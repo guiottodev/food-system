@@ -9,9 +9,242 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model AdminUser {
+enum UserRole {
+  ADMIN
+}
+
+enum OrderStatus {
+  NOVO        @map("Novo")
+  CONFIRMADO  @map("Confirmado")
+  EM_PRODUCAO @map("Em produção")
+  PRONTO      @map("Pronto")
+  EM_ROTA     @map("Em rota")
+  ENTREGUE    @map("Entregue")
+  CANCELADO   @map("Cancelado")
+}
+
+enum OrderType {
+  PRONTA_ENTREGA @map("pronta_entrega")
+  ENCOMENDA      @map("encomenda")
+}
+
+enum DeliveryMethod {
+  ENTREGA  @map("entrega")
+  RETIRADA @map("retirada")
+}
+
+enum UnitType {
+  UNIDADE @map("unidade")
+  CENTO   @map("cento")
+  KG      @map("kg")
+  G       @map("g")
+}
+
+enum InventoryMovementType {
+  IN         @map("in")
+  OUT        @map("out")
+  ADJUSTMENT @map("adjustment")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  name      String?
+  role      UserRole @default(ADMIN)
+  createdAt DateTime @default(now())
+
+  auditLogs      AuditLog[]
+  inventoryMoves InventoryMovement[]
+  ordersCreated  Order[] @relation("OrdersCreatedBy")
+
+  @@map("users")
+}
+
+model Customer {
   id           String   @id @default(cuid())
-  username     String   @unique
-  passwordHash String?
+  name         String
+  phone        String?
+  email        String?
+  document     String?
+  notes        String?
+  isAnonymized Boolean  @default(false)
   createdAt    DateTime @default(now())
+
+  addresses CustomerAddress[]
+  orders    Order[]
+
+  @@map("customers")
+}
+
+model CustomerAddress {
+  id               String   @id @default(cuid())
+  customerId       String
+  addressText      String
+  addressBairro    String
+  addressReferencia String?
+  addressCity      String?
+  addressCep       String?
+  isDefault        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@map("customer_addresses")
+}
+
+model Category {
+  id                   String  @id @default(cuid())
+  name                 String  @unique
+  defaultDailyCapacity Decimal @default(0)
+  createdAt            DateTime @default(now())
+
+  products      Product[]
+  capacityRules CapacityRule[]
+
+  @@map("categories")
+}
+
+model Product {
+  id         String   @id @default(cuid())
+  name       String
+  categoryId String
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  category Category @relation(fields: [categoryId], references: [id])
+  skus     Sku[]
+
+  @@map("products")
+  @@unique([name, categoryId])
+}
+
+model Sku {
+  id           String   @id @default(cuid())
+  productId    String
+  displayName  String
+  unitLabel    String
+  unitType     UnitType
+  quantityStep Decimal
+  priceCurrent Decimal
+  isCritical   Boolean  @default(false)
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  product          Product @relation(fields: [productId], references: [id])
+  orderItems       OrderItem[]
+  inventoryStock   InventoryStock?
+  inventoryMoves   InventoryMovement[]
+  capacityRules    CapacityRule[]
+
+  @@map("skus")
+  @@unique([productId, displayName])
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  orderNumber       String        @unique
+  customerId        String
+  status            OrderStatus
+  orderType         OrderType
+  deliveryDatetime  DateTime
+  deliveryMethod    DeliveryMethod
+  addressText       String?
+  addressBairro     String?
+  addressReferencia String?
+  addressCity       String?
+  addressCep        String?
+  deliveryFee       Decimal?
+  subtotal          Decimal
+  total             Decimal
+  notes             String?
+  cancellationReason String?
+  createdById       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  customer   Customer @relation(fields: [customerId], references: [id])
+  createdBy  User?    @relation("OrdersCreatedBy", fields: [createdById], references: [id])
+  items      OrderItem[]
+  movements  InventoryMovement[]
+
+  @@map("orders")
+  @@index([status, deliveryDatetime])
+  @@index([deliveryMethod, deliveryDatetime])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  skuId       String
+  quantity    Decimal
+  priceAtTime Decimal
+  lineTotal   Decimal
+  createdAt   DateTime @default(now())
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sku   Sku   @relation(fields: [skuId], references: [id])
+
+  @@map("order_items")
+  @@index([orderId])
+  @@index([skuId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String?
+  entityType String
+  entityId  String
+  action    String
+  changes   String?
+  createdAt DateTime @default(now())
+
+  actor User? @relation(fields: [actorId], references: [id])
+
+  @@map("audit_logs")
+  @@index([entityType, entityId])
+}
+
+model InventoryStock {
+  id        String   @id @default(cuid())
+  skuId     String   @unique
+  quantity  Decimal  @default(0)
+  updatedAt DateTime @updatedAt
+
+  sku Sku @relation(fields: [skuId], references: [id], onDelete: Cascade)
+
+  @@map("inventory_stock")
+}
+
+model InventoryMovement {
+  id           String                @id @default(cuid())
+  skuId        String
+  movementType InventoryMovementType
+  quantity     Decimal
+  reason       String
+  relatedOrderId String?
+  createdById  String?
+  createdAt    DateTime @default(now())
+
+  sku         Sku   @relation(fields: [skuId], references: [id])
+  relatedOrder Order? @relation(fields: [relatedOrderId], references: [id])
+  createdBy   User? @relation(fields: [createdById], references: [id])
+
+  @@map("inventory_movements")
+  @@index([skuId, createdAt])
+}
+
+model CapacityRule {
+  id            String   @id @default(cuid())
+  categoryId    String
+  skuId         String?
+  dailyCapacity Decimal
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+
+  category Category @relation(fields: [categoryId], references: [id])
+  sku      Sku?     @relation(fields: [skuId], references: [id])
+
+  @@map("capacity_rules")
+  @@index([categoryId, skuId])
 }
