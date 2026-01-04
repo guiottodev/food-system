@@ -3,7 +3,7 @@ const path = require("path");
 const { PrismaClient } = require("@prisma/client");
 
 const prisma = new PrismaClient();
-const VALID = new Set(["KG", "UNIDADE", "CENTO"]);
+const VALID = new Set(["KG", "UNIDADE"]);
 
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;

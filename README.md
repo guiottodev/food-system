@@ -20,13 +20,25 @@ Popular base de testes:
 - `node scripts\\fill_test_data.js --count=1000 --pastDays=90 --futureDays=30 --reset`
 
 Catalogo (Categorias/Produtos/SKUs):
-- Categoria pode ter hierarquia via parentId (ate 5+ niveis).
-- Produto tem lead time (horas), visibilidade publica e sob consulta padrao.
-- SKU tem tamanho, sabor, congelado, unidade (KG/UNIDADE/CENTO), passo de quantidade e preco.
+- Categoria: nome unico, descricao opcional.
+- Produto: lead time (horas), visibilidade publica, sob consulta, imagens (principal + extras).
+- SKU: tamanho, sabor, congelado, tipo de venda (UNIDADE/KG), passo de quantidade, minimo, preco.
+- UnitLabel: "un", "cento", "kg", "kit" (compativel com o tipo de venda).
 - Sob consulta: SKU usa override quando definido; caso contrario herda do produto.
-- Imagens ficam em `product_images` e tags em `sku_tags`.
+- Imagens extras ficam em `product_images` e tags em `sku_tags`.
 - Labels pt-BR: Tamanho, Tipo de venda, Passo de quantidade, Preco atual.
-- Integridade de unidade: triggers bloqueiam unitType/label invalidos.
+- Regra: novo pedido usa somente SKUs ativos; historico sempre aparece via snapshots no order_items.
 
 Integridade do banco:
 - Rodar `npm run db:check` antes de iniciar, ou use `scripts\\start-local.bat`.
+
+Smoke test (Catalogo + Pedidos):
+1) `npm.cmd run dev`
+2) Login
+3) Criar categoria
+4) Criar produto ativo
+5) Adicionar 3 SKUs (2 UNIDADE, 1 KG)
+6) Criar pedido com SKUs ativos
+7) Inativar 1 SKU
+8) Confirmar: novo pedido nao mostra SKU inativo
+9) Confirmar: pedido antigo segue exibindo itens (snapshot)

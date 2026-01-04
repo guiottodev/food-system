@@ -35,7 +35,6 @@ enum DeliveryMethod {
 
 enum UnitType {
   UNIDADE
-  CENTO
   KG
 }
 
@@ -96,13 +95,9 @@ model Category {
   id                   String  @id @default(cuid())
   name                 String  @unique
   description          String?
-  parentId             String?
-  defaultDailyCapacity Decimal @default(0)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @default(now()) @updatedAt
 
-  parent        Category? @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
-  children      Category[] @relation("CategoryTree")
   products      Product[]
   capacityRules CapacityRule[]
 
@@ -113,12 +108,12 @@ model Product {
   id         String   @id @default(cuid())
   name       String
   categoryId String
-  leadTimeHours       Int     @default(0)
-  notesInternal       String?
+  leadTimeHours       Int?
   descriptionLong     String?
   isActive            Boolean  @default(true) @map("active")
   isPublicHidden      Boolean  @default(false)
-  isSobConsultaDefault Boolean @default(false)
+  isSobConsulta       Boolean @default(false)
+  imageMainUrl        String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @default(now()) @updatedAt
 
@@ -146,16 +141,16 @@ model ProductImage {
 model Sku {
   id           String   @id @default(cuid())
   productId    String
-  size         String   @default("")
-  flavor       String   @default("")
+  sizeText     String   @default("")
+  flavorText   String?
   isFrozen     Boolean  @default(false)
   displayName  String
   unitLabel    String
   unitType     UnitType
   quantityStep Decimal
+  minQty       Decimal  @default(1)
   priceCurrent Decimal
   cost         Decimal?
-  isCritical   Boolean  @default(false)
   isActive     Boolean  @default(true) @map("active")
   isSobConsultaOverride Boolean?
   createdAt    DateTime @default(now())
@@ -220,14 +215,21 @@ model Order {
 model OrderItem {
   id          String   @id @default(cuid())
   orderId     String
-  skuId       String
+  skuId       String?
   quantity    Decimal
+  snapshotDisplayName String
+  snapshotUnitLabel   String
+  snapshotUnitType    UnitType
+  snapshotSizeText    String?
+  snapshotFlavorText  String?
+  snapshotIsFrozen    Boolean @default(false)
+  snapshotIsSobConsulta Boolean @default(false)
   priceAtTime Decimal
   lineTotal   Decimal
   createdAt   DateTime @default(now())
 
   order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  sku   Sku   @relation(fields: [skuId], references: [id])
+  sku   Sku?  @relation(fields: [skuId], references: [id], onDelete: SetNull)
 
   @@map("order_items")
   @@index([orderId])

@@ -1,7 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const { PrismaClient, Prisma } = require("@prisma/client");
-const { normalizeUnitType, unitLabelFor } = require("../lib/unit");
+const { normalizeUnitType } = require("../lib/unit");
 
 const TAG = "[SEED_FAKE]";
 const prisma = new PrismaClient();
@@ -123,12 +123,11 @@ async function ensureSkus(minCount) {
   const skuCount = await prisma.sku.count();
   if (skuCount >= minCount) return;
 
-  const category = await prisma.category.create({
-    data: {
-      name: `${TAG} Categoria Base`,
-      defaultDailyCapacity: toDecimal(200),
-    },
-  });
+    const category = await prisma.category.create({
+      data: {
+        name: `${TAG} Categoria Base`,
+      },
+    });
 
   const products = [];
   for (let i = 1; i <= 5; i += 1) {
@@ -143,9 +142,10 @@ async function ensureSkus(minCount) {
   }
 
   const unitTypes = [
-    { unitType: "UNIDADE", step: 1 },
-    { unitType: "CENTO", step: 1 },
-    { unitType: "KG", step: 0.1 },
+    { unitType: "UNIDADE", unitLabel: "un", step: 1, minQty: 1 },
+    { unitType: "UNIDADE", unitLabel: "cento", step: 1, minQty: 1 },
+    { unitType: "UNIDADE", unitLabel: "kit", step: 1, minQty: 1 },
+    { unitType: "KG", unitLabel: "kg", step: 0.1, minQty: 0.1 },
   ];
 
   const skuData = [];
@@ -155,15 +155,15 @@ async function ensureSkus(minCount) {
     const normalizedUnit = normalizeUnitType(unit.unitType);
     skuData.push({
       productId: product.id,
-      size: unit.unitType === "KG" ? "1kg" : "25g",
-      flavor: `Sabor ${i}`,
+      sizeText: unit.unitType === "KG" ? "1kg" : "25g",
+      flavorText: `Sabor ${i}`,
       isFrozen: i % 2 === 0,
       displayName: `${TAG} SKU ${String(i).padStart(2, "0")}`,
-      unitLabel: unitLabelFor(normalizedUnit),
+      unitLabel: unit.unitLabel,
       unitType: normalizedUnit,
       quantityStep: toDecimal(unit.step),
+      minQty: toDecimal(unit.minQty),
       priceCurrent: toDecimal(randInt(10, 180)),
-      isCritical: i % 7 === 0,
     });
   }
 
@@ -212,7 +212,16 @@ async function main() {
       unitLabel: true,
       unitType: true,
       quantityStep: true,
+      sizeText: true,
+      flavorText: true,
+      isFrozen: true,
+      isSobConsultaOverride: true,
       priceCurrent: true,
+      product: {
+        select: {
+          isSobConsulta: true,
+        },
+      },
     },
   });
 
@@ -284,11 +293,26 @@ async function main() {
       const quantity = Number((step * multiplier).toFixed(3));
       const priceAtTime = Number(sku.priceCurrent);
       const lineTotal = Number((quantity * priceAtTime).toFixed(2));
+      const snapshotIsSobConsulta =
+        sku.isSobConsultaOverride === true
+          ? true
+          : sku.isSobConsultaOverride === false
+          ? false
+          : sku.product.isSobConsulta;
       items.push({
         skuId: sku.id,
         quantity,
         priceAtTime,
         lineTotal,
+        snapshot: {
+          snapshotDisplayName: sku.displayName,
+          snapshotUnitLabel: sku.unitLabel,
+          snapshotUnitType: sku.unitType,
+          snapshotSizeText: sku.sizeText || null,
+          snapshotFlavorText: sku.flavorText || null,
+          snapshotIsFrozen: sku.isFrozen,
+          snapshotIsSobConsulta,
+        },
       });
     }
 
@@ -323,6 +347,13 @@ async function main() {
         orderId: order.id,
         skuId: item.skuId,
         quantity: toDecimal(item.quantity),
+        snapshotDisplayName: item.snapshot.snapshotDisplayName,
+        snapshotUnitLabel: item.snapshot.snapshotUnitLabel,
+        snapshotUnitType: item.snapshot.snapshotUnitType,
+        snapshotSizeText: item.snapshot.snapshotSizeText,
+        snapshotFlavorText: item.snapshot.snapshotFlavorText,
+        snapshotIsFrozen: item.snapshot.snapshotIsFrozen,
+        snapshotIsSobConsulta: item.snapshot.snapshotIsSobConsulta,
         priceAtTime: toDecimal(item.priceAtTime),
         lineTotal: toDecimal(item.lineTotal),
       })),
