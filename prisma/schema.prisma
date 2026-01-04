@@ -34,10 +34,9 @@ enum DeliveryMethod {
 }
 
 enum UnitType {
-  UNIDADE @map("unidade")
-  CENTO   @map("cento")
-  KG      @map("kg")
-  G       @map("g")
+  UNIDADE
+  CENTO
+  KG
 }
 
 enum InventoryMovementType {
@@ -96,9 +95,14 @@ model CustomerAddress {
 model Category {
   id                   String  @id @default(cuid())
   name                 String  @unique
+  description          String?
+  parentId             String?
   defaultDailyCapacity Decimal @default(0)
   createdAt            DateTime @default(now())
+  updatedAt            DateTime @default(now()) @updatedAt
 
+  parent        Category? @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children      Category[] @relation("CategoryTree")
   products      Product[]
   capacityRules CapacityRule[]
 
@@ -109,36 +113,76 @@ model Product {
   id         String   @id @default(cuid())
   name       String
   categoryId String
-  active     Boolean  @default(true)
-  createdAt  DateTime @default(now())
+  leadTimeHours       Int     @default(0)
+  notesInternal       String?
+  descriptionLong     String?
+  isActive            Boolean  @default(true) @map("active")
+  isPublicHidden      Boolean  @default(false)
+  isSobConsultaDefault Boolean @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
 
   category Category @relation(fields: [categoryId], references: [id])
   skus     Sku[]
+  images   ProductImage[]
 
   @@map("products")
   @@unique([name, categoryId])
 }
 
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+  @@index([productId, sortOrder])
+}
+
 model Sku {
   id           String   @id @default(cuid())
   productId    String
+  size         String   @default("")
+  flavor       String   @default("")
+  isFrozen     Boolean  @default(false)
   displayName  String
   unitLabel    String
   unitType     UnitType
   quantityStep Decimal
   priceCurrent Decimal
+  cost         Decimal?
   isCritical   Boolean  @default(false)
-  active       Boolean  @default(true)
+  isActive     Boolean  @default(true) @map("active")
+  isSobConsultaOverride Boolean?
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
   product          Product @relation(fields: [productId], references: [id])
   orderItems       OrderItem[]
   inventoryStock   InventoryStock?
   inventoryMoves   InventoryMovement[]
   capacityRules    CapacityRule[]
+  tags             SkuTag[]
 
   @@map("skus")
   @@unique([productId, displayName])
+}
+
+model SkuTag {
+  id        String   @id @default(cuid())
+  skuId     String
+  name      String
+  createdAt DateTime @default(now())
+
+  sku Sku @relation(fields: [skuId], references: [id], onDelete: Cascade)
+
+  @@map("sku_tags")
+  @@unique([skuId, name])
+  @@index([skuId])
 }
 
 model Order {

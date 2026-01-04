@@ -19,6 +19,13 @@ if not exist "node_modules" (
   exit /b 1
 )
 
+echo Verificando integridade do banco...
+node scripts\check-db-integrity.js
+if %ERRORLEVEL% neq 0 (
+  echo Falha na verificacao do banco. Rode "npm run db:migrate" e tente novamente.
+  exit /b 1
+)
+
 if not exist ".next" (
   echo Build nao encontrado. Executando "npm run build"...
   npm run build
