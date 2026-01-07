@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
+import { validateQtyByUnit } from "@/lib/quantity";
 import { OrderStatus, OrderType, Prisma } from "@prisma/client";
 
 type CreateOrderPayload = {
@@ -37,11 +38,6 @@ function toDecimal(value: number) {
   return new Prisma.Decimal(value);
 }
 
-function ensureMultiple(value: number, step: number) {
-  const factor = 1 / step;
-  return Math.abs(Math.round(value * factor) - value * factor) < 1e-6;
-}
-
 function parseQuantity(value: number | string) {
   const raw = String(value ?? "").trim().replace(",", ".");
   const parsed = Number(raw);
@@ -49,13 +45,6 @@ function parseQuantity(value: number | string) {
     return null;
   }
   return parsed;
-}
-
-function decimalPlaces(value: number) {
-  const text = String(value);
-  const parts = text.split(".");
-  if (parts.length < 2) return 0;
-  return parts[1].length;
 }
 
 async function generateOrderNumber(
@@ -149,23 +138,13 @@ export async function createOrderAction(formData: FormData) {
       redirect("/admin/orders/new?error=sku-invalido");
     }
     const quantity = getQuantity(item.quantity);
-    const step = Number(sku.quantityStep);
-    if (!ensureMultiple(quantity, step)) {
+    const qtyError = validateQtyByUnit(sku.unitType, quantity);
+    if (qtyError) {
       redirect("/admin/orders/new?error=quantidade-invalida");
     }
     const minQty = Number(sku.minQty);
     if (quantity < minQty) {
       redirect("/admin/orders/new?error=quantidade-invalida");
-    }
-    if (sku.unitType === "UNIDADE") {
-      if (!Number.isInteger(quantity) || quantity <= 0) {
-        redirect("/admin/orders/new?error=quantidade-invalida");
-      }
-    }
-    if (sku.unitType === "KG") {
-      if (quantity <= 0 || decimalPlaces(quantity) > 1) {
-        redirect("/admin/orders/new?error=quantidade-invalida");
-      }
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { createOrderAction } from "./actions";
+import { validateQtyByUnit } from "@/lib/quantity";
 
 type CustomerOption = {
   id: string;
@@ -57,6 +58,7 @@ export default function OrderForm({
   const [deliveryFee, setDeliveryFee] = useState("0");
   const [skuSearch, setSkuSearch] = useState("");
   const [items, setItems] = useState<OrderItem[]>([]);
+  const [qtyError, setQtyError] = useState("");
 
   const filteredSkus = useMemo(() => {
     if (!skuSearch) {
@@ -113,9 +115,18 @@ export default function OrderForm({
 
   function updateItem(index: number, quantity: number) {
     setItems((prev) =>
-      prev.map((item, idx) =>
-        idx === index ? { ...item, quantity } : item
-      )
+      prev.map((item, idx) => {
+        if (idx !== index) return item;
+        const next = { ...item, quantity };
+        const error = validateQtyByUnit(
+          next.unitType as "KG" | "UNIDADE",
+          next.quantity
+        );
+        if (!error) {
+          setQtyError("");
+        }
+        return next;
+      })
     );
   }
 
@@ -123,8 +134,33 @@ export default function OrderForm({
     setItems((prev) => prev.filter((_, idx) => idx !== index));
   }
 
+  function validateItems() {
+    for (const item of items) {
+      const error = validateQtyByUnit(
+        item.unitType as "KG" | "UNIDADE",
+        item.quantity
+      );
+      if (error) {
+        return `${item.skuLabel}: ${error}`;
+      }
+    }
+    return "";
+  }
+
   return (
-    <form action={createOrderAction} style={{ display: "grid", gap: 16 }}>
+    <form
+      action={createOrderAction}
+      style={{ display: "grid", gap: 16 }}
+      onSubmit={(event) => {
+        const message = validateItems();
+        if (message) {
+          event.preventDefault();
+          setQtyError(message);
+        } else {
+          setQtyError("");
+        }
+      }}
+    >
       <input type="hidden" name="payload" value={payload} />
 
       <section style={{ border: "1px solid #ddd", padding: 12 }}>
@@ -324,7 +360,11 @@ export default function OrderForm({
                   <input
                     type="number"
                     min={item.minQty}
-                    step={item.quantityStep}
+                    step={
+                      item.unitType === "KG"
+                        ? Math.max(item.quantityStep || 0.05, 0.05)
+                        : 1
+                    }
                     value={item.quantity}
                     onChange={(event) =>
                       updateItem(index, Number(event.target.value))
@@ -354,6 +394,7 @@ export default function OrderForm({
       </section>
 
       <button type="submit">Salvar pedido</button>
+      {qtyError ? <p style={{ color: "crimson" }}>{qtyError}</p> : null}
     </form>
   );
 }
