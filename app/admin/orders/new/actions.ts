@@ -101,7 +101,8 @@ export async function createOrderAction(formData: FormData) {
     include: {
       product: {
         select: {
-          isSobConsulta: true,
+          sobConsulta: true,
+          name: true,
         },
       },
     },
@@ -109,7 +110,7 @@ export async function createOrderAction(formData: FormData) {
   const skuMap = new Map(skus.map((sku) => [sku.id, sku]));
 
   function normalizeQuantity(
-    unitType: "KG" | "UNIDADE",
+    unitType: "KG" | "UNIDADE" | "CENTO",
     value: number | string
   ) {
     const result = validateQtyByUnit(unitType, value);
@@ -137,23 +138,24 @@ export async function createOrderAction(formData: FormData) {
 
   const computedItems = normalizedItems.map((item) => {
     const quantity = item.quantity;
-    const priceAtTime = Number(item.sku.priceCurrent);
-    const lineTotal = quantity * priceAtTime;
+    const unitPrice = Number(item.sku.priceCurrent);
+    const lineTotal = quantity * unitPrice;
     const snapshotIsSobConsulta =
-      item.sku.isSobConsultaOverride === true
+      item.sku.sobConsultaOverride === true
         ? true
-        : item.sku.isSobConsultaOverride === false
+        : item.sku.sobConsultaOverride === false
         ? false
-        : item.sku.product.isSobConsulta;
+        : item.sku.product.sobConsulta;
 
     return {
       sku: item.sku,
       skuId: item.skuId,
       quantity,
-      priceAtTime,
+      unitPrice,
       lineTotal,
       snapshot: {
-        snapshotDisplayName: item.sku.displayName,
+        snapshotSkuName: item.sku.displayName,
+        snapshotProductName: item.sku.product.name,
         snapshotUnitLabel: item.sku.unitLabel,
         snapshotUnitType: item.sku.unitType,
         snapshotSizeText: item.sku.sizeText || null,
@@ -173,13 +175,8 @@ export async function createOrderAction(formData: FormData) {
 
   let shouldConvert = false;
   if (payload.orderType === "PRONTA_ENTREGA") {
-    const stocks = await prisma.inventoryStock.findMany({
-      where: { skuId: { in: skuIds } },
-    });
-    const stockMap = new Map(stocks.map((s) => [s.skuId, s]));
     for (const item of computedItems) {
-      const stock = stockMap.get(item.skuId);
-      const available = stock ? Number(stock.quantity) : 0;
+      const available = Number(item.sku.stockQuantity ?? 0);
       if (available < item.quantity) {
         shouldConvert = true;
         break;
@@ -213,7 +210,7 @@ export async function createOrderAction(formData: FormData) {
       data: {
         orderNumber,
         customerId,
-        status: OrderStatus.CONFIRMADO,
+        status: OrderStatus.NOVO,
         orderType: finalOrderType as OrderType,
         deliveryDatetime: new Date(payload.deliveryDatetime),
         deliveryMethod: payload.deliveryMethod,
@@ -233,14 +230,15 @@ export async function createOrderAction(formData: FormData) {
         orderId: order.id,
         skuId: item.skuId,
         quantity: toDecimal(item.quantity),
-        snapshotDisplayName: item.snapshot.snapshotDisplayName,
+        snapshotSkuName: item.snapshot.snapshotSkuName,
+        snapshotProductName: item.snapshot.snapshotProductName,
         snapshotUnitLabel: item.snapshot.snapshotUnitLabel,
         snapshotUnitType: item.snapshot.snapshotUnitType,
         snapshotSizeText: item.snapshot.snapshotSizeText,
         snapshotFlavorText: item.snapshot.snapshotFlavorText,
         snapshotIsFrozen: item.snapshot.snapshotIsFrozen,
         snapshotIsSobConsulta: item.snapshot.snapshotIsSobConsulta,
-        priceAtTime: toDecimal(item.priceAtTime),
+        snapshotUnitPrice: toDecimal(item.unitPrice),
         lineTotal: toDecimal(item.lineTotal),
       })),
     });

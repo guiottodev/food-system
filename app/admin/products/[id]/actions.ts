@@ -37,10 +37,10 @@ export async function updateProductAction(formData: FormData) {
   const name = parseText(formData.get("name"));
   const categoryId = parseText(formData.get("categoryId"));
   const descriptionLong = parseText(formData.get("descriptionLong"));
-  const leadTimeHours = parseNumber(formData.get("leadTimeHours"));
+  const leadTime = parseNumber(formData.get("leadTime"));
   const isActive = parseBool(formData.get("isActive"));
   const isPublicHidden = parseBool(formData.get("isPublicHidden"));
-  const isSobConsulta = parseBool(formData.get("isSobConsulta"));
+  const sobConsulta = parseBool(formData.get("sobConsulta"));
   const imageMainUrl = parseText(formData.get("imageMainUrl"));
   const imageExtraUrls = String(formData.get("imageExtraUrls") ?? "")
     .split(/\r?\n/)
@@ -58,10 +58,10 @@ export async function updateProductAction(formData: FormData) {
         name,
         categoryId,
         descriptionLong: descriptionLong || null,
-        leadTimeHours,
+        leadTime,
         isActive,
         isPublicHidden,
-        isSobConsulta,
+        sobConsulta,
         imageMainUrl: imageMainUrl || null,
       },
     });
@@ -94,7 +94,7 @@ export async function createSkuAction(formData: FormData) {
   const cost = parseNumber(formData.get("cost"));
   const isFrozen = parseBool(formData.get("isFrozen"));
   const isActive = parseBool(formData.get("isActive"));
-  const sobRaw = parseText(formData.get("isSobConsultaOverride"));
+  const sobRaw = parseText(formData.get("sobConsultaOverride"));
   const tags = parseTags(formData.get("tags"));
 
   if (!productId || !displayName || !sizeText || !quantityStep || !priceCurrent) {
@@ -104,20 +104,23 @@ export async function createSkuAction(formData: FormData) {
   if (unitType === "KG" && unitLabel !== "kg") {
     redirect(`/admin/products/${productId}?error=sku_unit`);
   }
-  if (unitType === "UNIDADE" && unitLabel === "kg") {
+  if (unitType === "CENTO" && unitLabel !== "cento") {
+    redirect(`/admin/products/${productId}?error=sku_unit`);
+  }
+  if (unitType === "UNIDADE" && (unitLabel === "kg" || unitLabel === "cento")) {
     redirect(`/admin/products/${productId}?error=sku_unit`);
   }
 
   const normalizedQtyStep =
-    unitType === "UNIDADE" ? ensureInteger(quantityStep) : quantityStep;
+    unitType === "KG" ? quantityStep : ensureInteger(quantityStep);
   const normalizedMinQty =
-    unitType === "UNIDADE" ? ensureInteger(minQty ?? 1) : minQty ?? 1;
+    unitType === "KG" ? minQty ?? 1 : ensureInteger(minQty ?? 1);
 
   if (!normalizedQtyStep || !normalizedMinQty) {
     redirect(`/admin/products/${productId}?error=sku_quantidade`);
   }
 
-  const isSobConsultaOverride =
+  const sobConsultaOverride =
     sobRaw === "true" ? true : sobRaw === "false" ? false : null;
 
   await prisma.$transaction(async (tx) => {
@@ -135,7 +138,7 @@ export async function createSkuAction(formData: FormData) {
         priceCurrent,
         cost: cost ?? null,
         isActive,
-        isSobConsultaOverride,
+        sobConsultaOverride,
       },
     });
 
@@ -166,7 +169,7 @@ export async function updateSkuAction(formData: FormData) {
   const cost = parseNumber(formData.get("cost"));
   const isFrozen = parseBool(formData.get("isFrozen"));
   const isActive = parseBool(formData.get("isActive"));
-  const sobRaw = parseText(formData.get("isSobConsultaOverride"));
+  const sobRaw = parseText(formData.get("sobConsultaOverride"));
   const tags = parseTags(formData.get("tags"));
 
   if (!productId || !skuId || !displayName || !sizeText || !quantityStep || !priceCurrent) {
@@ -176,20 +179,23 @@ export async function updateSkuAction(formData: FormData) {
   if (unitType === "KG" && unitLabel !== "kg") {
     redirect(`/admin/products/${productId}?error=sku_unit`);
   }
-  if (unitType === "UNIDADE" && unitLabel === "kg") {
+  if (unitType === "CENTO" && unitLabel !== "cento") {
+    redirect(`/admin/products/${productId}?error=sku_unit`);
+  }
+  if (unitType === "UNIDADE" && (unitLabel === "kg" || unitLabel === "cento")) {
     redirect(`/admin/products/${productId}?error=sku_unit`);
   }
 
   const normalizedQtyStep =
-    unitType === "UNIDADE" ? ensureInteger(quantityStep) : quantityStep;
+    unitType === "KG" ? quantityStep : ensureInteger(quantityStep);
   const normalizedMinQty =
-    unitType === "UNIDADE" ? ensureInteger(minQty ?? 1) : minQty ?? 1;
+    unitType === "KG" ? minQty ?? 1 : ensureInteger(minQty ?? 1);
 
   if (!normalizedQtyStep || !normalizedMinQty) {
     redirect(`/admin/products/${productId}?error=sku_quantidade`);
   }
 
-  const isSobConsultaOverride =
+  const sobConsultaOverride =
     sobRaw === "true" ? true : sobRaw === "false" ? false : null;
 
   await prisma.$transaction(async (tx) => {
@@ -207,7 +213,7 @@ export async function updateSkuAction(formData: FormData) {
         priceCurrent,
         cost: cost ?? null,
         isActive,
-        isSobConsultaOverride,
+        sobConsultaOverride,
       },
     });
 
@@ -258,7 +264,7 @@ export async function duplicateSkuAction(formData: FormData) {
         priceCurrent: sku.priceCurrent,
         cost: sku.cost,
         isActive: sku.isActive,
-        isSobConsultaOverride: sku.isSobConsultaOverride,
+        sobConsultaOverride: sku.sobConsultaOverride,
       },
     });
 

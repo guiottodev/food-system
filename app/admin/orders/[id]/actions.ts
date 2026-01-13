@@ -4,17 +4,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
+import {
+  validateCancelReason,
+  validateStatusTransition,
+} from "@/lib/domain/order";
 import { OrderStatus } from "@prisma/client";
-
-const transitions: Record<OrderStatus, OrderStatus[]> = {
-  NOVO: ["CONFIRMADO", "CANCELADO"],
-  CONFIRMADO: ["EM_PRODUCAO", "PRONTO", "CANCELADO"],
-  EM_PRODUCAO: ["PRONTO", "CANCELADO"],
-  PRONTO: ["EM_ROTA", "ENTREGUE", "CANCELADO"],
-  EM_ROTA: ["ENTREGUE", "CANCELADO"],
-  ENTREGUE: [],
-  CANCELADO: [],
-};
 
 async function getActorId() {
   const cookieStore = await cookies();
@@ -39,23 +33,67 @@ export async function updateStatusAction(formData: FormData) {
     redirect(`/admin/orders/${orderId}`);
   }
 
-  const order = await prisma.order.findUnique({ where: { id: orderId } });
-  if (!order) {
-    redirect("/admin/orders");
-  }
-
-  const allowed = transitions[order.status] || [];
-  if (!allowed.includes(nextStatus)) {
-    redirect(`/admin/orders/${orderId}?error=transicao`);
-  }
-
   const actorId = await getActorId();
 
   await prisma.$transaction(async (tx) => {
-    await tx.order.update({
+    const order = await tx.order.findUnique({
       where: { id: orderId },
-      data: { status: nextStatus },
+      include: {
+        items: {
+          select: {
+            skuId: true,
+            quantity: true,
+          },
+        },
+      },
     });
+    if (!order) {
+      redirect("/admin/orders");
+    }
+
+    const validation = validateStatusTransition(order.status, nextStatus);
+    if (!validation.ok) {
+      redirect(`/admin/orders/${orderId}?error=transicao`);
+    }
+
+    if (nextStatus === "ENTREGUE") {
+      const now = new Date();
+      const marked = await tx.order.updateMany({
+        where: {
+          id: orderId,
+          stockDecrementedAt: null,
+        },
+        data: {
+          status: nextStatus,
+          stockDecrementedAt: now,
+        },
+      });
+
+      if (marked.count === 1) {
+        for (const item of order.items) {
+          if (!item.skuId) continue;
+          await tx.sku.update({
+            where: { id: item.skuId },
+            data: {
+              stockQuantity: {
+                decrement: item.quantity,
+              },
+            },
+          });
+        }
+      } else if (order.status !== "ENTREGUE") {
+        await tx.order.update({
+          where: { id: orderId },
+          data: { status: nextStatus },
+        });
+      }
+    } else {
+      await tx.order.update({
+        where: { id: orderId },
+        data: { status: nextStatus },
+      });
+    }
+
     await tx.auditLog.create({
       data: {
         actorId,
@@ -73,13 +111,28 @@ export async function updateStatusAction(formData: FormData) {
 export async function cancelOrderAction(formData: FormData) {
   const orderId = String(formData.get("orderId") ?? "");
   const reason = String(formData.get("cancellationReason") ?? "").trim();
-  if (!orderId || !reason) {
+  if (!orderId) {
+    redirect(`/admin/orders/${orderId}`);
+  }
+
+  const reasonValidation = validateCancelReason(reason);
+  if (!reasonValidation.ok) {
     redirect(`/admin/orders/${orderId}?error=motivo`);
   }
 
   const actorId = await getActorId();
 
   await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      redirect("/admin/orders");
+    }
+
+    const validation = validateStatusTransition(order.status, "CANCELADO");
+    if (!validation.ok) {
+      redirect(`/admin/orders/${orderId}?error=transicao`);
+    }
+
     await tx.order.update({
       where: { id: orderId },
       data: { status: "CANCELADO", cancellationReason: reason },

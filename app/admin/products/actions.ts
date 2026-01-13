@@ -30,10 +30,10 @@ export async function createProductAction(formData: FormData) {
   const name = parseText(formData.get("name"));
   const categoryId = parseText(formData.get("categoryId"));
   const descriptionLong = parseText(formData.get("descriptionLong"));
-  const leadTimeHours = parseNumber(formData.get("leadTimeHours"));
+  const leadTime = parseNumber(formData.get("leadTime"));
   const isActive = parseBool(formData.get("isActive"));
   const isPublicHidden = parseBool(formData.get("isPublicHidden"));
-  const isSobConsulta = parseBool(formData.get("isSobConsulta"));
+  const sobConsulta = parseBool(formData.get("sobConsulta"));
   const imageMainUrl = parseText(formData.get("imageMainUrl"));
   const imageExtraUrls = parseLines(formData.get("imageExtraUrls"));
 
@@ -46,10 +46,10 @@ export async function createProductAction(formData: FormData) {
       name,
       categoryId,
       descriptionLong: descriptionLong || null,
-      leadTimeHours,
+      leadTime,
       isActive,
       isPublicHidden,
-      isSobConsulta,
+      sobConsulta,
       imageMainUrl: imageMainUrl || null,
     },
   });

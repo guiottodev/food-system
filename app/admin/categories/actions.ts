@@ -7,9 +7,14 @@ function parseText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
 }
 
+function parseBool(value: FormDataEntryValue | null) {
+  return value === "on";
+}
+
 export async function createCategoryAction(formData: FormData) {
   const name = parseText(formData.get("name"));
   const description = parseText(formData.get("description"));
+  const isActive = parseBool(formData.get("isActive"));
   if (!name) {
     redirect("/admin/categories?error=nome");
   }
@@ -18,6 +23,7 @@ export async function createCategoryAction(formData: FormData) {
     data: {
       name,
       description: description || null,
+      isActive,
     },
   });
 
@@ -28,6 +34,7 @@ export async function updateCategoryAction(formData: FormData) {
   const id = parseText(formData.get("id"));
   const name = parseText(formData.get("name"));
   const description = parseText(formData.get("description"));
+  const isActive = parseBool(formData.get("isActive"));
   if (!id || !name) {
     redirect("/admin/categories?error=nome");
   }
@@ -37,6 +44,7 @@ export async function updateCategoryAction(formData: FormData) {
     data: {
       name,
       description: description || null,
+      isActive,
     },
   });
 
