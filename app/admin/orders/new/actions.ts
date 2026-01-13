@@ -38,15 +38,6 @@ function toDecimal(value: number) {
   return new Prisma.Decimal(value);
 }
 
-function parseQuantity(value: number | string) {
-  const raw = String(value ?? "").trim().replace(",", ".");
-  const parsed = Number(raw);
-  if (!raw || Number.isNaN(parsed)) {
-    return null;
-  }
-  return parsed;
-}
-
 async function generateOrderNumber(
   tx: Prisma.TransactionClient | typeof prisma
 ) {
@@ -117,65 +108,57 @@ export async function createOrderAction(formData: FormData) {
   });
   const skuMap = new Map(skus.map((sku) => [sku.id, sku]));
 
-  const normalizedItems = payload.items.map((item) => {
-    const quantity = parseQuantity(item.quantity);
-    return { ...item, quantity };
-  });
-
-  function getQuantity(value: number | null) {
-    if (value === null) {
+  function normalizeQuantity(
+    unitType: "KG" | "UNIDADE",
+    value: number | string
+  ) {
+    const result = validateQtyByUnit(unitType, value);
+    if (!result.ok) {
       redirect("/admin/orders/new?error=quantidade-invalida");
     }
-    return value;
+    return result.normalized;
   }
 
-  for (const item of normalizedItems) {
-    if (item.quantity === null) {
-      redirect("/admin/orders/new?error=quantidade-invalida");
-    }
+  const normalizedItems = payload.items.map((item) => {
     const sku = skuMap.get(item.skuId);
     if (!sku) {
       redirect("/admin/orders/new?error=sku-invalido");
     }
-    const quantity = getQuantity(item.quantity);
-    const qtyError = validateQtyByUnit(sku.unitType, quantity);
-    if (qtyError) {
-      redirect("/admin/orders/new?error=quantidade-invalida");
-    }
-    const minQty = Number(sku.minQty);
-    if (quantity < minQty) {
+    const quantity = normalizeQuantity(sku.unitType, item.quantity);
+    return { ...item, quantity, sku };
+  });
+
+  for (const item of normalizedItems) {
+    const minQty = Number(item.sku.minQty);
+    if (item.quantity < minQty) {
       redirect("/admin/orders/new?error=quantidade-invalida");
     }
   }
 
   const computedItems = normalizedItems.map((item) => {
-    const sku = skuMap.get(item.skuId);
-    if (!sku) {
-      redirect("/admin/orders/new?error=quantidade-invalida");
-    }
-    const quantity = getQuantity(item.quantity);
-    const priceAtTime = Number(sku.priceCurrent);
+    const quantity = item.quantity;
+    const priceAtTime = Number(item.sku.priceCurrent);
     const lineTotal = quantity * priceAtTime;
     const snapshotIsSobConsulta =
-      sku.isSobConsultaOverride === true
+      item.sku.isSobConsultaOverride === true
         ? true
-        : sku.isSobConsultaOverride === false
+        : item.sku.isSobConsultaOverride === false
         ? false
-        : sku.product.isSobConsulta;
+        : item.sku.product.isSobConsulta;
 
     return {
-      sku,
+      sku: item.sku,
       skuId: item.skuId,
       quantity,
       priceAtTime,
       lineTotal,
       snapshot: {
-        snapshotDisplayName: sku.displayName,
-        snapshotUnitLabel: sku.unitLabel,
-        snapshotUnitType: sku.unitType,
-        snapshotSizeText: sku.sizeText || null,
-        snapshotFlavorText: sku.flavorText || null,
-        snapshotIsFrozen: sku.isFrozen,
+        snapshotDisplayName: item.sku.displayName,
+        snapshotUnitLabel: item.sku.unitLabel,
+        snapshotUnitType: item.sku.unitType,
+        snapshotSizeText: item.sku.sizeText || null,
+        snapshotFlavorText: item.sku.flavorText || null,
+        snapshotIsFrozen: item.sku.isFrozen,
         snapshotIsSobConsulta,
       },
     };

@@ -27,7 +27,7 @@ type OrderItem = {
   unitType: string;
   quantityStep: number;
   minQty: number;
-  quantity: number;
+  quantity: string;
   priceAtTime: number;
 };
 
@@ -68,10 +68,14 @@ export default function OrderForm({
     return skus.filter((sku) => sku.displayName.toLowerCase().includes(search));
   }, [skus, skuSearch]);
 
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.quantity * item.priceAtTime,
-    0
-  );
+  const subtotal = items.reduce((sum, item) => {
+    const result = validateQtyByUnit(
+      item.unitType as "KG" | "UNIDADE",
+      item.quantity
+    );
+    if (!result.ok) return sum;
+    return sum + result.normalized * item.priceAtTime;
+  }, 0);
   const total = subtotal + (Number(deliveryFee) || 0);
 
   const payload = JSON.stringify({
@@ -107,22 +111,22 @@ export default function OrderForm({
         unitType: sku.unitType,
         quantityStep: sku.quantityStep,
         minQty: sku.minQty,
-        quantity: sku.minQty,
+        quantity: String(sku.minQty),
         priceAtTime: sku.priceCurrent,
       },
     ]);
   }
 
-  function updateItem(index: number, quantity: number) {
+  function updateItem(index: number, quantity: string) {
     setItems((prev) =>
       prev.map((item, idx) => {
         if (idx !== index) return item;
         const next = { ...item, quantity };
-        const error = validateQtyByUnit(
+        const result = validateQtyByUnit(
           next.unitType as "KG" | "UNIDADE",
           next.quantity
         );
-        if (!error) {
+        if (result.ok) {
           setQtyError("");
         }
         return next;
@@ -136,12 +140,12 @@ export default function OrderForm({
 
   function validateItems() {
     for (const item of items) {
-      const error = validateQtyByUnit(
+      const result = validateQtyByUnit(
         item.unitType as "KG" | "UNIDADE",
         item.quantity
       );
-      if (error) {
-        return `${item.skuLabel}: ${error}`;
+      if (!result.ok) {
+        return `${item.skuLabel}: ${result.error}`;
       }
     }
     return "";
@@ -335,11 +339,11 @@ export default function OrderForm({
           </select>
         </div>
 
-        {items.length === 0 ? (
-          <p style={{ marginTop: 12 }}>Nenhum item adicionado.</p>
-        ) : (
-          <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-            {items.map((item, index) => (
+      {items.length === 0 ? (
+        <p style={{ marginTop: 12 }}>Nenhum item adicionado.</p>
+      ) : (
+        <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
+          {items.map((item, index) => (
               <div
                 key={`${item.skuId}-${index}`}
                 style={{
@@ -358,16 +362,12 @@ export default function OrderForm({
                   }}
                 >
                   <input
-                    type="number"
-                    min={item.minQty}
-                    step={
-                      item.unitType === "KG"
-                        ? Math.max(item.quantityStep || 0.05, 0.05)
-                        : 1
-                    }
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Qtd"
                     value={item.quantity}
                     onChange={(event) =>
-                      updateItem(index, Number(event.target.value))
+                      updateItem(index, event.target.value)
                     }
                   />
                   <span>
@@ -378,8 +378,22 @@ export default function OrderForm({
                   </button>
                 </div>
                 <div style={{ marginTop: 6 }}>
-                  Preço: R$ {item.priceAtTime.toFixed(2)} | Total linha: R${" "}
-                  {(item.quantity * item.priceAtTime).toFixed(2)}
+                  {(() => {
+                    const result = validateQtyByUnit(
+                      item.unitType as "KG" | "UNIDADE",
+                      item.quantity
+                    );
+                    if (!result.ok) {
+                      return "Quantidade invalida.";
+                    }
+                    const lineTotal = result.normalized * item.priceAtTime;
+                    return (
+                      <>
+                        Preço: R$ {item.priceAtTime.toFixed(2)} | Total linha:
+                        R$ {lineTotal.toFixed(2)}
+                      </>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
