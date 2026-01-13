@@ -1,8 +1,8 @@
-# QA Checklist (Gate 2)
+﻿# QA Checklist (Gate 2)
 
 Este checklist deve ser executado para toda entrega que altera comportamento, telas, validacoes ou impressao.
 
-## Manual QA — humano
+## Manual QA - humano
 1) Rodar `npm run dev` e acessar `http://localhost:3000/admin`.
 2) Executar os fluxos em `docs/INTEGRATION_FLOW.md` (Fluxo 1, 2 e 3).
 3) Durante os fluxos, validar mensagens e estados nas telas relevantes.
@@ -58,3 +58,4 @@ Este checklist deve ser executado para toda entrega que altera comportamento, te
 - [ ] Estoque nao duplica decremento em Entregue
 - [ ] Abrir tela principal do admin sem quebrar
 - [ ] Executar a acao mais critica do dia a dia em menos de 1 minuto
+
