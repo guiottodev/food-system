@@ -13,6 +13,7 @@ type ProductSearchParams = {
 
 const unitTypeOptions = [
   { value: "UNIDADE", label: "UNIDADE" },
+  { value: "CENTO", label: "CENTO" },
   { value: "KG", label: "KG" },
 ];
 
@@ -106,8 +107,8 @@ export default async function ProductDetailPage({
           ></textarea>
           <input
             type="number"
-            name="leadTimeHours"
-            defaultValue={product.leadTimeHours ?? ""}
+            name="leadTime"
+            defaultValue={product.leadTime ?? ""}
             placeholder="Lead time (horas)"
             min="0"
             step="1"
@@ -131,8 +132,8 @@ export default async function ProductDetailPage({
           <label>
             <input
               type="checkbox"
-              name="isSobConsulta"
-              defaultChecked={product.isSobConsulta}
+              name="sobConsulta"
+              defaultChecked={product.sobConsulta}
             />{" "}
             Sob consulta
           </label>
@@ -193,7 +194,7 @@ export default async function ProductDetailPage({
           </label>
           <label>
             Sob consulta
-            <select name="isSobConsultaOverride" defaultValue="inherit">
+            <select name="sobConsultaOverride" defaultValue="inherit">
               <option value="inherit">Herdar do produto</option>
               <option value="true">Forcar sob consulta</option>
               <option value="false">Forcar nao</option>
@@ -327,11 +328,11 @@ export default async function ProductDetailPage({
                       <label>
                         Sob consulta
                         <select
-                          name="isSobConsultaOverride"
+                          name="sobConsultaOverride"
                           defaultValue={
-                            sku.isSobConsultaOverride === true
+                            sku.sobConsultaOverride === true
                               ? "true"
-                              : sku.isSobConsultaOverride === false
+                              : sku.sobConsultaOverride === false
                               ? "false"
                               : "inherit"
                           }
@@ -360,11 +361,11 @@ export default async function ProductDetailPage({
                     {sku.isActive ? "ATIVO" : "INATIVO"}
                   </td>
                   <td style={{ padding: 8 }}>
-                    {sku.isSobConsultaOverride === true
+                    {sku.sobConsultaOverride === true
                       ? "SIM"
-                      : sku.isSobConsultaOverride === false
+                      : sku.sobConsultaOverride === false
                       ? "NAO"
-                      : product.isSobConsulta
+                      : product.sobConsulta
                       ? "SIM"
                       : "NAO"}
                   </td>

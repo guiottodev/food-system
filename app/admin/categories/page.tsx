@@ -55,6 +55,9 @@ export default async function CategoriesPage({
             name="description"
             placeholder="Descricao (opcional)"
           ></textarea>
+          <label>
+            <input type="checkbox" name="isActive" defaultChecked /> Ativa
+          </label>
           <button type="submit">Criar categoria</button>
         </form>
       </section>
@@ -75,6 +78,7 @@ export default async function CategoriesPage({
               <tr style={{ background: "#f7f7f7" }}>
                 <th style={{ textAlign: "left", padding: 8 }}>Nome</th>
                 <th style={{ textAlign: "left", padding: 8 }}>Descricao</th>
+                <th style={{ textAlign: "left", padding: 8 }}>Ativo</th>
                 <th style={{ textAlign: "left", padding: 8 }}>Acoes</th>
               </tr>
             </thead>
@@ -96,6 +100,13 @@ export default async function CategoriesPage({
                         defaultValue={category.description || ""}
                         placeholder="Descricao"
                       ></textarea>
+                    </td>
+                    <td style={{ padding: 8 }}>
+                      <input
+                        type="checkbox"
+                        name="isActive"
+                        defaultChecked={category.isActive}
+                      />
                     </td>
                     <td style={{ padding: 8 }}>
                       <button type="submit">Salvar</button>

@@ -51,9 +51,9 @@ export default async function ProductsPage({
       ? { isPublicHidden: false }
       : {}),
     ...(sobFilter === "yes"
-      ? { isSobConsulta: true }
+      ? { sobConsulta: true }
       : sobFilter === "no"
-      ? { isSobConsulta: false }
+      ? { sobConsulta: false }
       : {}),
   };
 
@@ -96,7 +96,7 @@ export default async function ProductsPage({
           ></textarea>
           <input
             type="number"
-            name="leadTimeHours"
+            name="leadTime"
             placeholder="Lead time (horas)"
             min="0"
             step="1"
@@ -108,7 +108,7 @@ export default async function ProductsPage({
             <input type="checkbox" name="isPublicHidden" /> Ocultar do publico
           </label>
           <label>
-            <input type="checkbox" name="isSobConsulta" /> Sob consulta
+            <input type="checkbox" name="sobConsulta" /> Sob consulta
           </label>
           <input
             name="imageMainUrl"
@@ -195,7 +195,7 @@ export default async function ProductsPage({
                     {product.isActive ? "Ativo" : "Inativo"}
                   </td>
                   <td style={{ padding: 8 }}>
-                    {product.isSobConsulta ? "Sim" : "Nao"}
+                    {product.sobConsulta ? "Sim" : "Nao"}
                   </td>
                   <td style={{ padding: 8 }}>{product._count.skus}</td>
                   <td style={{ padding: 8 }}>

@@ -19,6 +19,32 @@ export default async function AdminPage() {
         </form>
       </div>
       <p>Bem-vindo ao sistema interno.</p>
+      <div style={{ display: "grid", gap: 12, marginTop: 24 }}>
+        <a
+          href="/admin/orders"
+          style={{
+            border: "1px solid #ddd",
+            padding: 12,
+            borderRadius: 6,
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
+          Pedidos
+        </a>
+        <a
+          href="/admin/catalog"
+          style={{
+            border: "1px solid #ddd",
+            padding: 12,
+            borderRadius: 6,
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
+          Catalogo
+        </a>
+      </div>
     </main>
   );
 }

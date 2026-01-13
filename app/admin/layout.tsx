@@ -26,8 +26,10 @@ export default async function AdminLayout({
         }}
       >
         <nav style={{ display: "flex", gap: 12 }}>
+          <Link href="/admin">Painel</Link>
           <Link href="/admin/orders">Pedidos</Link>
           <Link href="/admin/orders/new">Novo pedido</Link>
+          <Link href="/admin/catalog">Catalogo</Link>
           <Link href="/admin/categories">Categorias</Link>
           <Link href="/admin/products">Produtos</Link>
         </nav>
