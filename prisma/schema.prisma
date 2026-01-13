@@ -15,10 +15,8 @@ enum UserRole {
 
 enum OrderStatus {
   NOVO        @map("Novo")
-  CONFIRMADO  @map("Confirmado")
-  EM_PRODUCAO @map("Em produção")
+  EM_PRODUCAO @map("Em producao")
   PRONTO      @map("Pronto")
-  EM_ROTA     @map("Em rota")
   ENTREGUE    @map("Entregue")
   CANCELADO   @map("Cancelado")
 }
@@ -35,6 +33,7 @@ enum DeliveryMethod {
 
 enum UnitType {
   UNIDADE
+  CENTO
   KG
 }
 
@@ -95,6 +94,7 @@ model Category {
   id                   String  @id @default(cuid())
   name                 String  @unique
   description          String?
+  isActive             Boolean @default(true) @map("active")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @default(now()) @updatedAt
 
@@ -108,11 +108,11 @@ model Product {
   id         String   @id @default(cuid())
   name       String
   categoryId String
-  leadTimeHours       Int?
+  leadTime            Int? @map("leadTimeHours")
   descriptionLong     String?
   isActive            Boolean  @default(true) @map("active")
   isPublicHidden      Boolean  @default(false)
-  isSobConsulta       Boolean @default(false)
+  sobConsulta         Boolean @default(false) @map("isSobConsulta")
   imageMainUrl        String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @default(now()) @updatedAt
@@ -152,7 +152,8 @@ model Sku {
   priceCurrent Decimal
   cost         Decimal?
   isActive     Boolean  @default(true) @map("active")
-  isSobConsultaOverride Boolean?
+  sobConsultaOverride Boolean? @map("isSobConsultaOverride")
+  stockQuantity Decimal @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now()) @updatedAt
 
@@ -198,6 +199,7 @@ model Order {
   total             Decimal
   notes             String?
   cancellationReason String?
+  stockDecrementedAt DateTime?
   createdById       String?
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -217,14 +219,15 @@ model OrderItem {
   orderId     String
   skuId       String?
   quantity    Decimal
-  snapshotDisplayName String
+  snapshotSkuName     String @map("snapshotDisplayName")
+  snapshotProductName String?
   snapshotUnitLabel   String
   snapshotUnitType    UnitType
   snapshotSizeText    String?
   snapshotFlavorText  String?
   snapshotIsFrozen    Boolean @default(false)
   snapshotIsSobConsulta Boolean @default(false)
-  priceAtTime Decimal
+  snapshotUnitPrice Decimal @map("priceAtTime")
   lineTotal   Decimal
   createdAt   DateTime @default(now())
 
@@ -294,3 +297,6 @@ model CapacityRule {
   @@map("capacity_rules")
   @@index([categoryId, skuId])
 }
+
+
+
