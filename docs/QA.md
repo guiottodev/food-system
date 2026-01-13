@@ -1,33 +1,37 @@
 # QA Checklist (Gate 2)
 
-Este checklist deve ser executado para toda entrega que altera comportamento, telas, validações ou impressão.
+Este checklist deve ser executado para toda entrega que altera comportamento, telas, validacoes ou impressao.
 
 ## 1) Build & qualidade
-- [ ] `npm run build` passa sem erros
+- [x] `npm run build` passa sem erros
+- [x] `npm test` passa
 - [ ] Sem erros no console do navegador nas telas afetadas
-- [ ] Sem warnings críticos novos (apenas se inevitáveis e justificados)
+- [ ] Sem warnings criticos novos (apenas se inevitaveis e justificados)
 
 ## 2) Happy path (fluxo principal)
-- [ ] Criar um pedido completo com itens válidos
+- [ ] Criar um pedido completo com itens validos
 - [ ] Salvar/confirmar o pedido
-- [ ] Ver o pedido refletido na listagem/produção do dia (se existir)
+- [ ] Ver o pedido refletido na listagem/producao do dia (se existir)
 
-## 3) Validações (casos inválidos essenciais)
+## 3) Validacoes (casos invalidos essenciais)
 - [ ] UNIDADE: quantidade decimal deve falhar (ex.: 2.5)
-- [ ] KG: quantidade fora de múltiplo 0.05 deve falhar (ex.: 1.03)
-- [ ] Mensagens de erro são claras e aparecem no lugar correto
-- [ ] Validação existe no client E no server (não dá para “burlar”)
+- [ ] CENTO: quantidade decimal deve falhar (ex.: 2.5)
+- [ ] KG: quantidade fora de multiplo 0.05 deve falhar (ex.: 1.03)
+- [ ] Mensagens de erro sao claras e aparecem no lugar correto
+- [ ] Validacao existe no client E no server (nao da para "oburlar")
+- [ ] Cancelamento sem motivo deve falhar
 
 ## 4) Estados de tela
-- [ ] Loading state (carregamento) existe e não trava interação indevidamente
-- [ ] Empty state (sem dados) mostra orientação e próxima ação
-- [ ] Error state mostra mensagem + opção de tentar novamente
+- [ ] Loading state (carregamento) existe e nao trava interacao indevidamente
+- [ ] Empty state (sem dados) mostra orientacao e proxima acao
+- [ ] Error state mostra mensagem + opcao de tentar novamente
 
-## 5) Impressão (se aplicável)
-- [ ] Layout não corta conteúdo no papel térmico (A7/A8 conforme padrão do projeto)
-- [ ] Texto legível e informações essenciais presentes (pedido, itens, quantidades)
-- [ ] Teste de impressão executado em pelo menos 1 cenário real
+## 5) Impressao (se aplicavel)
+- [ ] Layout nao corta conteudo no papel termico (A7/A8 conforme padrao do projeto)
+- [ ] Texto legivel e informacoes essenciais presentes (pedido, itens, quantidades)
+- [ ] Teste de impressao executado em pelo menos 1 cenario real
 
-## 6) Smoke test (regressão rápida)
+## 6) Smoke test (regressao rapida)
+- [ ] Estoque nao duplica decremento em Entregue
 - [ ] Abrir tela principal do admin sem quebrar
-- [ ] Executar a ação mais crítica do dia a dia em menos de 1 minuto
+- [ ] Executar a acao mais critica do dia a dia em menos de 1 minuto
