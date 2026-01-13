@@ -35,8 +35,10 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 
 function formatUnit(item: OrderItem) {
   if (item.unitLabel) return item.unitLabel;
+  if (item.unitType === "KG") return "kg";
   if (item.unitType === "CENTO") return "cento";
-  return item.unitType === "KG" ? "kg" : "un";
+  if (item.unitType === "UNIDADE") return "un";
+  return "legacy";
 }
 
 export default function OrdersTableClient({
