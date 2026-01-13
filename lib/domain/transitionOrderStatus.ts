@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient, OrderStatus } from "@prisma/client";
+import { PrismaClient, OrderStatus } from "@prisma/client";
 import { validateStatusTransition } from "./order";
 
 export type TransitionResult =
@@ -6,7 +6,7 @@ export type TransitionResult =
   | { ok: false; error: string };
 
 export async function transitionOrderStatus(
-  prisma: PrismaClient | Prisma.TransactionClient,
+  prisma: PrismaClient,
   orderId: string,
   nextStatus: OrderStatus,
   actorId: string | null
