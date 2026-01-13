@@ -53,7 +53,7 @@
 **Execução no Windows**
 - Usuário abre por **duplo clique**:
   - `scripts/start-local.bat` inicia o servidor e abre o navegador
-  - `scripts/backup.bat` cria backup do SQLite com timestamp
+  - `scripts/backupbat` cria backup do SQLite com timestamp
 
 ---
 
