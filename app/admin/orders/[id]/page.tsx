@@ -6,10 +6,8 @@ import { cancelOrderAction, updateStatusAction } from "./actions";
 
 const statusLabel: Record<OrderStatus, string> = {
   NOVO: "Novo",
-  CONFIRMADO: "Confirmado",
-  EM_PRODUCAO: "Em produção",
+  EM_PRODUCAO: "Em producao",
   PRONTO: "Pronto",
-  EM_ROTA: "Em rota",
   ENTREGUE: "Entregue",
   CANCELADO: "Cancelado",
 };
@@ -25,12 +23,10 @@ const deliveryMethodLabel = {
 };
 
 const statusOptions = [
-  OrderStatus.CONFIRMADO,
+  OrderStatus.NOVO,
   OrderStatus.EM_PRODUCAO,
   OrderStatus.PRONTO,
-  OrderStatus.EM_ROTA,
   OrderStatus.ENTREGUE,
-  OrderStatus.CANCELADO,
 ];
 
 function formatDateTime(value: Date) {
@@ -61,9 +57,10 @@ export default async function OrderDetailPage({
         select: {
           id: true,
           quantity: true,
-          priceAtTime: true,
+          snapshotUnitPrice: true,
           lineTotal: true,
-          snapshotDisplayName: true,
+          snapshotSkuName: true,
+          snapshotProductName: true,
           snapshotUnitLabel: true,
           snapshotUnitType: true,
         },
@@ -145,29 +142,43 @@ export default async function OrderDetailPage({
         <div style={{ display: "grid", gap: 8 }}>
           {order.items.map((item) => (
             <div key={item.id} style={{ borderBottom: "1px solid #eee" }}>
-              <strong>{item.snapshotDisplayName}</strong>
+              <strong>
+                {item.snapshotProductName
+                  ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
+                  : item.snapshotSkuName}
+              </strong>
               <div>
                 {Number(item.quantity)} {item.snapshotUnitLabel} x R${" "}
-                {Number(item.priceAtTime).toFixed(2)} = R${" "}
+                {Number(item.snapshotUnitPrice).toFixed(2)} = R${" "}
                 {Number(item.lineTotal).toFixed(2)}
               </div>
             </div>
           ))}
         </div>
       </section>
-
       <section style={{ border: "1px solid #ddd", padding: 12 }}>
         <h2>Atualizar status</h2>
         <form action={updateStatusAction} style={{ display: "flex", gap: 8 }}>
           <input type="hidden" name="orderId" value={order.id} />
-          <select name="status" defaultValue={order.status}>
+          <select
+            name="status"
+            defaultValue={order.status}
+            disabled={order.status === "ENTREGUE" || order.status === "CANCELADO"}
+          >
             {statusOptions.map((status) => (
               <option key={status} value={status}>
                 {statusLabel[status]}
               </option>
             ))}
           </select>
-          <button type="submit">Atualizar</button>
+          <button
+            type="submit"
+            disabled={
+              order.status === "ENTREGUE" || order.status === "CANCELADO"
+            }
+          >
+            Atualizar
+          </button>
         </form>
       </section>
 
@@ -204,3 +215,8 @@ export default async function OrderDetailPage({
     </main>
   );
 }
+
+
+
+
+

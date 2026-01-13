@@ -48,18 +48,17 @@ function formatCurrency(value: number) {
 
 const statusOptions = [
   { value: "ALL", label: "Todos" },
-  { value: OrderStatus.CONFIRMADO, label: "Confirmado" },
-  { value: OrderStatus.EM_PRODUCAO, label: "Em produção" },
+  { value: OrderStatus.NOVO, label: "Novo" },
+  { value: OrderStatus.EM_PRODUCAO, label: "Em producao" },
   { value: OrderStatus.PRONTO, label: "Pronto" },
-  { value: OrderStatus.EM_ROTA, label: "Em rota" },
+  { value: OrderStatus.ENTREGUE, label: "Entregue" },
+  { value: OrderStatus.CANCELADO, label: "Cancelado" },
 ];
 
 const statusLabel: Record<OrderStatus, string> = {
   NOVO: "Novo",
-  CONFIRMADO: "Confirmado",
-  EM_PRODUCAO: "Em produção",
+  EM_PRODUCAO: "Em producao",
   PRONTO: "Pronto",
-  EM_ROTA: "Em rota",
   ENTREGUE: "Entregue",
   CANCELADO: "Cancelado",
 };
@@ -197,9 +196,10 @@ export default async function OrdersPage({
           select: {
             id: true,
             quantity: true,
-            priceAtTime: true,
+            snapshotUnitPrice: true,
             lineTotal: true,
-            snapshotDisplayName: true,
+            snapshotSkuName: true,
+            snapshotProductName: true,
             snapshotUnitLabel: true,
             snapshotUnitType: true,
           },
@@ -297,11 +297,13 @@ export default async function OrdersPage({
             totalLabel: formatCurrency(Number(order.total)),
             items: order.items.map((item) => ({
               id: item.id,
-              name: item.snapshotDisplayName,
+              name: item.snapshotProductName
+                ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
+                : item.snapshotSkuName,
               quantity: Number(item.quantity),
               unitLabel: item.snapshotUnitLabel,
               unitType: item.snapshotUnitType,
-              priceAtTime: item.priceAtTime ? Number(item.priceAtTime) : null,
+              priceAtTime: item.snapshotUnitPrice ? Number(item.snapshotUnitPrice) : null,
               lineTotal: item.lineTotal ? Number(item.lineTotal) : null,
             })),
             subtotal: Number(order.subtotal),
@@ -323,3 +325,12 @@ export default async function OrdersPage({
     </main>
   );
 }
+
+
+
+
+
+
+
+
+

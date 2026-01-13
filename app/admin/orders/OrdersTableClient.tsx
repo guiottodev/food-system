@@ -35,6 +35,7 @@ const currencyFormatter = new Intl.NumberFormat("pt-BR", {
 
 function formatUnit(item: OrderItem) {
   if (item.unitLabel) return item.unitLabel;
+  if (item.unitType === "CENTO") return "cento";
   return item.unitType === "KG" ? "kg" : "un";
 }
 

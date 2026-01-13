@@ -70,7 +70,7 @@ export default function OrderForm({
 
   const subtotal = items.reduce((sum, item) => {
     const result = validateQtyByUnit(
-      item.unitType as "KG" | "UNIDADE",
+      item.unitType as "KG" | "UNIDADE" | "CENTO",
       item.quantity
     );
     if (!result.ok) return sum;
@@ -123,7 +123,7 @@ export default function OrderForm({
         if (idx !== index) return item;
         const next = { ...item, quantity };
         const result = validateQtyByUnit(
-          next.unitType as "KG" | "UNIDADE",
+          next.unitType as "KG" | "UNIDADE" | "CENTO",
           next.quantity
         );
         if (result.ok) {
@@ -141,7 +141,7 @@ export default function OrderForm({
   function validateItems() {
     for (const item of items) {
       const result = validateQtyByUnit(
-        item.unitType as "KG" | "UNIDADE",
+        item.unitType as "KG" | "UNIDADE" | "CENTO",
         item.quantity
       );
       if (!result.ok) {
@@ -380,7 +380,7 @@ export default function OrderForm({
                 <div style={{ marginTop: 6 }}>
                   {(() => {
                     const result = validateQtyByUnit(
-                      item.unitType as "KG" | "UNIDADE",
+                      item.unitType as "KG" | "UNIDADE" | "CENTO",
                       item.quantity
                     );
                     if (!result.ok) {
