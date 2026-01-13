@@ -2,6 +2,29 @@
 
 Este checklist deve ser executado para toda entrega que altera comportamento, telas, validacoes ou impressao.
 
+## Manual QA — humano
+1) Rodar `npm run dev` e acessar `http://localhost:3000/admin`.
+2) Executar os fluxos em `docs/INTEGRATION_FLOW.md` (Fluxo 1, 2 e 3).
+3) Durante os fluxos, validar mensagens e estados nas telas relevantes.
+4) Apos concluir, marcar os itens abaixo neste arquivo:
+- [ ] Sem erros no console do navegador nas telas afetadas
+- [ ] Sem warnings criticos novos (apenas se inevitaveis e justificados)
+- [ ] Criar um pedido completo com itens validos
+- [ ] Salvar/confirmar o pedido
+- [ ] Ver o pedido refletido na listagem/producao do dia (se existir)
+- [ ] UNIDADE: quantidade decimal deve falhar (ex.: 2.5)
+- [ ] CENTO: quantidade decimal deve falhar (ex.: 2.5)
+- [ ] KG: quantidade fora de multiplo 0.05 deve falhar (ex.: 1.03)
+- [ ] Mensagens de erro sao claras e aparecem no lugar correto
+- [ ] Validacao existe no client E no server (nao da para "oburlar")
+- [ ] Cancelamento sem motivo deve falhar
+- [ ] Loading state (carregamento) existe e nao trava interacao indevidamente
+- [ ] Empty state (sem dados) mostra orientacao e proxima acao
+- [ ] Error state mostra mensagem + opcao de tentar novamente
+- [ ] Estoque nao duplica decremento em Entregue
+- [ ] Abrir tela principal do admin sem quebrar
+- [ ] Executar a acao mais critica do dia a dia em menos de 1 minuto
+
 ## 1) Build & qualidade
 - [x] `npm run build` passa sem erros
 - [x] `npm test` passa
