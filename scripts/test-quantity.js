@@ -31,11 +31,11 @@ function validateQtyByUnit(unitType, input) {
 
   const { normalized, q100 } = parsed;
 
-  if (unitType === "UNIDADE") {
+  if (unitType === "UNIDADE" || unitType === "CENTO") {
     if (!Number.isInteger(normalized)) {
       return {
         ok: false,
-        error: "Para UNIDADE, a quantidade deve ser inteira.",
+        error: `Para ${unitType}, a quantidade deve ser inteira.`,
       };
     }
     return { ok: true, normalized: Math.round(normalized), q100 };
@@ -55,6 +55,8 @@ const cases = [
   { unit: "UNIDADE", input: 1, ok: true },
   { unit: "UNIDADE", input: 1.0, ok: true, normalized: 1 },
   { unit: "UNIDADE", input: 1.5, ok: false },
+  { unit: "CENTO", input: 2, ok: true },
+  { unit: "CENTO", input: 2.5, ok: false },
   { unit: "KG", input: "0,55", ok: true },
   { unit: "UNIDADE", input: " 2 ", ok: true, normalized: 2 },
 ];
