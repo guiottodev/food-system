@@ -8,6 +8,7 @@ import {
   validateCancelReason,
   validateStatusTransition,
 } from "@/lib/domain/order";
+import { transitionOrderStatus } from "@/lib/domain/transitionOrderStatus";
 import { OrderStatus } from "@prisma/client";
 
 async function getActorId() {
@@ -35,75 +36,15 @@ export async function updateStatusAction(formData: FormData) {
 
   const actorId = await getActorId();
 
-  await prisma.$transaction(async (tx) => {
-    const order = await tx.order.findUnique({
-      where: { id: orderId },
-      include: {
-        items: {
-          select: {
-            skuId: true,
-            quantity: true,
-          },
-        },
-      },
-    });
-    if (!order) {
-      redirect("/admin/orders");
-    }
-
-    const validation = validateStatusTransition(order.status, nextStatus);
-    if (!validation.ok) {
-      redirect(`/admin/orders/${orderId}?error=transicao`);
-    }
-
-    if (nextStatus === "ENTREGUE") {
-      const now = new Date();
-      const marked = await tx.order.updateMany({
-        where: {
-          id: orderId,
-          stockDecrementedAt: null,
-        },
-        data: {
-          status: nextStatus,
-          stockDecrementedAt: now,
-        },
-      });
-
-      if (marked.count === 1) {
-        for (const item of order.items) {
-          if (!item.skuId) continue;
-          await tx.sku.update({
-            where: { id: item.skuId },
-            data: {
-              stockQuantity: {
-                decrement: item.quantity,
-              },
-            },
-          });
-        }
-      } else if (order.status !== "ENTREGUE") {
-        await tx.order.update({
-          where: { id: orderId },
-          data: { status: nextStatus },
-        });
-      }
-    } else {
-      await tx.order.update({
-        where: { id: orderId },
-        data: { status: nextStatus },
-      });
-    }
-
-    await tx.auditLog.create({
-      data: {
-        actorId,
-        entityType: "orders",
-        entityId: orderId,
-        action: "status_change",
-        changes: `${order.status} -> ${nextStatus}`,
-      },
-    });
-  });
+  const result = await transitionOrderStatus(
+    prisma,
+    orderId,
+    nextStatus,
+    actorId
+  );
+  if (!result.ok) {
+    redirect(`/admin/orders/${orderId}?error=transicao`);
+  }
 
   redirect(`/admin/orders/${orderId}`);
 }
