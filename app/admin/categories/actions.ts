@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/adminAuth";
 
 function parseText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -12,6 +13,7 @@ function parseBool(value: FormDataEntryValue | null) {
 }
 
 export async function createCategoryAction(formData: FormData) {
+  await requireAdminSession();
   const name = parseText(formData.get("name"));
   const description = parseText(formData.get("description"));
   const isActive = parseBool(formData.get("isActive"));
@@ -31,6 +33,7 @@ export async function createCategoryAction(formData: FormData) {
 }
 
 export async function updateCategoryAction(formData: FormData) {
+  await requireAdminSession();
   const id = parseText(formData.get("id"));
   const name = parseText(formData.get("name"));
   const description = parseText(formData.get("description"));

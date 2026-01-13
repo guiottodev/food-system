@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/adminAuth";
 import { normalizeUnitType, normalizeUnitLabel } from "@/lib/unit";
 
 function parseText(value: FormDataEntryValue | null) {
@@ -33,6 +34,7 @@ function ensureInteger(value: number | null) {
 }
 
 export async function updateProductAction(formData: FormData) {
+  await requireAdminSession();
   const id = parseText(formData.get("id"));
   const name = parseText(formData.get("name"));
   const categoryId = parseText(formData.get("categoryId"));
@@ -82,6 +84,7 @@ export async function updateProductAction(formData: FormData) {
 }
 
 export async function createSkuAction(formData: FormData) {
+  await requireAdminSession();
   const productId = parseText(formData.get("productId"));
   const displayName = parseText(formData.get("displayName"));
   const sizeText = parseText(formData.get("sizeText"));
@@ -156,6 +159,7 @@ export async function createSkuAction(formData: FormData) {
 }
 
 export async function updateSkuAction(formData: FormData) {
+  await requireAdminSession();
   const productId = parseText(formData.get("productId"));
   const skuId = parseText(formData.get("skuId"));
   const displayName = parseText(formData.get("displayName"));
@@ -232,6 +236,7 @@ export async function updateSkuAction(formData: FormData) {
 }
 
 export async function duplicateSkuAction(formData: FormData) {
+  await requireAdminSession();
   const productId = parseText(formData.get("productId"));
   const skuId = parseText(formData.get("skuId"));
   if (!productId || !skuId) {

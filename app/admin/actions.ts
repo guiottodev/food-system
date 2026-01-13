@@ -10,6 +10,7 @@ export async function logoutAction() {
     sameSite: "lax",
     path: "/",
     maxAge: 0,
+    secure: process.env.NODE_ENV === "production",
   });
 
   redirect("/login");

@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { requireAdminSession } from "@/lib/adminAuth";
 
 function parseText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -27,6 +28,7 @@ function parseLines(value: FormDataEntryValue | null) {
 }
 
 export async function createProductAction(formData: FormData) {
+  await requireAdminSession();
   const name = parseText(formData.get("name"));
   const categoryId = parseText(formData.get("categoryId"));
   const descriptionLong = parseText(formData.get("descriptionLong"));

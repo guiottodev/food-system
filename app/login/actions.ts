@@ -25,6 +25,7 @@ export async function loginAction(formData: FormData) {
     sameSite: "lax",
     path: "/",
     maxAge: getSessionMaxAge(),
+    secure: process.env.NODE_ENV === "production",
   });
 
   redirect("/admin");
