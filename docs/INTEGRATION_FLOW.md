@@ -14,3 +14,8 @@ Use este roteiro quando nao houver testes de integracao automatizados.
 2) Criar produto ativo com a categoria.
 3) Criar SKU ativo e verificar que aparece no novo pedido.
 4) Inativar SKU e confirmar que nao aparece no novo pedido, mas permanece no historico.
+
+## Fluxo 3 — Snapshot de pedido
+1) Criar um pedido com SKU ativo e confirmar que aparece no detalhe com nome/valor/unidade.
+2) Editar o SKU (nome/unidade/preco) ou inativar o SKU.
+3) Reabrir o pedido historico e confirmar que os dados exibidos seguem o snapshot original.

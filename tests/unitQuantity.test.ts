@@ -24,8 +24,10 @@ describe("validateQuantity", () => {
   });
 
   it("accepts KG multiples of 0.05", () => {
+    expect(validateQuantity("KG", 0.05).ok).toBe(true);
+    expect(validateQuantity("KG", 0.1).ok).toBe(true);
     expect(validateQuantity("KG", 0.5).ok).toBe(true);
-    expect(validateQuantity("KG", 0.55).ok).toBe(true);
+    expect(validateQuantity("KG", 1.25).ok).toBe(true);
   });
 
   it("rejects KG values outside the 0.05 step", () => {
