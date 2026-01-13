@@ -1,4 +1,5 @@
 ﻿import { cookies } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logoutAction } from "./actions";
 import { verifySessionValue } from "@/lib/session";
@@ -20,7 +21,7 @@ export default async function AdminPage() {
       </div>
       <p>Bem-vindo ao sistema interno.</p>
       <div style={{ display: "grid", gap: 12, marginTop: 24 }}>
-        <a
+        <Link
           href="/admin/orders"
           style={{
             border: "1px solid #ddd",
@@ -31,8 +32,8 @@ export default async function AdminPage() {
           }}
         >
           Pedidos
-        </a>
-        <a
+        </Link>
+        <Link
           href="/admin/catalog"
           style={{
             border: "1px solid #ddd",
@@ -43,7 +44,7 @@ export default async function AdminPage() {
           }}
         >
           Catalogo
-        </a>
+        </Link>
       </div>
     </main>
   );

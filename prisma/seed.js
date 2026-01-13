@@ -38,7 +38,7 @@ async function main() {
       },
     });
 
-    const skus = await prisma.sku.createMany({
+    await prisma.sku.createMany({
       data: [
         {
           productId: productA.id,
