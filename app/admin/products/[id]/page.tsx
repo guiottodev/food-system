@@ -6,6 +6,7 @@ import {
   updateProductAction,
   updateSkuAction,
 } from "./actions";
+import styles from "../../_styles/adminPrimitives.module.css";
 
 type ProductSearchParams = {
   error?: string;
@@ -44,7 +45,7 @@ export default async function ProductDetailPage({
 
   if (!product) {
     return (
-      <main>
+      <main className={`${styles.page} ${styles.stackSm}`}>
         <p>Produto nao encontrado.</p>
         <Link href="/admin/products">Voltar</Link>
       </main>
@@ -61,36 +62,39 @@ export default async function ProductDetailPage({
     .join("\n");
 
   return (
-    <main style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h1>Produto: {product.name}</h1>
+    <main className={styles.page}>
+      <div className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>Produto: {product.name}</h1>
         <Link href="/admin/products">Voltar</Link>
       </div>
 
       {sp?.error === "campos" ? (
-        <p style={{ color: "crimson" }}>
+        <p className={styles.textError}>
           Preencha nome e categoria para salvar.
         </p>
       ) : null}
       {sp?.error === "sku_campos" ? (
-        <p style={{ color: "crimson" }}>
+        <p className={styles.textError}>
           Preencha nome, tamanho, tipo de venda, passo, minimo e preco.
         </p>
       ) : null}
       {sp?.error === "sku_unit" ? (
-        <p style={{ color: "crimson" }}>
+        <p className={styles.textError}>
           Tipo de venda e label de unidade incoerentes.
         </p>
       ) : null}
       {sp?.error === "sku_quantidade" ? (
-        <p style={{ color: "crimson" }}>
+        <p className={styles.textError}>
           Passo/minimo invalidos para o tipo de venda.
         </p>
       ) : null}
 
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Editar produto</h2>
-        <form action={updateProductAction} style={{ display: "grid", gap: 8 }}>
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Editar produto</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <form action={updateProductAction} className={styles.formGrid}>
           <input type="hidden" name="id" value={product.id} />
           <input name="name" defaultValue={product.name} required />
           <select name="categoryId" defaultValue={product.categoryId} required>
@@ -104,6 +108,7 @@ export default async function ProductDetailPage({
             name="descriptionLong"
             defaultValue={product.descriptionLong || ""}
             placeholder="Descricao longa"
+            className={styles.fieldFull}
           ></textarea>
           <input
             type="number"
@@ -113,7 +118,7 @@ export default async function ProductDetailPage({
             min="0"
             step="1"
           />
-          <label>
+          <label className={styles.clusterSm}>
             <input
               type="checkbox"
               name="isActive"
@@ -121,7 +126,7 @@ export default async function ProductDetailPage({
             />{" "}
             Ativo
           </label>
-          <label>
+          <label className={styles.clusterSm}>
             <input
               type="checkbox"
               name="isPublicHidden"
@@ -129,7 +134,7 @@ export default async function ProductDetailPage({
             />{" "}
             Ocultar do publico
           </label>
-          <label>
+          <label className={styles.clusterSm}>
             <input
               type="checkbox"
               name="sobConsulta"
@@ -141,27 +146,38 @@ export default async function ProductDetailPage({
             name="imageMainUrl"
             defaultValue={product.imageMainUrl || ""}
             placeholder="URL da imagem principal"
+            className={styles.fieldFull}
           />
           <textarea
             name="imageExtraUrls"
             defaultValue={imageExtraUrls}
             placeholder="URLs extras (uma por linha)"
+            className={styles.fieldFull}
           ></textarea>
           <button type="submit">Salvar produto</button>
-        </form>
+          </form>
+        </div>
       </section>
 
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Novo SKU</h2>
-        <form action={createSkuAction} style={{ display: "grid", gap: 8 }}>
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Novo SKU</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <form action={createSkuAction} className={styles.formGrid}>
           <input type="hidden" name="productId" value={product.id} />
-          <input name="displayName" placeholder="Nome exibido" required />
+          <input
+            name="displayName"
+            placeholder="Nome exibido"
+            required
+            className={styles.fieldFull}
+          />
           <input name="sizeText" placeholder="Tamanho" required />
           <input name="flavorText" placeholder="Sabor (opcional)" />
-          <label>
+          <label className={styles.clusterSm}>
             <input type="checkbox" name="isFrozen" /> Congelado
           </label>
-          <label>
+          <label className={styles.field}>
             Tipo de venda
             <select name="unitType" defaultValue="UNIDADE">
               {unitTypeOptions.map((opt) => (
@@ -172,27 +188,27 @@ export default async function ProductDetailPage({
             </select>
           </label>
           <input name="unitLabel" placeholder="un/cento/kg/kit" required />
-          <label>
+          <label className={styles.field}>
             Passo de quantidade
             <input type="number" name="quantityStep" step="0.1" required />
           </label>
-          <label>
+          <label className={styles.field}>
             Minimo
             <input type="number" name="minQty" step="0.1" required />
           </label>
-          <label>
+          <label className={styles.field}>
             Preco atual
             <input type="number" name="priceCurrent" step="0.01" required />
           </label>
-          <label>
+          <label className={styles.field}>
             Custo (opcional)
             <input type="number" name="cost" step="0.01" />
           </label>
-          <label>
+          <label className={styles.field}>
             Tags (separadas por virgula)
             <input name="tags" placeholder="salgado, festa" />
           </label>
-          <label>
+          <label className={styles.field}>
             Sob consulta
             <select name="sobConsultaOverride" defaultValue="inherit">
               <option value="inherit">Herdar do produto</option>
@@ -200,189 +216,193 @@ export default async function ProductDetailPage({
               <option value="false">Forcar nao</option>
             </select>
           </label>
-          <label>
+          <label className={styles.clusterSm}>
             <input type="checkbox" name="isActive" defaultChecked /> Ativo
           </label>
           <button type="submit">Criar SKU</button>
-        </form>
+          </form>
+        </div>
       </section>
 
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>SKUs</h2>
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>SKUs</h2>
+        </div>
         {product.skus.length === 0 ? (
-          <p>Nenhum SKU cadastrado.</p>
+          <div className={styles.emptyState}>Nenhum SKU cadastrado.</div>
         ) : (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              border: "1px solid #eee",
-            }}
-          >
-            <thead>
-              <tr style={{ background: "#f7f7f7" }}>
-                <th style={{ padding: 8, textAlign: "left" }}>Nome</th>
-                <th style={{ padding: 8, textAlign: "left" }}>Tamanho</th>
-                <th style={{ padding: 8, textAlign: "left" }}>Tipo</th>
-                <th style={{ padding: 8, textAlign: "left" }}>Status</th>
-                <th style={{ padding: 8, textAlign: "left" }}>Sob consulta</th>
-                <th style={{ padding: 8, textAlign: "left" }}>Preco</th>
-                <th style={{ padding: 8, textAlign: "left" }}>Acoes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {product.skus.map((sku) => (
-                <tr key={sku.id} style={{ borderTop: "1px solid #eee" }}>
-                  <td style={{ padding: 8 }}>
-                    <form
-                      action={updateSkuAction}
-                      style={{ display: "grid", gap: 6 }}
-                    >
-                      <input type="hidden" name="productId" value={product.id} />
-                      <input type="hidden" name="skuId" value={sku.id} />
-                      <input
-                        name="displayName"
-                        defaultValue={sku.displayName}
-                        required
-                      />
-                      <input
-                        name="sizeText"
-                        defaultValue={sku.sizeText}
-                        required
-                      />
-                      <input
-                        name="flavorText"
-                        defaultValue={sku.flavorText || ""}
-                        placeholder="Sabor"
-                      />
-                      <label>
-                        <input
-                          type="checkbox"
-                          name="isFrozen"
-                          defaultChecked={sku.isFrozen}
-                        />{" "}
-                        Congelado
-                      </label>
-                      <label>
-                        Tipo de venda
-                        <select name="unitType" defaultValue={sku.unitType}>
-                          {unitTypeOptions.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <input
-                        name="unitLabel"
-                        defaultValue={sku.unitLabel}
-                        placeholder="un/cento/kg/kit"
-                        required
-                      />
-                      <label>
-                        Passo de quantidade
-                        <input
-                          type="number"
-                          name="quantityStep"
-                          step="0.1"
-                          defaultValue={Number(sku.quantityStep)}
-                          required
-                        />
-                      </label>
-                      <label>
-                        Minimo
-                        <input
-                          type="number"
-                          name="minQty"
-                          step="0.1"
-                          defaultValue={Number(sku.minQty)}
-                          required
-                        />
-                      </label>
-                      <label>
-                        Preco atual
-                        <input
-                          type="number"
-                          name="priceCurrent"
-                          step="0.01"
-                          defaultValue={Number(sku.priceCurrent)}
-                          required
-                        />
-                      </label>
-                      <label>
-                        Custo (opcional)
-                        <input
-                          type="number"
-                          name="cost"
-                          step="0.01"
-                          defaultValue={sku.cost ? Number(sku.cost) : ""}
-                        />
-                      </label>
-                      <label>
-                        Tags (separadas por virgula)
-                        <input
-                          name="tags"
-                          defaultValue={sku.tags.map((tag) => tag.name).join(", ")}
-                        />
-                      </label>
-                      <label>
-                        Sob consulta
-                        <select
-                          name="sobConsultaOverride"
-                          defaultValue={
-                            sku.sobConsultaOverride === true
-                              ? "true"
-                              : sku.sobConsultaOverride === false
-                              ? "false"
-                              : "inherit"
-                          }
-                        >
-                          <option value="inherit">Herdar do produto</option>
-                          <option value="true">Forcar sob consulta</option>
-                          <option value="false">Forcar nao</option>
-                        </select>
-                      </label>
-                      <label>
-                        <input
-                          type="checkbox"
-                          name="isActive"
-                          defaultChecked={sku.isActive}
-                        />{" "}
-                        Ativo
-                      </label>
-                      <button type="submit">Salvar SKU</button>
-                    </form>
-                  </td>
-                  <td style={{ padding: 8 }}>{sku.sizeText}</td>
-                  <td style={{ padding: 8 }}>
-                    {sku.unitType} ({sku.unitLabel})
-                  </td>
-                  <td style={{ padding: 8 }}>
-                    {sku.isActive ? "ATIVO" : "INATIVO"}
-                  </td>
-                  <td style={{ padding: 8 }}>
-                    {sku.sobConsultaOverride === true
-                      ? "SIM"
-                      : sku.sobConsultaOverride === false
-                      ? "NAO"
-                      : product.sobConsulta
-                      ? "SIM"
-                      : "NAO"}
-                  </td>
-                  <td style={{ padding: 8 }}>
-                    R$ {Number(sku.priceCurrent).toFixed(2)}
-                  </td>
-                  <td style={{ padding: 8 }}>
-                    <form action={duplicateSkuAction}>
-                      <input type="hidden" name="productId" value={product.id} />
-                      <input type="hidden" name="skuId" value={sku.id} />
-                      <button type="submit">Duplicar</button>
-                    </form>
-                  </td>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Tamanho</th>
+                  <th>Tipo</th>
+                  <th>Status</th>
+                  <th>Sob consulta</th>
+                  <th className={styles.tableNumeric}>Preco</th>
+                  <th className={styles.tableActions}>Acoes</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {product.skus.map((sku) => (
+                  <tr key={sku.id}>
+                    <td>
+                      <form action={updateSkuAction} className={styles.stackSm}>
+                        <input
+                          type="hidden"
+                          name="productId"
+                          value={product.id}
+                        />
+                        <input type="hidden" name="skuId" value={sku.id} />
+                        <input
+                          name="displayName"
+                          defaultValue={sku.displayName}
+                          required
+                        />
+                        <input
+                          name="sizeText"
+                          defaultValue={sku.sizeText}
+                          required
+                        />
+                        <input
+                          name="flavorText"
+                          defaultValue={sku.flavorText || ""}
+                          placeholder="Sabor"
+                        />
+                        <label className={styles.clusterSm}>
+                          <input
+                            type="checkbox"
+                            name="isFrozen"
+                            defaultChecked={sku.isFrozen}
+                          />{" "}
+                          Congelado
+                        </label>
+                        <label className={styles.field}>
+                          Tipo de venda
+                          <select name="unitType" defaultValue={sku.unitType}>
+                            {unitTypeOptions.map((opt) => (
+                              <option key={opt.value} value={opt.value}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <input
+                          name="unitLabel"
+                          defaultValue={sku.unitLabel}
+                          placeholder="un/cento/kg/kit"
+                          required
+                        />
+                        <label className={styles.field}>
+                          Passo de quantidade
+                          <input
+                            type="number"
+                            name="quantityStep"
+                            step="0.1"
+                            defaultValue={Number(sku.quantityStep)}
+                            required
+                          />
+                        </label>
+                        <label className={styles.field}>
+                          Minimo
+                          <input
+                            type="number"
+                            name="minQty"
+                            step="0.1"
+                            defaultValue={Number(sku.minQty)}
+                            required
+                          />
+                        </label>
+                        <label className={styles.field}>
+                          Preco atual
+                          <input
+                            type="number"
+                            name="priceCurrent"
+                            step="0.01"
+                            defaultValue={Number(sku.priceCurrent)}
+                            required
+                          />
+                        </label>
+                        <label className={styles.field}>
+                          Custo (opcional)
+                          <input
+                            type="number"
+                            name="cost"
+                            step="0.01"
+                            defaultValue={sku.cost ? Number(sku.cost) : ""}
+                          />
+                        </label>
+                        <label className={styles.field}>
+                          Tags (separadas por virgula)
+                          <input
+                            name="tags"
+                            defaultValue={sku.tags
+                              .map((tag) => tag.name)
+                              .join(", ")}
+                          />
+                        </label>
+                        <label className={styles.field}>
+                          Sob consulta
+                          <select
+                            name="sobConsultaOverride"
+                            defaultValue={
+                              sku.sobConsultaOverride === true
+                                ? "true"
+                                : sku.sobConsultaOverride === false
+                                ? "false"
+                                : "inherit"
+                            }
+                          >
+                            <option value="inherit">Herdar do produto</option>
+                            <option value="true">Forcar sob consulta</option>
+                            <option value="false">Forcar nao</option>
+                          </select>
+                        </label>
+                        <label className={styles.clusterSm}>
+                          <input
+                            type="checkbox"
+                            name="isActive"
+                            defaultChecked={sku.isActive}
+                          />{" "}
+                          Ativo
+                        </label>
+                        <button type="submit">Salvar SKU</button>
+                      </form>
+                    </td>
+                    <td>{sku.sizeText}</td>
+                    <td>
+                      {sku.unitType} ({sku.unitLabel})
+                    </td>
+                    <td>{sku.isActive ? "ATIVO" : "INATIVO"}</td>
+                    <td>
+                      {sku.sobConsultaOverride === true
+                        ? "SIM"
+                        : sku.sobConsultaOverride === false
+                        ? "NAO"
+                        : product.sobConsulta
+                        ? "SIM"
+                        : "NAO"}
+                    </td>
+                    <td className={styles.tableNumeric}>
+                      R$ {Number(sku.priceCurrent).toFixed(2)}
+                    </td>
+                    <td className={styles.tableActions}>
+                      <form action={duplicateSkuAction}>
+                        <input
+                          type="hidden"
+                          name="productId"
+                          value={product.id}
+                        />
+                        <input type="hidden" name="skuId" value={sku.id} />
+                        <button type="submit">Duplicar</button>
+                      </form>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>

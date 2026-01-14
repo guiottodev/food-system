@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createProductAction } from "./actions";
+import styles from "../_styles/adminPrimitives.module.css";
 
 type ProductsSearchParams = {
   q?: string;
@@ -69,144 +70,145 @@ export default async function ProductsPage({
   });
 
   return (
-    <main style={{ display: "grid", gap: 16 }}>
-      <h1>Produtos</h1>
+    <main className={styles.page}>
+      <div className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>Produtos</h1>
+      </div>
 
       {sp?.error === "campos" ? (
-        <p style={{ color: "crimson" }}>
+        <p className={styles.textError}>
           Informe nome e categoria para criar o produto.
         </p>
       ) : null}
 
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Novo produto</h2>
-        <form action={createProductAction} style={{ display: "grid", gap: 8 }}>
-          <input name="name" placeholder="Nome do produto" required />
-          <select name="categoryId" required>
-            <option value="">Selecione a categoria</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-          <textarea
-            name="descriptionLong"
-            placeholder="Descricao longa (opcional)"
-          ></textarea>
-          <input
-            type="number"
-            name="leadTime"
-            placeholder="Lead time (horas)"
-            min="0"
-            step="1"
-          />
-          <label>
-            <input type="checkbox" name="isActive" defaultChecked /> Ativo
-          </label>
-          <label>
-            <input type="checkbox" name="isPublicHidden" /> Ocultar do publico
-          </label>
-          <label>
-            <input type="checkbox" name="sobConsulta" /> Sob consulta
-          </label>
-          <input
-            name="imageMainUrl"
-            placeholder="URL da imagem principal"
-          />
-          <textarea
-            name="imageExtraUrls"
-            placeholder="URLs extras (uma por linha)"
-          ></textarea>
-          <button type="submit">Criar produto</button>
-        </form>
-      </section>
-
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Filtros</h2>
-        <form
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 200px 160px 160px 160px 120px",
-            gap: 12,
-          }}
-        >
-          <input
-            type="text"
-            name="q"
-            placeholder="Buscar por nome"
-            defaultValue={query}
-          />
-          <select name="categoryId" defaultValue={categoryId}>
-            <option value="">Todas categorias</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-          <select name="active" defaultValue={activeFilter}>
-            <option value="all">Ativos e inativos</option>
-            <option value="active">Somente ativos</option>
-            <option value="inactive">Somente inativos</option>
-          </select>
-          <select name="hidden" defaultValue={hiddenFilter}>
-            <option value="all">Publico e oculto</option>
-            <option value="public">Somente publico</option>
-            <option value="hidden">Somente oculto</option>
-          </select>
-          <select name="sob" defaultValue={sobFilter}>
-            <option value="all">Com ou sem sob consulta</option>
-            <option value="yes">Somente sob consulta</option>
-            <option value="no">Sem sob consulta</option>
-          </select>
-          <button type="submit">Aplicar</button>
-        </form>
-      </section>
-
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Lista</h2>
-        {products.length === 0 ? (
-          <p>Nenhum produto encontrado.</p>
-        ) : (
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              border: "1px solid #eee",
-            }}
-          >
-            <thead>
-              <tr style={{ background: "#f7f7f7" }}>
-                <th style={{ padding: 8, textAlign: "left" }}>Produto</th>
-                <th style={{ padding: 8, textAlign: "left" }}>Categoria</th>
-                <th style={{ padding: 8, textAlign: "left" }}>Status</th>
-                <th style={{ padding: 8, textAlign: "left" }}>Sob consulta</th>
-                <th style={{ padding: 8, textAlign: "left" }}>SKUs</th>
-                <th style={{ padding: 8, textAlign: "left" }}>Acoes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id} style={{ borderTop: "1px solid #eee" }}>
-                  <td style={{ padding: 8 }}>{product.name}</td>
-                  <td style={{ padding: 8 }}>{product.category.name}</td>
-                  <td style={{ padding: 8 }}>
-                    {product.isActive ? "Ativo" : "Inativo"}
-                  </td>
-                  <td style={{ padding: 8 }}>
-                    {product.sobConsulta ? "Sim" : "Nao"}
-                  </td>
-                  <td style={{ padding: 8 }}>{product._count.skus}</td>
-                  <td style={{ padding: 8 }}>
-                    <Link href={`/admin/products/${product.id}`}>
-                      Ver detalhes
-                    </Link>
-                  </td>
-                </tr>
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Novo produto</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <form action={createProductAction} className={styles.formSection}>
+            <input name="name" placeholder="Nome do produto" required />
+            <select name="categoryId" required>
+              <option value="">Selecione a categoria</option>
+              {categories.map((category) => (
+                <option key={category.id} value={category.id}>
+                  {category.name}
+                </option>
               ))}
-            </tbody>
-          </table>
+            </select>
+            <textarea
+              name="descriptionLong"
+              placeholder="Descricao longa (opcional)"
+            ></textarea>
+            <input
+              type="number"
+              name="leadTime"
+              placeholder="Lead time (horas)"
+              min="0"
+              step="1"
+            />
+            <label className={styles.clusterSm}>
+              <input type="checkbox" name="isActive" defaultChecked /> Ativo
+            </label>
+            <label className={styles.clusterSm}>
+              <input type="checkbox" name="isPublicHidden" /> Ocultar do publico
+            </label>
+            <label className={styles.clusterSm}>
+              <input type="checkbox" name="sobConsulta" /> Sob consulta
+            </label>
+            <input name="imageMainUrl" placeholder="URL da imagem principal" />
+            <textarea
+              name="imageExtraUrls"
+              placeholder="URLs extras (uma por linha)"
+            ></textarea>
+            <button type="submit">Criar produto</button>
+          </form>
+        </div>
+      </section>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Filtros</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <form className={styles.toolbar}>
+            <div className={styles.toolbarGroup}>
+              <input
+                type="text"
+                name="q"
+                placeholder="Buscar por nome"
+                defaultValue={query}
+              />
+              <select name="categoryId" defaultValue={categoryId}>
+                <option value="">Todas categorias</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+              <select name="active" defaultValue={activeFilter}>
+                <option value="all">Ativos e inativos</option>
+                <option value="active">Somente ativos</option>
+                <option value="inactive">Somente inativos</option>
+              </select>
+              <select name="hidden" defaultValue={hiddenFilter}>
+                <option value="all">Publico e oculto</option>
+                <option value="public">Somente publico</option>
+                <option value="hidden">Somente oculto</option>
+              </select>
+              <select name="sob" defaultValue={sobFilter}>
+                <option value="all">Com ou sem sob consulta</option>
+                <option value="yes">Somente sob consulta</option>
+                <option value="no">Sem sob consulta</option>
+              </select>
+            </div>
+            <div className={styles.toolbarActions}>
+              <button type="submit">Aplicar</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Lista</h2>
+        </div>
+        {products.length === 0 ? (
+          <div className={styles.emptyState}>Nenhum produto encontrado.</div>
+        ) : (
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th>Categoria</th>
+                  <th>Status</th>
+                  <th>Sob consulta</th>
+                  <th className={styles.tableNumeric}>SKUs</th>
+                  <th className={styles.tableActions}>Acoes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((product) => (
+                  <tr key={product.id}>
+                    <td>{product.name}</td>
+                    <td>{product.category.name}</td>
+                    <td>{product.isActive ? "Ativo" : "Inativo"}</td>
+                    <td>{product.sobConsulta ? "Sim" : "Nao"}</td>
+                    <td className={styles.tableNumeric}>
+                      {product._count.skus}
+                    </td>
+                    <td className={styles.tableActions}>
+                      <Link href={`/admin/products/${product.id}`}>
+                        Ver detalhes
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </main>
