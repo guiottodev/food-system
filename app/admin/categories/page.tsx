@@ -85,33 +85,40 @@ export default async function CategoriesPage({
             <tbody>
               {categories.map((category) => (
                 <tr key={category.id} style={{ borderTop: "1px solid #eee" }}>
-                  <form action={updateCategoryAction} style={{ display: "contents" }}>
-                    <td style={{ padding: 8 }}>
+                  <td style={{ padding: 8 }}>
+                    <input
+                      form={`category-form-${category.id}`}
+                      name="name"
+                      defaultValue={category.name}
+                      required
+                    />
+                  </td>
+                  <td style={{ padding: 8 }}>
+                    <textarea
+                      form={`category-form-${category.id}`}
+                      name="description"
+                      defaultValue={category.description || ""}
+                      placeholder="Descricao"
+                    ></textarea>
+                  </td>
+                  <td style={{ padding: 8 }}>
+                    <input
+                      form={`category-form-${category.id}`}
+                      type="checkbox"
+                      name="isActive"
+                      defaultChecked={category.isActive}
+                    />
+                  </td>
+                  <td style={{ padding: 8 }}>
+                    <form
+                      id={`category-form-${category.id}`}
+                      action={updateCategoryAction}
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
                       <input type="hidden" name="id" value={category.id} />
-                      <input
-                        name="name"
-                        defaultValue={category.name}
-                        required
-                      />
-                    </td>
-                    <td style={{ padding: 8 }}>
-                      <textarea
-                        name="description"
-                        defaultValue={category.description || ""}
-                        placeholder="Descricao"
-                      ></textarea>
-                    </td>
-                    <td style={{ padding: 8 }}>
-                      <input
-                        type="checkbox"
-                        name="isActive"
-                        defaultChecked={category.isActive}
-                      />
-                    </td>
-                    <td style={{ padding: 8 }}>
                       <button type="submit">Salvar</button>
-                    </td>
-                  </form>
+                    </form>
+                  </td>
                 </tr>
               ))}
             </tbody>
