@@ -498,7 +498,7 @@ export default function OrderForm({
             </div>
             <div className={styles.panelBody}>
               <div className={styles.clusterSm}>
-                <label className={styles.clusterSm}>
+                <label className={styles.choiceRow}>
                   <input
                     type="radio"
                     name="customerMode"
@@ -508,9 +508,11 @@ export default function OrderForm({
                       setCustomerName("");
                     }}
                   />
-                  Selecionar cliente existente
+                  <span className={styles.choiceLabel}>
+                    Selecionar cliente existente
+                  </span>
                 </label>
-                <label className={styles.clusterSm}>
+                <label className={styles.choiceRow}>
                   <input
                     type="radio"
                     name="customerMode"
@@ -520,7 +522,9 @@ export default function OrderForm({
                       setCustomerId("");
                     }}
                   />
-                  Cadastrar novo cliente
+                  <span className={styles.choiceLabel}>
+                    Cadastrar novo cliente
+                  </span>
                 </label>
               </div>
               {customerMode === "existing" ? (
@@ -534,6 +538,7 @@ export default function OrderForm({
                       onChange={(event) =>
                         setCustomerSearch(event.target.value)
                       }
+                      className={styles.control}
                     />
                   </label>
                   <label className={styles.field}>
@@ -560,6 +565,7 @@ export default function OrderForm({
                           ? "customer-error"
                           : undefined
                       }
+                      className={styles.control}
                     >
                       <option value="">Selecione um cliente</option>
                       {filteredCustomers.map((customer) => (
@@ -594,6 +600,7 @@ export default function OrderForm({
                           ? "customer-name-error"
                           : undefined
                       }
+                      className={styles.control}
                     />
                     {showErrors && validation.errors.customerName ? (
                       <span
@@ -611,6 +618,7 @@ export default function OrderForm({
                       placeholder="Telefone"
                       value={customerPhone}
                       onChange={(event) => setCustomerPhone(event.target.value)}
+                      className={styles.control}
                     />
                   </label>
                 </div>
@@ -684,6 +692,7 @@ export default function OrderForm({
                         ? "schedule-date-error"
                         : undefined
                     }
+                    className={styles.control}
                   />
                   {showErrors && validation.errors.scheduleDate ? (
                     <span
@@ -709,6 +718,7 @@ export default function OrderForm({
                         ? "schedule-time-error"
                         : undefined
                     }
+                    className={styles.control}
                   >
                     <option value="">Selecione o horario</option>
                     {TIME_OPTIONS.map((option) => (
@@ -748,6 +758,7 @@ export default function OrderForm({
                           ? "address-error"
                           : undefined
                       }
+                      className={styles.control}
                     />
                     {showErrors && validation.errors.addressText ? (
                       <span id="address-error" className={styles.fieldError}>
@@ -770,6 +781,7 @@ export default function OrderForm({
                           ? "city-error"
                           : undefined
                       }
+                      className={styles.control}
                     />
                     {showErrors && validation.errors.addressCity ? (
                       <span id="city-error" className={styles.fieldError}>
@@ -783,6 +795,7 @@ export default function OrderForm({
                       type="text"
                       value={addressBairro}
                       onChange={(event) => setAddressBairro(event.target.value)}
+                      className={styles.control}
                     />
                   </label>
                   <label className={`${styles.field} ${styles.fieldFull}`}>
@@ -793,6 +806,7 @@ export default function OrderForm({
                       onChange={(event) =>
                         setAddressReferencia(event.target.value)
                       }
+                      className={styles.control}
                     />
                   </label>
                   <label className={styles.field}>
@@ -812,6 +826,7 @@ export default function OrderForm({
                           ? "fee-error"
                           : undefined
                       }
+                      className={styles.control}
                     />
                     <span className={styles.fieldHelp}>
                       Use 0 se nao houver cobranca.
@@ -882,6 +897,7 @@ export default function OrderForm({
                       aria-expanded={skuOpen}
                       aria-controls="sku-listbox"
                       aria-autocomplete="list"
+                      className={styles.control}
                     />
                     {skuOpen ? (
                       <ul
@@ -945,6 +961,7 @@ export default function OrderForm({
                     <select
                       value={categoryId}
                       onChange={(event) => setCategoryId(event.target.value)}
+                      className={styles.control}
                     >
                       <option value="">Todas</option>
                       {categories.map((category) => (
@@ -954,7 +971,11 @@ export default function OrderForm({
                       ))}
                     </select>
                     {categoryId ? (
-                      <button type="button" onClick={() => setCategoryId("")}>
+                      <button
+                        type="button"
+                        onClick={() => setCategoryId("")}
+                        className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                      >
                         Limpar
                       </button>
                     ) : null}
@@ -1020,6 +1041,7 @@ export default function OrderForm({
                                     ? `qty-error-${item.lineId}`
                                     : undefined
                                 }
+                                className={styles.control}
                               />
                               {showErrors && itemError ? (
                                 <div
@@ -1041,6 +1063,7 @@ export default function OrderForm({
                               <button
                                 type="button"
                                 onClick={() => removeItem(item.lineId)}
+                                className={`${styles.button} ${styles.buttonDanger} ${styles.buttonSm}`}
                               >
                                 Remover
                               </button>
@@ -1067,6 +1090,7 @@ export default function OrderForm({
                   placeholder="Ex.: sem cebola, entregar na portaria..."
                   value={notes}
                   onChange={(event) => setNotes(event.target.value)}
+                  className={`${styles.control} ${styles.controlTextarea}`}
                 />
               </label>
             </div>
@@ -1105,7 +1129,11 @@ export default function OrderForm({
               )}
             </div>
             <div className={styles.panelFooter}>
-              <button type="submit" disabled={!validation.isValid}>
+              <button
+                type="submit"
+                disabled={!validation.isValid}
+                className={`${styles.button} ${styles.buttonPrimary}`}
+              >
                 Salvar pedido
               </button>
             </div>

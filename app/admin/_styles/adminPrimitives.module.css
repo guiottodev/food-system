@@ -463,7 +463,40 @@
   color: var(--text-muted);
 }
 
+.controlTextarea {
+  height: auto;
+  min-height: 96px;
+  padding: var(--space-3);
+  resize: vertical;
+}
+
+.choiceRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  user-select: none;
+}
+
+.choiceRow input {
+  cursor: pointer;
+}
+
+.choiceLabel {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.choiceHelp {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
 .button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
   height: 40px;
   padding: 0 var(--space-3);
   border: 1px solid var(--border);
@@ -471,11 +504,22 @@
   background: var(--bg-surface);
   color: var(--text-primary);
   font-weight: var(--fw-medium);
+  cursor: pointer;
 }
 
 .button:hover {
   border-color: var(--border-strong);
   background: var(--bg-subtle);
+}
+
+.button:focus-visible {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
 }
 
 .buttonPrimary {
@@ -485,5 +529,41 @@
 }
 
 .buttonPrimary:hover {
+  background: var(--focus-ring);
   filter: brightness(0.95);
+}
+
+.buttonSecondary {
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+.buttonGhost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text-primary);
+}
+
+.buttonGhost:hover {
+  border-color: transparent;
+  background: var(--bg-subtle);
+}
+
+.buttonDanger {
+  background: var(--state-error);
+  border-color: var(--state-error);
+  color: #ffffff;
+}
+
+.buttonDanger:hover {
+  background: var(--state-error);
+  border-color: var(--state-error);
+  filter: brightness(0.95);
+}
+
+.buttonSm {
+  height: 32px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
 }

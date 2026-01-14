@@ -87,8 +87,13 @@ export default async function ProductsPage({
         </div>
         <div className={styles.panelBody}>
           <form action={createProductAction} className={styles.formSection}>
-            <input name="name" placeholder="Nome do produto" required />
-            <select name="categoryId" required>
+            <input
+              name="name"
+              placeholder="Nome do produto"
+              required
+              className={styles.control}
+            />
+            <select name="categoryId" required className={styles.control}>
               <option value="">Selecione a categoria</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
@@ -99,6 +104,7 @@ export default async function ProductsPage({
             <textarea
               name="descriptionLong"
               placeholder="Descricao longa (opcional)"
+              className={`${styles.control} ${styles.controlTextarea}`}
             ></textarea>
             <input
               type="number"
@@ -106,22 +112,36 @@ export default async function ProductsPage({
               placeholder="Lead time (horas)"
               min="0"
               step="1"
+              className={styles.control}
             />
-            <label className={styles.clusterSm}>
-              <input type="checkbox" name="isActive" defaultChecked /> Ativo
+            <label className={styles.choiceRow}>
+              <input type="checkbox" name="isActive" defaultChecked />
+              <span className={styles.choiceLabel}>Ativo</span>
             </label>
-            <label className={styles.clusterSm}>
-              <input type="checkbox" name="isPublicHidden" /> Ocultar do publico
+            <label className={styles.choiceRow}>
+              <input type="checkbox" name="isPublicHidden" />
+              <span className={styles.choiceLabel}>Ocultar do publico</span>
             </label>
-            <label className={styles.clusterSm}>
-              <input type="checkbox" name="sobConsulta" /> Sob consulta
+            <label className={styles.choiceRow}>
+              <input type="checkbox" name="sobConsulta" />
+              <span className={styles.choiceLabel}>Sob consulta</span>
             </label>
-            <input name="imageMainUrl" placeholder="URL da imagem principal" />
+            <input
+              name="imageMainUrl"
+              placeholder="URL da imagem principal"
+              className={styles.control}
+            />
             <textarea
               name="imageExtraUrls"
               placeholder="URLs extras (uma por linha)"
+              className={`${styles.control} ${styles.controlTextarea}`}
             ></textarea>
-            <button type="submit">Criar produto</button>
+            <button
+              type="submit"
+              className={`${styles.button} ${styles.buttonPrimary}`}
+            >
+              Criar produto
+            </button>
           </form>
         </div>
       </section>
@@ -138,8 +158,13 @@ export default async function ProductsPage({
                 name="q"
                 placeholder="Buscar por nome"
                 defaultValue={query}
+                className={styles.control}
               />
-              <select name="categoryId" defaultValue={categoryId}>
+              <select
+                name="categoryId"
+                defaultValue={categoryId}
+                className={styles.control}
+              >
                 <option value="">Todas categorias</option>
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
@@ -147,24 +172,41 @@ export default async function ProductsPage({
                   </option>
                 ))}
               </select>
-              <select name="active" defaultValue={activeFilter}>
+              <select
+                name="active"
+                defaultValue={activeFilter}
+                className={styles.control}
+              >
                 <option value="all">Ativos e inativos</option>
                 <option value="active">Somente ativos</option>
                 <option value="inactive">Somente inativos</option>
               </select>
-              <select name="hidden" defaultValue={hiddenFilter}>
+              <select
+                name="hidden"
+                defaultValue={hiddenFilter}
+                className={styles.control}
+              >
                 <option value="all">Publico e oculto</option>
                 <option value="public">Somente publico</option>
                 <option value="hidden">Somente oculto</option>
               </select>
-              <select name="sob" defaultValue={sobFilter}>
+              <select
+                name="sob"
+                defaultValue={sobFilter}
+                className={styles.control}
+              >
                 <option value="all">Com ou sem sob consulta</option>
                 <option value="yes">Somente sob consulta</option>
                 <option value="no">Sem sob consulta</option>
               </select>
             </div>
             <div className={styles.toolbarActions}>
-              <button type="submit">Aplicar</button>
+              <button
+                type="submit"
+                className={`${styles.button} ${styles.buttonSecondary}`}
+              >
+                Aplicar
+              </button>
             </div>
           </form>
         </div>
