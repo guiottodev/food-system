@@ -196,6 +196,50 @@ export default function DesignSystemPage() {
 
       <section className={styles.panel}>
         <div className={styles.panelHeader}>
+          <h2>Screen: Novo pedido V2</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <div className={styles.pageGrid}>
+            <div className={styles.pageMain}>
+              <div className={styles.panelSub}>
+                <strong>Cliente</strong>
+                <div className={styles.textMuted}>
+                  Selecionar cliente existente ou cadastrar novo.
+                </div>
+              </div>
+              <div className={styles.panelSub}>
+                <strong>Entrega</strong>
+                <div className={styles.textMuted}>
+                  Metodo + agendamento + endereco quando aplicavel.
+                </div>
+              </div>
+              <div className={styles.panelSub}>
+                <strong>Itens</strong>
+                <div className={styles.textMuted}>
+                  Busca por produto + lista de itens adicionados.
+                </div>
+              </div>
+              <div className={styles.panelSub}>
+                <strong>Observacoes</strong>
+                <div className={styles.textMuted}>
+                  Campo livre para observacoes do pedido.
+                </div>
+              </div>
+            </div>
+            <div className={styles.pageAside}>
+              <div className={`${styles.panelSub} ${styles.stickyPanel}`}>
+                <strong>Resumo</strong>
+                <div className={styles.textMuted}>
+                  Subtotal, taxa e total + acao principal.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
           <h2>Focus test</h2>
         </div>
         <div className={styles.panelBody}>
