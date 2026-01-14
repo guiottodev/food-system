@@ -264,19 +264,28 @@ export default async function OrdersPage({
                 name="q"
                 placeholder="Buscar por cliente ou telefone"
                 defaultValue={query}
+                className={styles.control}
               />
-              <select name="status" defaultValue={statusParam}>
+              <select
+                name="status"
+                defaultValue={statusParam}
+                className={styles.control}
+              >
                 {statusOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
               </select>
-              <select name="dir" defaultValue={dir}>
+              <select name="dir" defaultValue={dir} className={styles.control}>
                 <option value="asc">Entrega: mais cedo</option>
                 <option value="desc">Entrega: mais tarde</option>
               </select>
-              <select name="pageSize" defaultValue={pageSize}>
+              <select
+                name="pageSize"
+                defaultValue={pageSize}
+                className={styles.control}
+              >
                 {PAGE_SIZES.map((size) => (
                   <option key={size} value={size}>
                     {size} por pagina
@@ -286,7 +295,12 @@ export default async function OrdersPage({
               <input type="hidden" name="view" value={view} />
             </div>
             <div className={styles.toolbarActions}>
-              <button type="submit">Aplicar</button>
+              <button
+                type="submit"
+                className={`${styles.button} ${styles.buttonPrimary}`}
+              >
+                Aplicar
+              </button>
             </div>
           </form>
         </div>
