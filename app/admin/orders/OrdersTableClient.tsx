@@ -1,7 +1,8 @@
-"use client";
+﻿"use client";
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
+import styles from "../_styles/adminPrimitives.module.css";
 
 type OrderItem = {
   id: string;
@@ -63,106 +64,96 @@ export default function OrdersTableClient({
   }
 
   return (
-    <table
-      style={{
-        width: "100%",
-        borderCollapse: "collapse",
-        border: "1px solid #ddd",
-      }}
-    >
-      <thead>
-        <tr style={{ background: "#f7f7f7" }}>
-          <th style={{ padding: 8, width: 40 }}></th>
-          <th style={{ padding: 8, textAlign: "left" }}>Nº do pedido</th>
-          <th style={{ padding: 8, textAlign: "left" }}>Cliente</th>
-          <th style={{ padding: 8, textAlign: "left" }}>Método</th>
-          <th style={{ padding: 8, textAlign: "left" }}>Status</th>
-          <th style={{ padding: 8, textAlign: "left" }}>Entrega</th>
-          <th style={{ padding: 8, textAlign: "right" }}>Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {orders.map((order) => {
-          const expanded = expandedIds.has(order.id);
-          return (
-            <Fragment key={order.id}>
-              <tr
-                style={{
-                  borderTop: "1px solid #eee",
-                  background: expanded ? "#fbfbfb" : "transparent",
-                }}
-              >
-                <td style={{ padding: 8 }}>
-                  <button
-                    type="button"
-                    onClick={() => toggle(order.id)}
-                    aria-expanded={expanded}
-                    aria-label="Ver itens"
-                  >
-                    {expanded ? "▼" : "▶"}
-                  </button>
-                </td>
-                <td style={{ padding: 8 }}>
-                  <Link href={`/admin/orders/${order.id}`}>
-                    {order.orderNumber}
-                  </Link>
-                </td>
-                <td style={{ padding: 8 }}>
-                  {order.customerName}
-                  {order.customerPhone ? ` (${order.customerPhone})` : ""}
-                </td>
-                <td style={{ padding: 8 }}>{order.deliveryMethodLabel}</td>
-                <td style={{ padding: 8 }}>{order.statusLabel}</td>
-                <td style={{ padding: 8 }}>{order.deliveryDatetime}</td>
-                <td style={{ padding: 8, textAlign: "right" }}>
-                  {order.totalLabel}
-                </td>
-              </tr>
-              {expanded ? (
-                <tr>
-                  <td colSpan={columns} style={{ padding: 12 }}>
-                    <strong>Itens</strong>
-                    {order.items.length === 0 ? (
-                      <p>Sem itens.</p>
-                    ) : (
-                      <ul style={{ margin: "8px 0 0 16px" }}>
-                        {order.items.map((item) => (
-                          <li key={item.id}>
-                            {item.name} — {item.quantity} {formatUnit(item)} —{" "}
-                            {item.priceAtTime !== null
-                              ? `${currencyFormatter.format(
-                                  item.priceAtTime
-                                )}/${formatUnit(item)}`
-                              : "—"}{" "}
-                            —{" "}
-                            {item.lineTotal !== null
-                              ? currencyFormatter.format(item.lineTotal)
-                              : "—"}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <div style={{ marginTop: 12 }}>
-                      <div>
-                        Subtotal: {currencyFormatter.format(order.subtotal)}
-                      </div>
-                      {order.deliveryFee > 0 ? (
-                        <div>
-                          Taxa de entrega:{" "}
-                          {currencyFormatter.format(order.deliveryFee)}
-                        </div>
-                      ) : null}
-                      <div>
-                        Total: {currencyFormatter.format(order.total)}
-                      </div>
-                    </div>
+    <div className={styles.tableWrap}>
+      <table className={styles.table}>
+        <thead>
+          <tr>
+            <th className={styles.tableIcon}></th>
+            <th>N do pedido</th>
+            <th>Cliente</th>
+            <th>Metodo</th>
+            <th>Status</th>
+            <th>Entrega</th>
+            <th className={styles.tableNumeric}>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {orders.map((order) => {
+            const expanded = expandedIds.has(order.id);
+            return (
+              <Fragment key={order.id}>
+                <tr className={expanded ? styles.tableRowExpanded : undefined}>
+                  <td className={styles.tableIcon}>
+                    <button
+                      type="button"
+                      onClick={() => toggle(order.id)}
+                      aria-expanded={expanded}
+                      aria-label="Ver itens"
+                    >
+                      {expanded ? "▾" : "▸"}
+                    </button>
                   </td>
+                  <td>
+                    <Link href={`/admin/orders/${order.id}`}>
+                      {order.orderNumber}
+                    </Link>
+                  </td>
+                  <td>
+                    {order.customerName}
+                    {order.customerPhone ? ` (${order.customerPhone})` : ""}
+                  </td>
+                  <td>{order.deliveryMethodLabel}</td>
+                  <td>{order.statusLabel}</td>
+                  <td>{order.deliveryDatetime}</td>
+                  <td className={styles.tableNumeric}>{order.totalLabel}</td>
                 </tr>
-              ) : null}
-            </Fragment>
-          );
-        })}
-      </tbody>
-    </table>
+                {expanded ? (
+                  <tr className={styles.tableRowExpanded}>
+                    <td colSpan={columns}>
+                      <div className={styles.stackSm}>
+                        <strong>Itens</strong>
+                        {order.items.length === 0 ? (
+                          <p className={styles.textMuted}>Sem itens.</p>
+                        ) : (
+                          <ul>
+                            {order.items.map((item) => (
+                              <li key={item.id}>
+                                {item.name} - {item.quantity} {formatUnit(item)} -{" "}
+                                {item.priceAtTime !== null
+                                  ? `${currencyFormatter.format(
+                                      item.priceAtTime
+                                    )}/${formatUnit(item)}`
+                                  : "-"} -{" "}
+                                {item.lineTotal !== null
+                                  ? currencyFormatter.format(item.lineTotal)
+                                  : "-"}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                        <div className={styles.stackSm}>
+                          <div>
+                            Subtotal: {currencyFormatter.format(order.subtotal)}
+                          </div>
+                          {order.deliveryFee > 0 ? (
+                            <div>
+                              Taxa de entrega:{" "}
+                              {currencyFormatter.format(order.deliveryFee)}
+                            </div>
+                          ) : null}
+                          <div>
+                            Total: {currencyFormatter.format(order.total)}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : null}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
