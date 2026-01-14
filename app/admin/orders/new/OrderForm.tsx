@@ -1,8 +1,9 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import { createOrderAction } from "./actions";
 import { validateQtyByUnit } from "@/lib/quantity";
+import styles from "../../_styles/adminPrimitives.module.css";
 
 type CustomerOption = {
   id: string;
@@ -154,7 +155,7 @@ export default function OrderForm({
   return (
     <form
       action={createOrderAction}
-      style={{ display: "grid", gap: 16 }}
+      className={styles.stackMd}
       onSubmit={(event) => {
         const message = validateItems();
         if (message) {
@@ -167,248 +168,259 @@ export default function OrderForm({
     >
       <input type="hidden" name="payload" value={payload} />
 
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Cliente</h2>
-        <div style={{ display: "flex", gap: 12 }}>
-          <label>
-            <input
-              type="radio"
-              checked={customerMode === "existing"}
-              onChange={() => setCustomerMode("existing")}
-            />{" "}
-            Selecionar existente
-          </label>
-          <label>
-            <input
-              type="radio"
-              checked={customerMode === "new"}
-              onChange={() => setCustomerMode("new")}
-            />{" "}
-            Novo cliente
-          </label>
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Cliente</h2>
         </div>
-        {customerMode === "existing" ? (
-          <select
-            value={customerId}
-            onChange={(event) => setCustomerId(event.target.value)}
-          >
-            <option value="">Selecione o cliente</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name} {customer.phone ? `(${customer.phone})` : ""}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-            <input
-              type="text"
-              placeholder="Nome do cliente"
-              value={customerName}
-              onChange={(event) => setCustomerName(event.target.value)}
-              required={customerMode === "new"}
-            />
-            <input
-              type="text"
-              placeholder="Telefone (opcional)"
-              value={customerPhone}
-              onChange={(event) => setCustomerPhone(event.target.value)}
-            />
+        <div className={styles.panelBody}>
+          <div className={styles.clusterSm}>
+            <label className={styles.clusterSm}>
+              <input
+                type="radio"
+                checked={customerMode === "existing"}
+                onChange={() => setCustomerMode("existing")}
+              />{" "}
+              Selecionar existente
+            </label>
+            <label className={styles.clusterSm}>
+              <input
+                type="radio"
+                checked={customerMode === "new"}
+                onChange={() => setCustomerMode("new")}
+              />{" "}
+              Novo cliente
+            </label>
           </div>
-        )}
-      </section>
-
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Entrega</h2>
-        <div style={{ display: "grid", gap: 8 }}>
-          <label>
-            Data e hora
-            <input
-              type="datetime-local"
-              value={deliveryDatetime}
-              onChange={(event) => setDeliveryDatetime(event.target.value)}
-              required
-            />
-          </label>
-          <label>
-            Método
+          {customerMode === "existing" ? (
             <select
-              value={deliveryMethod}
-              onChange={(event) =>
-                setDeliveryMethod(event.target.value as "ENTREGA" | "RETIRADA")
-              }
+              value={customerId}
+              onChange={(event) => setCustomerId(event.target.value)}
             >
-              <option value="ENTREGA">Entrega</option>
-              <option value="RETIRADA">Retirada</option>
+              <option value="">Selecione o cliente</option>
+              {customers.map((customer) => (
+                <option key={customer.id} value={customer.id}>
+                  {customer.name} {customer.phone ? `(${customer.phone})` : ""}
+                </option>
+              ))}
             </select>
-          </label>
-        </div>
-        {deliveryMethod === "ENTREGA" ? (
-          <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-            <input
-              type="text"
-              placeholder="Endereço"
-              value={addressText}
-              onChange={(event) => setAddressText(event.target.value)}
-              required
-            />
-            <input
-              type="text"
-              placeholder="Bairro"
-              value={addressBairro}
-              onChange={(event) => setAddressBairro(event.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Referência"
-              value={addressReferencia}
-              onChange={(event) => setAddressReferencia(event.target.value)}
-            />
-            <input
-              type="text"
-              placeholder="Cidade"
-              value={addressCity}
-              onChange={(event) => setAddressCity(event.target.value)}
-            />
-          </div>
-        ) : null}
-      </section>
-
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Pedido</h2>
-        <div style={{ display: "grid", gap: 8 }}>
-          <label>
-            Tipo
-            <select
-              value={orderType}
-              onChange={(event) =>
-                setOrderType(
-                  event.target.value as "PRONTA_ENTREGA" | "ENCOMENDA"
-                )
-              }
-            >
-              <option value="PRONTA_ENTREGA">Pronta entrega</option>
-              <option value="ENCOMENDA">Encomenda</option>
-            </select>
-          </label>
-          <label>
-            Taxa de entrega
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={deliveryFee}
-              onChange={(event) => setDeliveryFee(event.target.value)}
-            />
-          </label>
+          ) : (
+            <div className={styles.formGrid}>
+              <input
+                type="text"
+                placeholder="Nome do cliente"
+                value={customerName}
+                onChange={(event) => setCustomerName(event.target.value)}
+                required={customerMode === "new"}
+              />
+              <input
+                type="text"
+                placeholder="Telefone (opcional)"
+                value={customerPhone}
+                onChange={(event) => setCustomerPhone(event.target.value)}
+              />
+            </div>
+          )}
         </div>
       </section>
 
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Itens</h2>
-        <input
-          type="text"
-          placeholder="Buscar SKU"
-          value={skuSearch}
-          onChange={(event) => setSkuSearch(event.target.value)}
-        />
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr auto",
-            gap: 8,
-            marginTop: 8,
-          }}
-        >
-          <select
-            onChange={(event) => {
-              const sku = skus.find((s) => s.id === event.target.value);
-              if (sku) {
-                addItem(sku);
-                setSkuSearch("");
-                event.currentTarget.value = "";
-              }
-            }}
-          >
-            <option value="">Selecione um SKU</option>
-            {filteredSkus.map((sku) => (
-              <option key={sku.id} value={sku.id}>
-                {sku.displayName} ({sku.unitLabel})
-              </option>
-            ))}
-          </select>
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Entrega</h2>
         </div>
-
-      {items.length === 0 ? (
-        <p style={{ marginTop: 12 }}>Nenhum item adicionado.</p>
-      ) : (
-        <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-          {items.map((item, index) => (
-              <div
-                key={`${item.skuId}-${index}`}
-                style={{
-                  border: "1px solid #eee",
-                  padding: 8,
-                  borderRadius: 6,
-                }}
+        <div className={styles.panelBody}>
+          <div className={styles.formGrid}>
+            <label className={styles.field}>
+              Data e hora
+              <input
+                type="datetime-local"
+                value={deliveryDatetime}
+                onChange={(event) => setDeliveryDatetime(event.target.value)}
+                required
+              />
+            </label>
+            <label className={styles.field}>
+              Metodo
+              <select
+                value={deliveryMethod}
+                onChange={(event) =>
+                  setDeliveryMethod(event.target.value as "ENTREGA" | "RETIRADA")
+                }
               >
-                <strong>{item.skuLabel}</strong>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "140px 1fr 120px",
-                    gap: 8,
-                    marginTop: 8,
-                  }}
-                >
-                  <input
-                    type="text"
-                    inputMode="decimal"
-                    placeholder="Qtd"
-                    value={item.quantity}
-                    onChange={(event) =>
-                      updateItem(index, event.target.value)
-                    }
-                  />
-                  <span>
-                    {item.unitLabel} (passo {item.quantityStep})
-                  </span>
-                  <button type="button" onClick={() => removeItem(index)}>
-                    Remover
-                  </button>
-                </div>
-                <div style={{ marginTop: 6 }}>
-                  {(() => {
-                    const result = validateQtyByUnit(
-                      item.unitType as "KG" | "UNIDADE" | "CENTO",
-                      item.quantity
-                    );
-                    if (!result.ok) {
-                      return "Quantidade invalida.";
-                    }
-                    const lineTotal = result.normalized * item.priceAtTime;
-                    return (
-                      <>
-                        Preço: R$ {item.priceAtTime.toFixed(2)} | Total linha:
-                        R$ {lineTotal.toFixed(2)}
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-            ))}
+                <option value="ENTREGA">Entrega</option>
+                <option value="RETIRADA">Retirada</option>
+              </select>
+            </label>
           </div>
-        )}
+          {deliveryMethod === "ENTREGA" ? (
+            <div className={styles.formGrid}>
+              <input
+                type="text"
+                placeholder="Endereco"
+                value={addressText}
+                onChange={(event) => setAddressText(event.target.value)}
+                required
+                className={styles.fieldFull}
+              />
+              <input
+                type="text"
+                placeholder="Bairro"
+                value={addressBairro}
+                onChange={(event) => setAddressBairro(event.target.value)}
+              />
+              <input
+                type="text"
+                placeholder="Referencia"
+                value={addressReferencia}
+                onChange={(event) => setAddressReferencia(event.target.value)}
+                className={styles.fieldFull}
+              />
+              <input
+                type="text"
+                placeholder="Cidade"
+                value={addressCity}
+                onChange={(event) => setAddressCity(event.target.value)}
+              />
+            </div>
+          ) : null}
+        </div>
       </section>
 
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Totais</h2>
-        <p>Subtotal: R$ {subtotal.toFixed(2)}</p>
-        <p>Total: R$ {total.toFixed(2)}</p>
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Pedido</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <div className={styles.formGrid}>
+            <label className={styles.field}>
+              Tipo
+              <select
+                value={orderType}
+                onChange={(event) =>
+                  setOrderType(
+                    event.target.value as "PRONTA_ENTREGA" | "ENCOMENDA"
+                  )
+                }
+              >
+                <option value="PRONTA_ENTREGA">Pronta entrega</option>
+                <option value="ENCOMENDA">Encomenda</option>
+              </select>
+            </label>
+            <label className={styles.field}>
+              Taxa de entrega
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={deliveryFee}
+                onChange={(event) => setDeliveryFee(event.target.value)}
+              />
+            </label>
+          </div>
+        </div>
       </section>
 
-      <button type="submit">Salvar pedido</button>
-      {qtyError ? <p style={{ color: "crimson" }}>{qtyError}</p> : null}
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Itens</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <div className={styles.formSection}>
+            <input
+              type="text"
+              placeholder="Buscar SKU"
+              value={skuSearch}
+              onChange={(event) => setSkuSearch(event.target.value)}
+            />
+            <select
+              onChange={(event) => {
+                const sku = skus.find((s) => s.id === event.target.value);
+                if (sku) {
+                  addItem(sku);
+                  setSkuSearch("");
+                  event.currentTarget.value = "";
+                }
+              }}
+            >
+              <option value="">Selecione um SKU</option>
+              {filteredSkus.map((sku) => (
+                <option key={sku.id} value={sku.id}>
+                  {sku.displayName} ({sku.unitLabel})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {items.length === 0 ? (
+            <p className={styles.textMuted}>Nenhum item adicionado.</p>
+          ) : (
+            <div className={styles.stackMd}>
+              {items.map((item, index) => (
+                <div key={`${item.skuId}-${index}`} className={styles.panelSub}>
+                  <div className={styles.stackSm}>
+                    <strong>{item.skuLabel}</strong>
+                    <div className={styles.gridRow}>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="Qtd"
+                        value={item.quantity}
+                        onChange={(event) =>
+                          updateItem(index, event.target.value)
+                        }
+                      />
+                      <span className={styles.textMuted}>
+                        {item.unitLabel} (passo {item.quantityStep})
+                      </span>
+                      <button type="button" onClick={() => removeItem(index)}>
+                        Remover
+                      </button>
+                    </div>
+                    <div className={styles.textMuted}>
+                      {(() => {
+                        const result = validateQtyByUnit(
+                          item.unitType as "KG" | "UNIDADE" | "CENTO",
+                          item.quantity
+                        );
+                        if (!result.ok) {
+                          return "Quantidade invalida.";
+                        }
+                        const lineTotal = result.normalized * item.priceAtTime;
+                        return (
+                          <>
+                            Preco: R$ {item.priceAtTime.toFixed(2)} | Total linha:
+                            R$ {lineTotal.toFixed(2)}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Totais</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <div className={styles.summaryRow}>
+            <span>Subtotal</span>
+            <strong>R$ {subtotal.toFixed(2)}</strong>
+          </div>
+          <div className={styles.summaryRow}>
+            <span>Total</span>
+            <strong>R$ {total.toFixed(2)}</strong>
+          </div>
+        </div>
+      </section>
+
+      <div className={styles.clusterSm}>
+        <button type="submit">Salvar pedido</button>
+      </div>
+      {qtyError ? <p className={styles.textError}>{qtyError}</p> : null}
     </form>
   );
 }

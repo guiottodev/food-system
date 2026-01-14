@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import OrderForm from "./OrderForm";
+import styles from "../../_styles/adminPrimitives.module.css";
 
 export default async function NewOrderPage({
   searchParams,
@@ -37,10 +38,10 @@ export default async function NewOrderPage({
   }
 
   return (
-    <main>
-      <h1>Novo pedido</h1>
+    <main className={styles.page}>
+      <h1 className={styles.pageTitle}>Novo pedido</h1>
       {errorMessage ? (
-        <p style={{ color: "crimson" }}>{errorMessage}</p>
+        <p className={styles.textError}>{errorMessage}</p>
       ) : null}
       <OrderForm
         customers={customers.map((customer) => ({
