@@ -7,9 +7,40 @@
   gap: var(--space-4);
 }
 
+.pageGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: start;
+}
+
+.pageMain {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.pageAside {
+  position: relative;
+}
+
+.stickyPanel {
+  position: sticky;
+  top: var(--space-5);
+}
+
 @media (max-width: 720px) {
   .page {
     padding: var(--space-4);
+  }
+}
+
+@media (max-width: 900px) {
+  .pageGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .stickyPanel {
+    position: static;
   }
 }
 
@@ -41,6 +72,48 @@
 .pageSubnavLink:focus-visible {
   color: var(--text-primary);
   background: var(--bg-subtle);
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.segmentedOption {
+  position: relative;
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  cursor: pointer;
+}
+
+.segmentedOption input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmentedOption:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.segmentedActive {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+}
+
+.segmentedTitle {
+  font-weight: var(--fw-medium);
+}
+
+.segmentedHelp {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .topNav {
@@ -170,6 +243,51 @@
 .formSection {
   display: grid;
   gap: var(--space-3);
+}
+
+.autocomplete {
+  position: relative;
+}
+
+.autocompleteList {
+  position: absolute;
+  z-index: 20;
+  width: 100%;
+  margin: var(--space-1) 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.autocompleteOption {
+  padding: var(--space-2) var(--space-3);
+  display: grid;
+  gap: var(--space-1);
+  cursor: pointer;
+}
+
+.autocompleteOptionActive {
+  background: var(--bg-subtle);
+}
+
+.autocompleteMain {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.autocompleteMeta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.autocompleteEmpty {
+  padding: var(--space-2) var(--space-3);
+  color: var(--text-muted);
 }
 
 .formGrid {
