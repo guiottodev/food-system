@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { OrderStatus } from "@prisma/client";
 import { cancelOrderAction, updateStatusAction } from "./actions";
+import styles from "../../_styles/adminPrimitives.module.css";
 
 const statusLabel: Record<OrderStatus, string> = {
   NOVO: "Novo",
@@ -70,8 +71,8 @@ export default async function OrderDetailPage({
 
   if (!order) {
     return (
-      <main>
-        <p>Pedido não encontrado.</p>
+      <main className={`${styles.page} ${styles.stackSm}`}>
+        <p>Pedido nao encontrado.</p>
         <Link href="/admin/orders">Voltar</Link>
       </main>
     );
@@ -88,135 +89,146 @@ export default async function OrderDetailPage({
   });
 
   return (
-    <main style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h1>Pedido {order.orderNumber}</h1>
+    <main className={styles.page}>
+      <div className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>Pedido {order.orderNumber}</h1>
         <Link href="/admin/orders">Voltar</Link>
       </div>
 
       {searchParams?.converted ? (
-        <div
-          style={{
-            padding: 12,
-            background: "#fff3cd",
-            border: "1px solid #ffecb5",
-            borderRadius: 6,
-          }}
-        >
+        <div className={`${styles.notice} ${styles.noticeWarning}`}>
           Estoque insuficiente para pronta entrega. Pedido convertido para
           encomenda.
         </div>
       ) : null}
 
       {searchParams?.error === "motivo" ? (
-        <p style={{ color: "crimson" }}>Informe o motivo do cancelamento.</p>
+        <p className={styles.textError}>Informe o motivo do cancelamento.</p>
       ) : null}
 
       {searchParams?.error === "transicao" ? (
-        <p style={{ color: "crimson" }}>Transição de status inválida.</p>
+        <p className={styles.textError}>Transicao de status invalida.</p>
       ) : null}
 
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Dados do pedido</h2>
-        <p>Cliente: {order.customer.name}</p>
-        <p>Telefone: {order.customer.phone || "-"}</p>
-        <p>Status: {statusLabel[order.status]}</p>
-        <p>Tipo: {orderTypeLabel[order.orderType]}</p>
-        <p>Entrega/Retirada: {deliveryMethodLabel[order.deliveryMethod]}</p>
-        <p>Data/hora: {formatDateTime(order.deliveryDatetime)}</p>
-        {order.deliveryMethod === "ENTREGA" ? (
-          <>
-            <p>Endereço: {order.addressText || "-"}</p>
-            <p>Bairro: {order.addressBairro || "-"}</p>
-            <p>Referência: {order.addressReferencia || "-"}</p>
-            <p>Cidade: {order.addressCity || "-"}</p>
-          </>
-        ) : null}
-        <p>Taxa de entrega: R$ {Number(order.deliveryFee || 0).toFixed(2)}</p>
-        <p>Subtotal: R$ {Number(order.subtotal).toFixed(2)}</p>
-        <p>Total: R$ {Number(order.total).toFixed(2)}</p>
-      </section>
-
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Itens</h2>
-        <div style={{ display: "grid", gap: 8 }}>
-          {order.items.map((item) => (
-            <div key={item.id} style={{ borderBottom: "1px solid #eee" }}>
-              <strong>
-                {item.snapshotProductName
-                  ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
-                  : item.snapshotSkuName}
-              </strong>
-              <div>
-                {Number(item.quantity)} {item.snapshotUnitLabel} x R${" "}
-                {Number(item.snapshotUnitPrice).toFixed(2)} = R${" "}
-                {Number(item.lineTotal).toFixed(2)}
-              </div>
-            </div>
-          ))}
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Dados do pedido</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <div className={styles.stackSm}>
+            <div>Cliente: {order.customer.name}</div>
+            <div>Telefone: {order.customer.phone || "-"}</div>
+            <div>Status: {statusLabel[order.status]}</div>
+            <div>Tipo: {orderTypeLabel[order.orderType]}</div>
+            <div>Entrega/Retirada: {deliveryMethodLabel[order.deliveryMethod]}</div>
+            <div>Data/hora: {formatDateTime(order.deliveryDatetime)}</div>
+            {order.deliveryMethod === "ENTREGA" ? (
+              <>
+                <div>Endereco: {order.addressText || "-"}</div>
+                <div>Bairro: {order.addressBairro || "-"}</div>
+                <div>Referencia: {order.addressReferencia || "-"}</div>
+                <div>Cidade: {order.addressCity || "-"}</div>
+              </>
+            ) : null}
+            <div>Taxa de entrega: R$ {Number(order.deliveryFee || 0).toFixed(2)}</div>
+            <div>Subtotal: R$ {Number(order.subtotal).toFixed(2)}</div>
+            <div>Total: R$ {Number(order.total).toFixed(2)}</div>
+          </div>
         </div>
       </section>
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Atualizar status</h2>
-        <form action={updateStatusAction} style={{ display: "flex", gap: 8 }}>
-          <input type="hidden" name="orderId" value={order.id} />
-          <select
-            name="status"
-            defaultValue={order.status}
-            disabled={order.status === "ENTREGUE" || order.status === "CANCELADO"}
-          >
-            {statusOptions.map((status) => (
-              <option key={status} value={status}>
-                {statusLabel[status]}
-              </option>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Itens</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <div className={styles.stackSm}>
+            {order.items.map((item) => (
+              <div key={item.id} className={styles.panelSub}>
+                <div>
+                  <strong>
+                    {item.snapshotProductName
+                      ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
+                      : item.snapshotSkuName}
+                  </strong>
+                </div>
+                <div>
+                  {Number(item.quantity)} {item.snapshotUnitLabel} x R${" "}
+                  {Number(item.snapshotUnitPrice).toFixed(2)} = R${" "}
+                  {Number(item.lineTotal).toFixed(2)}
+                </div>
+              </div>
             ))}
-          </select>
-          <button
-            type="submit"
-            disabled={
-              order.status === "ENTREGUE" || order.status === "CANCELADO"
-            }
-          >
-            Atualizar
-          </button>
-        </form>
+          </div>
+        </div>
       </section>
 
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Cancelar pedido</h2>
-        <form action={cancelOrderAction} style={{ display: "grid", gap: 8 }}>
-          <input type="hidden" name="orderId" value={order.id} />
-          <input
-            name="cancellationReason"
-            placeholder="Motivo do cancelamento"
-          />
-          <button type="submit">Cancelar pedido</button>
-        </form>
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Atualizar status</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <form action={updateStatusAction} className={styles.clusterSm}>
+            <input type="hidden" name="orderId" value={order.id} />
+            <select
+              name="status"
+              defaultValue={order.status}
+              disabled={order.status === "ENTREGUE" || order.status === "CANCELADO"}
+            >
+              {statusOptions.map((status) => (
+                <option key={status} value={status}>
+                  {statusLabel[status]}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={order.status === "ENTREGUE" || order.status === "CANCELADO"}
+            >
+              Atualizar
+            </button>
+          </form>
+        </div>
       </section>
 
-      <section style={{ border: "1px solid #ddd", padding: 12 }}>
-        <h2>Auditoria</h2>
-        {auditLogs.length === 0 ? (
-          <p>Sem registros recentes.</p>
-        ) : (
-          <ul>
-            {auditLogs.map((log) => (
-              <li key={log.id}>
-                {new Intl.DateTimeFormat("pt-BR", {
-                  dateStyle: "short",
-                  timeStyle: "short",
-                }).format(log.createdAt)}{" "}
-                - {log.action} ({log.actor?.username || "sistema"})
-              </li>
-            ))}
-          </ul>
-        )}
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Cancelar pedido</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <form action={cancelOrderAction} className={styles.formSection}>
+            <input type="hidden" name="orderId" value={order.id} />
+            <input
+              name="cancellationReason"
+              placeholder="Motivo do cancelamento"
+            />
+            <button type="submit">Cancelar pedido</button>
+          </form>
+        </div>
+      </section>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Auditoria</h2>
+        </div>
+        <div className={styles.panelBody}>
+          {auditLogs.length === 0 ? (
+            <div className={styles.emptyState}>Sem registros recentes.</div>
+          ) : (
+            <ul>
+              {auditLogs.map((log) => (
+                <li key={log.id}>
+                  {new Intl.DateTimeFormat("pt-BR", {
+                    dateStyle: "short",
+                    timeStyle: "short",
+                  }).format(log.createdAt)}{" "}
+                  - {log.action} ({log.actor?.username || "sistema"})
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </section>
     </main>
   );
 }
-
-
-
-
-
