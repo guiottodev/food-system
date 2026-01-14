@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import styles from "../_styles/adminPrimitives.module.css";
 
@@ -33,7 +34,7 @@ export default function DesignSystemPage() {
             Outro paragrafo com numeros: 10, 20, 30, 40, 50 e percentuais 12%,
             45%, 99%.
           </p>
-          <a href="/admin">Link de exemplo para o painel</a>
+          <Link href="/admin">Link de exemplo para o painel</Link>
         </div>
       </section>
 
@@ -244,7 +245,7 @@ export default function DesignSystemPage() {
         </div>
         <div className={styles.panelBody}>
           <div className={styles.stackSm}>
-            <a href="/admin/orders">Link para pedidos</a>
+            <Link href="/admin/orders">Link para pedidos</Link>
             <input type="text" placeholder="Campo para tab" />
             <button type="button">Botao final</button>
           </div>
