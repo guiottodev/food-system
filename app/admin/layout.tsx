@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { logoutAction } from "./actions";
 import { verifySessionValue } from "@/lib/session";
+import styles from "./_styles/adminPrimitives.module.css";
 
 export default async function AdminLayout({
   children,
@@ -16,27 +17,34 @@ export default async function AdminLayout({
   }
 
   return (
-    <div style={{ maxWidth: 1100, margin: "32px auto", padding: 16 }}>
-      <header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 24,
-        }}
-      >
-        <nav style={{ display: "flex", gap: 12 }}>
-          <Link href="/admin">Painel</Link>
-          <Link href="/admin/orders">Pedidos</Link>
-          <Link href="/admin/orders/new">Novo pedido</Link>
-          <Link href="/admin/catalog">Catalogo</Link>
-          <Link href="/admin/categories">Categorias</Link>
-          <Link href="/admin/products">Produtos</Link>
-        </nav>
-        <form action={logoutAction}>
-          <button type="submit">Sair</button>
-        </form>
-      </header>
+    <div className={styles.stackMd}>
+      <div className={styles.page}>
+        <header className={styles.pageHeader}>
+          <nav className={styles.topNav}>
+            <Link className={styles.topNavLink} href="/admin">
+              Painel
+            </Link>
+            <Link className={styles.topNavLink} href="/admin/orders">
+              Pedidos
+            </Link>
+            <Link className={styles.topNavLink} href="/admin/orders/new">
+              Novo pedido
+            </Link>
+            <Link className={styles.topNavLink} href="/admin/catalog">
+              Catalogo
+            </Link>
+            <Link className={styles.topNavLink} href="/admin/categories">
+              Categorias
+            </Link>
+            <Link className={styles.topNavLink} href="/admin/products">
+              Produtos
+            </Link>
+          </nav>
+          <form className={styles.topNavRight} action={logoutAction}>
+            <button type="submit">Sair</button>
+          </form>
+        </header>
+      </div>
       {children}
     </div>
   );
