@@ -1,0 +1,140 @@
+:where(label) {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+}
+
+:where(input, select, textarea) {
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+}
+
+:where(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+    select,
+    textarea
+  ) {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  min-height: 40px;
+}
+
+:where(textarea) {
+  min-height: 96px;
+  resize: vertical;
+}
+
+:where(input)::placeholder,
+:where(textarea)::placeholder {
+  color: var(--text-muted);
+}
+
+:where(fieldset) {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+}
+
+:where(legend) {
+  padding: 0 var(--space-2);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+:where(input, select, textarea):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--focus-ring-alpha);
+}
+
+:where(input, select, textarea)[aria-invalid="true"],
+:where(input, select, textarea):invalid {
+  border-color: var(--state-error);
+}
+
+:where(input, select, textarea):disabled {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+:where(input[type="checkbox"], input[type="radio"]) {
+  accent-color: var(--action-primary);
+}
+
+:where(button, input[type="submit"], input[type="button"], input[type="reset"]) {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  min-height: 36px;
+  padding: 8px 12px;
+}
+
+:where(button, input[type="submit"], input[type="button"], input[type="reset"]):hover {
+  background: var(--bg-subtle);
+  border-color: var(--border-strong);
+}
+
+:where(button, input[type="submit"], input[type="button"], input[type="reset"]):active {
+  background: var(--bg-subtle);
+}
+
+:where(button, input[type="submit"], input[type="button"], input[type="reset"]):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px var(--focus-ring-alpha);
+}
+
+:where(button, input[type="submit"], input[type="button"], input[type="reset"]):disabled {
+  cursor: not-allowed;
+  opacity: var(--opacity-disabled);
+}
+
+:where(table) {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+:where(th, td) {
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-2) var(--space-3);
+  vertical-align: top;
+}
+
+:where(thead th) {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-weight: var(--fw-medium);
+}
+
+:where(tbody tr:hover) {
+  background: var(--bg-subtle);
+}
+
+:where(tbody tr:last-child td) {
+  border-bottom: 0;
+}
+
+:where(a) {
+  color: inherit;
+  text-decoration: none;
+}
+
+:where(a:hover, a:focus-visible) {
+  color: var(--action-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+:where(a:focus-visible) {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}

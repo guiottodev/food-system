@@ -23,6 +23,7 @@
   --border: #e2e8f0;
   --border-strong: #cbd5e1;
   --focus-ring: #2563eb;
+  --focus-ring-alpha: rgba(37, 99, 235, 0.2);
   --action-primary: #2563eb;
   --action-primary-hover: #1d4ed8;
   --action-secondary: #f1f5f9;
@@ -30,6 +31,7 @@
   --state-warning: #b45309;
   --state-error: #b91c1c;
   --state-info: #0ea5e9;
+  --opacity-disabled: 0.55;
 
   --space-1: 4px;
   --space-2: 8px;
