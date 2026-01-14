@@ -42,7 +42,7 @@ export default async function OrderDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }> | { id: string };
-  searchParams?: { converted?: string; error?: string };
+  searchParams?: { converted?: string; created?: string; error?: string };
 }) {
   const p = await Promise.resolve(params);
   const id = p?.id;
@@ -94,6 +94,10 @@ export default async function OrderDetailPage({
         <h1 className={styles.pageTitle}>Pedido {order.orderNumber}</h1>
         <Link href="/admin/orders">Voltar</Link>
       </div>
+
+      {searchParams?.created ? (
+        <div className={styles.notice}>Pedido salvo.</div>
+      ) : null}
 
       {searchParams?.converted ? (
         <div className={`${styles.notice} ${styles.noticeWarning}`}>
