@@ -20,6 +20,7 @@ type OrderRow = {
   customerName: string;
   customerPhone: string | null;
   deliveryMethodLabel: string;
+  status: string;
   statusLabel: string;
   deliveryDatetime: string;
   totalLabel: string;
@@ -40,6 +41,20 @@ function formatUnit(item: OrderItem) {
   if (item.unitType === "CENTO") return "cento";
   if (item.unitType === "UNIDADE") return "un";
   return "legacy";
+}
+
+function statusBadgeClass(status: string) {
+  switch (status) {
+    case "ENTREGUE":
+    case "PRONTO":
+      return styles.badgeSuccess;
+    case "EM_PRODUCAO":
+      return styles.badgeWarning;
+    case "CANCELADO":
+      return styles.badgeDanger;
+    default:
+      return styles.badgeNeutral;
+  }
 }
 
 export default function OrdersTableClient({
@@ -89,6 +104,7 @@ export default function OrdersTableClient({
                       onClick={() => toggle(order.id)}
                       aria-expanded={expanded}
                       aria-label="Ver itens"
+                      className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
                     >
                       {expanded ? "▾" : "▸"}
                     </button>
@@ -103,7 +119,15 @@ export default function OrdersTableClient({
                     {order.customerPhone ? ` (${order.customerPhone})` : ""}
                   </td>
                   <td>{order.deliveryMethodLabel}</td>
-                  <td>{order.statusLabel}</td>
+                  <td>
+                    <span
+                      className={`${styles.badge} ${statusBadgeClass(
+                        order.status
+                      )}`}
+                    >
+                      {order.statusLabel}
+                    </span>
+                  </td>
                   <td>{order.deliveryDatetime}</td>
                   <td className={styles.tableNumeric}>{order.totalLabel}</td>
                 </tr>

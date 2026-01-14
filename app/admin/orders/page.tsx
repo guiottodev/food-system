@@ -325,6 +325,7 @@ export default async function OrdersPage({
               customerName: order.customer.name,
               customerPhone: order.customer.phone,
               deliveryMethodLabel: deliveryMethodLabel[order.deliveryMethod],
+              status: order.status,
               statusLabel: statusLabel[order.status],
               deliveryDatetime: formatDateTime(order.deliveryDatetime),
               totalLabel: formatCurrency(Number(order.total)),

@@ -238,13 +238,36 @@ export default async function ProductsPage({
                   <tr key={product.id}>
                     <td>{product.name}</td>
                     <td>{product.category.name}</td>
-                    <td>{product.isActive ? "Ativo" : "Inativo"}</td>
-                    <td>{product.sobConsulta ? "Sim" : "Nao"}</td>
+                    <td>
+                      <span
+                        className={`${styles.badge} ${
+                          product.isActive
+                            ? styles.badgeSuccess
+                            : styles.badgeNeutral
+                        }`}
+                      >
+                        {product.isActive ? "Ativo" : "Inativo"}
+                      </span>
+                    </td>
+                    <td>
+                      <span
+                        className={`${styles.badge} ${
+                          product.sobConsulta
+                            ? styles.badgeWarning
+                            : styles.badgeNeutral
+                        }`}
+                      >
+                        {product.sobConsulta ? "Sim" : "Nao"}
+                      </span>
+                    </td>
                     <td className={styles.tableNumeric}>
                       {product._count.skus}
                     </td>
                     <td className={styles.tableActions}>
-                      <Link href={`/admin/products/${product.id}`}>
+                      <Link
+                        href={`/admin/products/${product.id}`}
+                        className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                      >
                         Ver detalhes
                       </Link>
                     </td>
