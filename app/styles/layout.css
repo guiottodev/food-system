@@ -16,6 +16,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
 }
 
 :where(h1) {

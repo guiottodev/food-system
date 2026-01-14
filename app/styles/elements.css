@@ -20,6 +20,16 @@
   border-radius: var(--radius-sm);
   padding: 10px 12px;
   min-height: 40px;
+  width: 100%;
+}
+
+:where(
+    label > input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+    label > select,
+    label > textarea
+  ) {
+  display: block;
+  margin-top: var(--space-1);
 }
 
 :where(textarea) {
@@ -62,10 +72,22 @@
   opacity: var(--opacity-disabled);
 }
 
+:where(input, select, textarea)[readonly] {
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+}
+
 :where(input[type="checkbox"], input[type="radio"]) {
   accent-color: var(--action-primary);
 }
 
+:where(label > input[type="checkbox"], label > input[type="radio"]) {
+  margin-right: var(--space-1);
+}
+
+:where(input[type="number"], input[inputmode="decimal"]) {
+  text-align: right;
+}
 :where(button, input[type="submit"], input[type="button"], input[type="reset"]) {
   background: var(--bg-surface);
   border: 1px solid var(--border);
@@ -101,6 +123,8 @@
 :where(table) {
   border-collapse: collapse;
   width: 100%;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 :where(th, td) {
@@ -113,6 +137,7 @@
   background: var(--bg-subtle);
   color: var(--text-secondary);
   font-weight: var(--fw-medium);
+  text-align: left;
 }
 
 :where(tbody tr:hover) {
