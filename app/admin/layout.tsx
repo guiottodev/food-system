@@ -17,8 +17,8 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className={styles.stackMd}>
-      <div className={styles.page}>
+    <div className={styles.layoutRoot}>
+      <div className={styles.topBar}>
         <header className={styles.pageHeader}>
           <AdminTopNav />
           <form className={styles.topNavRight} action={logoutAction}>

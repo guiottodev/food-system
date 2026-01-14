@@ -40,8 +40,14 @@ export default async function CategoriesPage({
             name="q"
             placeholder="Buscar por nome"
             defaultValue={query}
+            className={styles.control}
           />
-          <button type="submit">Buscar</button>
+          <button
+            type="submit"
+            className={`${styles.button} ${styles.buttonSecondary}`}
+          >
+            Buscar
+          </button>
         </div>
       </form>
 
@@ -55,15 +61,27 @@ export default async function CategoriesPage({
         </div>
         <div className={styles.panelBody}>
           <form action={createCategoryAction} className={styles.formSection}>
-            <input name="name" placeholder="Nome" required />
+            <input
+              name="name"
+              placeholder="Nome"
+              required
+              className={styles.control}
+            />
             <textarea
               name="description"
               placeholder="Descricao (opcional)"
+              className={`${styles.control} ${styles.controlTextarea}`}
             ></textarea>
-            <label className={styles.clusterSm}>
-              <input type="checkbox" name="isActive" defaultChecked /> Ativa
+            <label className={styles.choiceRow}>
+              <input type="checkbox" name="isActive" defaultChecked />
+              <span className={styles.choiceLabel}>Ativa</span>
             </label>
-            <button type="submit">Criar categoria</button>
+            <button
+              type="submit"
+              className={`${styles.button} ${styles.buttonPrimary}`}
+            >
+              Criar categoria
+            </button>
           </form>
         </div>
       </section>
@@ -96,6 +114,7 @@ export default async function CategoriesPage({
                         name="name"
                         defaultValue={category.name}
                         required
+                        className={styles.control}
                       />
                     </td>
                     <td>
@@ -104,6 +123,7 @@ export default async function CategoriesPage({
                         name="description"
                         defaultValue={category.description || ""}
                         placeholder="Descricao"
+                        className={`${styles.control} ${styles.controlTextarea}`}
                       ></textarea>
                     </td>
                     <td>
@@ -121,7 +141,12 @@ export default async function CategoriesPage({
                         className={styles.clusterSm}
                       >
                         <input type="hidden" name="id" value={category.id} />
-                        <button type="submit">Salvar</button>
+                        <button
+                          type="submit"
+                          className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonSm}`}
+                        >
+                          Salvar
+                        </button>
                       </form>
                     </td>
                   </tr>

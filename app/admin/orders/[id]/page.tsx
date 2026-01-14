@@ -186,6 +186,7 @@ export default async function OrderDetailPage({
               name="status"
               defaultValue={order.status}
               disabled={order.status === "ENTREGUE" || order.status === "CANCELADO"}
+              className={styles.control}
             >
               {statusOptions.map((status) => (
                 <option key={status} value={status}>
@@ -196,6 +197,7 @@ export default async function OrderDetailPage({
             <button
               type="submit"
               disabled={order.status === "ENTREGUE" || order.status === "CANCELADO"}
+              className={`${styles.button} ${styles.buttonSecondary}`}
             >
               Atualizar
             </button>
@@ -213,8 +215,14 @@ export default async function OrderDetailPage({
             <input
               name="cancellationReason"
               placeholder="Motivo do cancelamento"
+              className={styles.control}
             />
-            <button type="submit">Cancelar pedido</button>
+            <button
+              type="submit"
+              className={`${styles.button} ${styles.buttonDanger}`}
+            >
+              Cancelar pedido
+            </button>
           </form>
         </div>
       </section>

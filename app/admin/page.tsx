@@ -17,7 +17,9 @@ export default async function AdminPage() {
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>Painel</h1>
         <form action={logoutAction}>
-          <button type="submit">Sair</button>
+          <button type="submit" className={styles.button}>
+            Sair
+          </button>
         </form>
       </div>
       <p>Bem-vindo ao sistema interno.</p>

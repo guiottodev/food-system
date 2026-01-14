@@ -7,6 +7,18 @@
   gap: var(--space-4);
 }
 
+.layoutRoot {
+  display: grid;
+  gap: 0;
+}
+
+.topBar {
+  max-width: var(--content-max);
+  margin: 0 auto;
+  padding: 0 var(--space-5);
+  width: 100%;
+}
+
 .pageGrid {
   display: grid;
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
@@ -31,6 +43,10 @@
 @media (max-width: 720px) {
   .page {
     padding: var(--space-4);
+  }
+
+  .topBar {
+    padding: 0 var(--space-4);
   }
 }
 
