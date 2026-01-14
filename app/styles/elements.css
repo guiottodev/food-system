@@ -60,9 +60,12 @@
   box-shadow: 0 0 0 3px var(--focus-ring-alpha);
 }
 
-:where(input, select, textarea)[aria-invalid="true"],
-:where(input, select, textarea):invalid {
+:where(input, select, textarea)[aria-invalid="true"] {
   border-color: var(--state-error);
+}
+
+:where(input, select, textarea):invalid:not([aria-invalid="true"]) {
+  border-color: var(--border);
 }
 
 :where(input, select, textarea):disabled {
