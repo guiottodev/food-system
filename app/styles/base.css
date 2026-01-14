@@ -1,0 +1,49 @@
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-md);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--text-primary);
+  line-height: var(--lh-tight);
+}
+
+h1 {
+  font-size: var(--text-xl);
+  font-weight: var(--fw-semibold);
+}
+
+h2 {
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+}
+
+h3 {
+  font-size: var(--text-md);
+  font-weight: var(--fw-medium);
+}
+
+p {
+  color: var(--text-secondary);
+}
+
+::selection {
+  background: rgba(37, 99, 235, 0.16);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}

@@ -1,3 +1,5 @@
+@import "./styles/app.css";
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -17,9 +19,11 @@ body {
 }
 
 body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-app);
+  font-family: var(--font-sans);
+  line-height: var(--lh-normal);
+  color-scheme: light;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
