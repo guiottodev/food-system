@@ -42,13 +42,21 @@ export default async function OrderDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }> | { id: string };
-  searchParams?: { converted?: string; created?: string; error?: string };
+  searchParams?:
+    | Promise<{ converted?: string; created?: string; error?: string }>
+    | { converted?: string; created?: string; error?: string };
 }) {
   const p = await Promise.resolve(params);
   const id = p?.id;
   if (!id) {
     redirect("/admin/orders?error=missing_id");
   }
+  const resolvedSearch = await Promise.resolve(searchParams);
+  const createdRaw = resolvedSearch?.created;
+  const created =
+    createdRaw !== undefined &&
+    createdRaw !== null &&
+    String(createdRaw).trim() !== "";
 
   const order = await prisma.order.findUnique({
     where: { id },
@@ -95,22 +103,22 @@ export default async function OrderDetailPage({
         <Link href="/admin/orders">Voltar</Link>
       </div>
 
-      {searchParams?.created ? (
+      {created ? (
         <div className={styles.notice}>Pedido salvo.</div>
       ) : null}
 
-      {searchParams?.converted ? (
+      {resolvedSearch?.converted ? (
         <div className={`${styles.notice} ${styles.noticeWarning}`}>
           Estoque insuficiente para pronta entrega. Pedido convertido para
           encomenda.
         </div>
       ) : null}
 
-      {searchParams?.error === "motivo" ? (
+      {resolvedSearch?.error === "motivo" ? (
         <p className={styles.textError}>Informe o motivo do cancelamento.</p>
       ) : null}
 
-      {searchParams?.error === "transicao" ? (
+      {resolvedSearch?.error === "transicao" ? (
         <p className={styles.textError}>Transicao de status invalida.</p>
       ) : null}
 
