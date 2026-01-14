@@ -492,7 +492,7 @@ export default function OrderForm({
       ) : null}
       <div className={styles.pageGrid}>
         <div className={styles.pageMain}>
-          <section className={styles.panel}>
+          <section className={`${styles.panel} ${styles.panelSecondary}`}>
             <div className={styles.panelHeader}>
               <h2>Cliente</h2>
             </div>
@@ -626,7 +626,7 @@ export default function OrderForm({
             </div>
           </section>
 
-          <section className={styles.panel}>
+          <section className={`${styles.panel} ${styles.panelSecondary}`}>
             <div className={styles.panelHeader}>
               <h2>Entrega</h2>
             </div>
@@ -842,7 +842,7 @@ export default function OrderForm({
             </div>
           </section>
 
-          <section className={styles.panel}>
+          <section className={`${styles.panel} ${styles.panelSecondary}`}>
             <div className={styles.panelHeader}>
               <h2>Itens</h2>
             </div>
@@ -1078,7 +1078,7 @@ export default function OrderForm({
             </div>
           </section>
 
-          <section className={styles.panel}>
+          <section className={`${styles.panel} ${styles.panelSecondary}`}>
             <div className={styles.panelHeader}>
               <h2>Observacoes</h2>
             </div>
@@ -1098,7 +1098,9 @@ export default function OrderForm({
         </div>
 
         <aside className={styles.pageAside}>
-          <section className={`${styles.panel} ${styles.stickyPanel}`}>
+          <section
+            className={`${styles.panel} ${styles.panelPrimary} ${styles.stickyPanel}`}
+          >
             <div className={styles.panelHeader}>
               <h2>Resumo</h2>
             </div>

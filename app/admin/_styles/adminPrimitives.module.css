@@ -56,6 +56,9 @@
 
 .pageTitle {
   margin: 0;
+  font-size: var(--text-xl);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
 }
 
 .pageSubnav {
@@ -154,11 +157,31 @@
   padding: var(--space-4);
 }
 
+.panelPrimary {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.panelSecondary {
+  border-color: var(--border);
+}
+
+.panelTertiary {
+  background: var(--bg-subtle);
+  border-color: var(--border);
+}
+
 .panelHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.panelHeader h2 {
+  margin: 0;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
 }
 
 .panelBody {

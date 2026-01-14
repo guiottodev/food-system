@@ -81,7 +81,7 @@ export default async function ProductsPage({
         </p>
       ) : null}
 
-      <section className={styles.panel}>
+      <section className={`${styles.panel} ${styles.panelPrimary}`}>
         <div className={styles.panelHeader}>
           <h2>Novo produto</h2>
         </div>
@@ -136,17 +136,19 @@ export default async function ProductsPage({
               placeholder="URLs extras (uma por linha)"
               className={`${styles.control} ${styles.controlTextarea}`}
             ></textarea>
-            <button
-              type="submit"
-              className={`${styles.button} ${styles.buttonPrimary}`}
-            >
-              Criar produto
-            </button>
+            <div className={styles.panelFooter}>
+              <button
+                type="submit"
+                className={`${styles.button} ${styles.buttonPrimary}`}
+              >
+                Criar produto
+              </button>
+            </div>
           </form>
         </div>
       </section>
 
-      <section className={styles.panel}>
+      <section className={`${styles.panel} ${styles.panelSecondary}`}>
         <div className={styles.panelHeader}>
           <h2>Filtros</h2>
         </div>
@@ -212,7 +214,7 @@ export default async function ProductsPage({
         </div>
       </section>
 
-      <section className={styles.panel}>
+      <section className={`${styles.panel} ${styles.panelSecondary}`}>
         <div className={styles.panelHeader}>
           <h2>Lista</h2>
         </div>
