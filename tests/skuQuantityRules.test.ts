@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { validateSkuQuantity } from "../lib/quantity";
+import { getSkuDefaults, normalizeUnitLabel, normalizeUnitType } from "../lib/unit";
 import { isSkuSellableInternal } from "../lib/catalog";
 
 describe("validateSkuQuantity", () => {
@@ -54,6 +55,46 @@ describe("validateSkuQuantity", () => {
         3
       ).ok
     ).toBe(true);
+  });
+
+  it("enforces KG minQty 0.5", () => {
+    expect(
+      validateSkuQuantity(
+        { unitType: "KG", minQty: 0.5, quantityStep: 0.05 },
+        0.45
+      ).ok
+    ).toBe(false);
+    expect(
+      validateSkuQuantity(
+        { unitType: "KG", minQty: 0.5, quantityStep: 0.05 },
+        0.5
+      ).ok
+    ).toBe(true);
+  });
+});
+
+describe("getSkuDefaults", () => {
+  it("returns defaults for unit types", () => {
+    expect(getSkuDefaults("UNIDADE")).toEqual({
+      minQty: 1,
+      quantityStep: 1,
+      unitLabel: "un",
+    });
+    expect(getSkuDefaults("CENTO")).toEqual({
+      minQty: 1,
+      quantityStep: 1,
+      unitLabel: "cento",
+    });
+    expect(getSkuDefaults("KG")).toEqual({
+      minQty: 0.5,
+      quantityStep: 0.05,
+      unitLabel: "kg",
+    });
+  });
+
+  it("rejects KIT in normalization/labels", () => {
+    expect(() => normalizeUnitType("kit")).toThrow();
+    expect(() => normalizeUnitLabel("kit")).toThrow();
   });
 });
 
