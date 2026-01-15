@@ -16,6 +16,10 @@ Prisma (Windows):
 - Exemplo: `./scripts/prisma.ps1 migrate deploy`
 - Exemplo: `./scripts/prisma.ps1 db seed`
 
+Testes (Vitest + SQLite):
+- `.env.test` usa `DATABASE_URL="file:./data/test.sqlite"`
+- `npm test` gera o Prisma Client (`prisma generate --no-engine`), prepara o banco de teste com `prisma db push` e roda `vitest` com `NODE_ENV=test`
+
 Popular base de testes:
 - `node scripts\\fill_test_data.js --count=1000 --pastDays=90 --futureDays=30 --reset`
 

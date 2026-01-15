@@ -7,7 +7,7 @@
         "build": "next build",
         "start": "next start",
         "lint": "eslint",
-        "test": "vitest run",
+        "test": "node scripts/test-run.js",
         "db:migrate": "prisma migrate deploy",
         "db:seed": "prisma db seed",
         "db:check": "node scripts/check-db-integrity.js"
