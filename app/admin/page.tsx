@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logoutAction } from "./actions";
 import { verifySessionValue } from "@/lib/session";
+import styles from "./_styles/adminPrimitives.module.css";
 
 export default async function AdminPage() {
   const cookieStore = await cookies();
@@ -12,37 +13,21 @@ export default async function AdminPage() {
   }
 
   return (
-    <main style={{ maxWidth: 720, margin: "64px auto", padding: 16 }}>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <h1>Painel</h1>
+    <main className={styles.page}>
+      <div className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>Painel</h1>
         <form action={logoutAction}>
-          <button type="submit">Sair</button>
+          <button type="submit" className={styles.button}>
+            Sair
+          </button>
         </form>
       </div>
       <p>Bem-vindo ao sistema interno.</p>
-      <div style={{ display: "grid", gap: 12, marginTop: 24 }}>
-        <Link
-          href="/admin/orders"
-          style={{
-            border: "1px solid #ddd",
-            padding: 12,
-            borderRadius: 6,
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
+      <div className={styles.stackSm}>
+        <Link className={styles.panelLink} href="/admin/orders">
           Pedidos
         </Link>
-        <Link
-          href="/admin/catalog"
-          style={{
-            border: "1px solid #ddd",
-            padding: 12,
-            borderRadius: 6,
-            textDecoration: "none",
-            color: "inherit",
-          }}
-        >
+        <Link className={styles.panelLink} href="/admin/catalog">
           Catalogo
         </Link>
       </div>

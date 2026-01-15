@@ -1,7 +1,8 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { OrderStatus } from "@prisma/client";
 import OrdersTableClient from "./OrdersTableClient";
+import styles from "../_styles/adminPrimitives.module.css";
 
 type OrdersSearchParams = {
   view?: string;
@@ -231,100 +232,137 @@ export default async function OrdersPage({
     withQuery("/admin/orders", { ...baseParams, view, page: nextPage });
 
   return (
-    <main>
-      <h1>Pedidos</h1>
-
-      <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
-        <Link href={tabLink("day")}>Hoje</Link>
-        <Link href={tabLink("week")}>Semana</Link>
-        <Link href={tabLink("all")}>Todos</Link>
-        <Link href={tabLink("previous")}>Anteriores</Link>
+    <main className={styles.page}>
+      <div className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>Pedidos</h1>
       </div>
 
-      <form
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 200px 140px 140px 120px",
-          gap: 12,
-          marginBottom: 16,
-        }}
-      >
-        <input
-          type="text"
-          name="q"
-          placeholder="Buscar por cliente ou telefone"
-          defaultValue={query}
-        />
-        <select name="status" defaultValue={statusParam}>
-          {statusOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <select name="dir" defaultValue={dir}>
-          <option value="asc">Entrega: mais cedo</option>
-          <option value="desc">Entrega: mais tarde</option>
-        </select>
-        <select name="pageSize" defaultValue={pageSize}>
-          {PAGE_SIZES.map((size) => (
-            <option key={size} value={size}>
-              {size} por página
-            </option>
-          ))}
-        </select>
-        <input type="hidden" name="view" value={view} />
-        <button type="submit">Aplicar</button>
-      </form>
+      <div className={styles.pageSubnav}>
+        <Link className={styles.pageSubnavLink} href={tabLink("day")}>
+          Hoje
+        </Link>
+        <Link className={styles.pageSubnavLink} href={tabLink("week")}>
+          Semana
+        </Link>
+        <Link className={styles.pageSubnavLink} href={tabLink("all")}>
+          Todos
+        </Link>
+        <Link className={styles.pageSubnavLink} href={tabLink("previous")}>
+          Anteriores
+        </Link>
+      </div>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Filtros</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <form className={styles.toolbar}>
+            <div className={styles.toolbarGroup}>
+              <input
+                type="text"
+                name="q"
+                placeholder="Buscar por cliente ou telefone"
+                defaultValue={query}
+                className={styles.control}
+              />
+              <select
+                name="status"
+                defaultValue={statusParam}
+                className={styles.control}
+              >
+                {statusOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <select name="dir" defaultValue={dir} className={styles.control}>
+                <option value="asc">Entrega: mais cedo</option>
+                <option value="desc">Entrega: mais tarde</option>
+              </select>
+              <select
+                name="pageSize"
+                defaultValue={pageSize}
+                className={styles.control}
+              >
+                {PAGE_SIZES.map((size) => (
+                  <option key={size} value={size}>
+                    {size} por pagina
+                  </option>
+                ))}
+              </select>
+              <input type="hidden" name="view" value={view} />
+            </div>
+            <div className={styles.toolbarActions}>
+              <button
+                type="submit"
+                className={`${styles.button} ${styles.buttonPrimary}`}
+              >
+                Aplicar
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
 
       <p>
-        Mostrando {startIndex}–{endIndex} de {totalCount}
+        Mostrando {startIndex}-{endIndex} de {totalCount}
       </p>
 
-      {orders.length === 0 ? (
-        <p>Nenhum pedido encontrado.</p>
-      ) : (
-        <OrdersTableClient
-          columns={7}
-          orders={orders.map((order) => ({
-            id: order.id,
-            orderNumber: order.orderNumber,
-            customerName: order.customer.name,
-            customerPhone: order.customer.phone,
-            deliveryMethodLabel: deliveryMethodLabel[order.deliveryMethod],
-            statusLabel: statusLabel[order.status],
-            deliveryDatetime: formatDateTime(order.deliveryDatetime),
-            totalLabel: formatCurrency(Number(order.total)),
-            items: order.items.map((item) => ({
-              id: item.id,
-              name: item.snapshotProductName
-                ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
-                : item.snapshotSkuName,
-              quantity: Number(item.quantity),
-              unitLabel: item.snapshotUnitLabel,
-              unitType: item.snapshotUnitType,
-              priceAtTime: item.snapshotUnitPrice ? Number(item.snapshotUnitPrice) : null,
-              lineTotal: item.lineTotal ? Number(item.lineTotal) : null,
-            })),
-            subtotal: Number(order.subtotal),
-            deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : 0,
-            total: Number(order.total),
-          }))}
-        />
-      )}
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Lista</h2>
+        </div>
+        {orders.length === 0 ? (
+          <div className={styles.emptyState}>Nenhum pedido encontrado.</div>
+        ) : (
+          <OrdersTableClient
+            columns={7}
+            orders={orders.map((order) => ({
+              id: order.id,
+              orderNumber: order.orderNumber,
+              customerName: order.customer.name,
+              customerPhone: order.customer.phone,
+              deliveryMethodLabel: deliveryMethodLabel[order.deliveryMethod],
+              status: order.status,
+              statusLabel: statusLabel[order.status],
+              deliveryDatetime: formatDateTime(order.deliveryDatetime),
+              totalLabel: formatCurrency(Number(order.total)),
+              items: order.items.map((item) => ({
+                id: item.id,
+                name: item.snapshotProductName
+                  ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
+                  : item.snapshotSkuName,
+                quantity: Number(item.quantity),
+                unitLabel: item.snapshotUnitLabel,
+                unitType: item.snapshotUnitType,
+                priceAtTime: item.snapshotUnitPrice
+                  ? Number(item.snapshotUnitPrice)
+                  : null,
+                lineTotal: item.lineTotal ? Number(item.lineTotal) : null,
+              })),
+              subtotal: Number(order.subtotal),
+              deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : 0,
+              total: Number(order.total),
+            }))}
+          />
+        )}
+      </section>
 
-      <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
+      <div className={styles.clusterSm}>
         <Link href={pageLink(Math.max(1, clampedPage - 1))}>Anterior</Link>
         <span>
-          Página {clampedPage} de {totalPages}
+          Pagina {clampedPage} de {totalPages}
         </span>
         <Link href={pageLink(Math.min(totalPages, clampedPage + 1))}>
-          Próxima
+          Proxima
         </Link>
       </div>
     </main>
   );
 }
+
 
 
 

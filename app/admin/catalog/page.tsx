@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import styles from "../_styles/adminPrimitives.module.css";
 
 export default async function CatalogPage() {
   const activeSkus = await prisma.sku.count({
@@ -7,21 +8,30 @@ export default async function CatalogPage() {
   });
 
   return (
-    <main style={{ display: "grid", gap: 16 }}>
-      <div style={{ display: "flex", gap: 8 }}>
-        <Link href="/admin">Admin</Link>
-        <span>&gt;</span>
-        <span>Catalogo</span>
+    <main className={styles.page}>
+      <div className={styles.clusterSm}>
+        <Link className={styles.topNavLink} href="/admin">
+          Admin
+        </Link>
+        <span className={styles.textMuted}>&gt;</span>
+        <span className={styles.textMuted}>Catalogo</span>
       </div>
 
-      <h1>Catalogo</h1>
+      <h1 className={styles.pageTitle}>Catalogo</h1>
 
-      <p>SKUs ativos: {activeSkus}</p>
-
-      <div style={{ display: "grid", gap: 12 }}>
-        <Link href="/admin/categories">Categorias</Link>
-        <Link href="/admin/products">Produtos</Link>
-      </div>
+      <section className={styles.panel}>
+        <div className={styles.panelBody}>
+          <p>SKUs ativos: {activeSkus}</p>
+          <div className={styles.stackSm}>
+            <Link className={styles.panelLink} href="/admin/categories">
+              Categorias
+            </Link>
+            <Link className={styles.panelLink} href="/admin/products">
+              Produtos
+            </Link>
+          </div>
+        </div>
+      </section>
     </main>
   );
 }
