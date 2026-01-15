@@ -4,7 +4,8 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
-import { validateQtyByUnit } from "@/lib/quantity";
+import { validateSkuQuantity } from "@/lib/quantity";
+import { isSkuSellableInternal } from "@/lib/catalog";
 import { OrderStatus, OrderType, Prisma } from "@prisma/client";
 
 type CreateOrderPayload = {
@@ -147,48 +148,41 @@ export async function createOrderAction(formData: FormData) {
   const skus = await prisma.sku.findMany({
     where: {
       id: { in: skuIds },
-      isActive: true,
-      product: {
-        isActive: true,
-      },
     },
     include: {
       product: {
         select: {
           sobConsulta: true,
           name: true,
+          isActive: true,
         },
       },
     },
   });
   const skuMap = new Map(skus.map((sku) => [sku.id, sku]));
 
-  function normalizeQuantity(
-    unitType: "KG" | "UNIDADE" | "CENTO",
-    value: number | string
-  ) {
-    const result = validateQtyByUnit(unitType, value);
-    if (!result.ok) {
-      redirect("/admin/orders/new?error=quantidade-invalida");
-    }
-    return result.normalized;
-  }
-
   const normalizedItems = payload.items.map((item) => {
     const sku = skuMap.get(item.skuId);
     if (!sku) {
       redirect("/admin/orders/new?error=sku-invalido");
     }
-    const quantity = normalizeQuantity(sku.unitType, item.quantity);
-    return { ...item, quantity, sku };
-  });
-
-  for (const item of normalizedItems) {
-    const minQty = Number(item.sku.minQty);
-    if (item.quantity < minQty) {
+    if (!isSkuSellableInternal({ sku, product: sku.product })) {
+      redirect("/admin/orders/new?error=sku-invalido");
+    }
+    const quantityResult = validateSkuQuantity(
+      {
+        unitType: sku.unitType,
+        minQty: sku.minQty,
+        quantityStep: sku.quantityStep,
+      },
+      item.quantity
+    );
+    if (!quantityResult.ok) {
       redirect("/admin/orders/new?error=quantidade-invalida");
     }
-  }
+    const quantity = quantityResult.normalized;
+    return { ...item, quantity, sku };
+  });
 
   const computedItems = normalizedItems.map((item) => {
     const quantity = item.quantity;
