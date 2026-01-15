@@ -40,7 +40,7 @@ export async function createProductAction(formData: FormData) {
   const imageExtraUrls = parseLines(formData.get("imageExtraUrls"));
 
   if (!name || !categoryId) {
-    redirect("/admin/products?error=campos");
+    redirect("/admin/products/new?error=campos");
   }
 
   const product = await prisma.product.create({
