@@ -12,7 +12,6 @@ type ProductDetailsFormProps = {
     name: string;
     categoryId: string;
     descriptionLong: string | null;
-    leadTime: number | null;
     isActive: boolean;
     isPublicHidden: boolean;
     sobConsulta: boolean;
@@ -61,15 +60,6 @@ export default function ProductDetailsForm({
             placeholder="Descricao longa"
             className={`${styles.control} ${styles.controlTextarea} ${styles.fieldFull}`}
           ></textarea>
-          <input
-            type="number"
-            name="leadTime"
-            defaultValue={product.leadTime ?? ""}
-            placeholder="Lead time (horas)"
-            min="0"
-            step="1"
-            className={styles.control}
-          />
           <label className={styles.choiceRow}>
             <input
               type="checkbox"

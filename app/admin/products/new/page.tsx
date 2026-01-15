@@ -55,14 +55,6 @@ export default async function ProductsNewPage({
               placeholder="Descricao longa (opcional)"
               className={`${styles.control} ${styles.controlTextarea}`}
             ></textarea>
-            <input
-              type="number"
-              name="leadTime"
-              placeholder="Lead time (horas)"
-              min="0"
-              step="1"
-              className={styles.control}
-            />
             <label className={styles.choiceRow}>
               <input type="checkbox" name="isActive" defaultChecked />
               <span className={styles.choiceLabel}>Ativo</span>

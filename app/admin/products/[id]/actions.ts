@@ -67,7 +67,8 @@ export async function updateProductAction(formData: FormData) {
   const name = parseText(formData.get("name"));
   const categoryId = parseText(formData.get("categoryId"));
   const descriptionLong = parseText(formData.get("descriptionLong"));
-  const leadTime = parseNumber(formData.get("leadTime"));
+  const hasLeadTime = formData.has("leadTime");
+  const leadTime = hasLeadTime ? parseNumber(formData.get("leadTime")) : null;
   const isActive = parseBool(formData.get("isActive"));
   const isPublicHidden = parseBool(formData.get("isPublicHidden"));
   const sobConsulta = parseBool(formData.get("sobConsulta"));
@@ -91,7 +92,7 @@ export async function updateProductAction(formData: FormData) {
         name,
         categoryId,
         descriptionLong: descriptionLong || null,
-        leadTime,
+        ...(hasLeadTime ? { leadTime } : {}),
         isActive,
         isPublicHidden,
         sobConsulta,

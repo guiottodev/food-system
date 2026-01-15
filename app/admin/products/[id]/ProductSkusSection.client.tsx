@@ -661,14 +661,6 @@ export default function ProductSkusSection({
                   />
                 </>
               ) : null}
-              <label className={styles.choiceRow}>
-                <input
-                  type="checkbox"
-                  name="isFrozen"
-                  defaultChecked={modalSku?.isFrozen ?? false}
-                />
-                <span className={styles.choiceLabel}>Congelado</span>
-              </label>
               <label className={styles.field}>
                 Tipo de venda
                 <select
@@ -682,37 +674,6 @@ export default function ProductSkusSection({
                     </option>
                   ))}
                 </select>
-              </label>
-              <input
-                name="unitLabel"
-                placeholder="un/cento/kg/kit"
-                required
-                defaultValue={modalSku?.unitLabel ?? ""}
-                className={styles.control}
-              />
-              <label className={styles.field}>
-                Passo de quantidade
-                <input
-                  type="number"
-                  name="quantityStep"
-                  step="0.1"
-                  required
-                  defaultValue={
-                    modalSku ? String(modalSku.quantityStep) : ""
-                  }
-                  className={styles.control}
-                />
-              </label>
-              <label className={styles.field}>
-                Minimo
-                <input
-                  type="number"
-                  name="minQty"
-                  step="0.1"
-                  required
-                  defaultValue={modalSku ? String(modalSku.minQty) : ""}
-                  className={styles.control}
-                />
               </label>
               <label className={styles.field}>
                 Preco atual
