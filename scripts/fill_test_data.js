@@ -143,9 +143,8 @@ async function ensureSkus(minCount) {
 
   const unitTypes = [
     { unitType: "UNIDADE", unitLabel: "un", step: 1, minQty: 1 },
-    { unitType: "UNIDADE", unitLabel: "cento", step: 1, minQty: 1 },
-    { unitType: "UNIDADE", unitLabel: "kit", step: 1, minQty: 1 },
-    { unitType: "KG", unitLabel: "kg", step: 0.1, minQty: 0.1 },
+    { unitType: "CENTO", unitLabel: "cento", step: 1, minQty: 1 },
+    { unitType: "KG", unitLabel: "kg", step: 0.05, minQty: 0.5 },
   ];
 
   const skuData = [];

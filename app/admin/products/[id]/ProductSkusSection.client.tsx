@@ -524,21 +524,6 @@ export default function ProductSkusSection({
                                 />
                                 <input
                                   type="hidden"
-                                  name="unitLabel"
-                                  value={sku.unitLabel}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="quantityStep"
-                                  value={String(sku.quantityStep)}
-                                />
-                                <input
-                                  type="hidden"
-                                  name="minQty"
-                                  value={String(sku.minQty)}
-                                />
-                                <input
-                                  type="hidden"
                                   name="priceCurrent"
                                   value={String(sku.priceCurrent)}
                                 />

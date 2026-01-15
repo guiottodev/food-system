@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
-import { normalizeUnitType, normalizeUnitLabel } from "@/lib/unit";
+import { getSkuDefaults, normalizeUnitType } from "@/lib/unit";
+import { validateSkuQuantity } from "@/lib/quantity";
 import {
   validateSkuAttributes,
   type SkuAttributeInput,
@@ -54,11 +55,6 @@ function parseAttributesJson(
   } catch {
     return null;
   }
-}
-
-function ensureInteger(value: number | null) {
-  if (value === null || !Number.isInteger(value)) return null;
-  return value;
 }
 
 export async function updateProductAction(formData: FormData) {
@@ -123,10 +119,7 @@ export async function createSkuAction(formData: FormData) {
   const displayName = parseText(formData.get("displayName"));
   const sizeText = parseText(formData.get("sizeText"));
   const flavorText = parseText(formData.get("flavorText"));
-  const unitType = normalizeUnitType(parseText(formData.get("unitType")));
-  const unitLabel = normalizeUnitLabel(parseText(formData.get("unitLabel")));
-  const quantityStep = parseNumber(formData.get("quantityStep"));
-  const minQty = parseNumber(formData.get("minQty"));
+  const unitTypeRaw = parseText(formData.get("unitType"));
   const priceCurrent = parseNumber(formData.get("priceCurrent"));
   const cost = parseNumber(formData.get("cost"));
   const isFrozen = parseBool(formData.get("isFrozen"));
@@ -137,28 +130,30 @@ export async function createSkuAction(formData: FormData) {
     formData.get("attributesJson")
   );
 
-  if (!productId || !displayName || !quantityStep || !priceCurrent) {
+  if (!productId || !displayName || !unitTypeRaw || !priceCurrent) {
     redirect(
       `/admin/products/${productId}?tab=skus&error=sku_campos&skuMode=new`
     );
   }
 
-  if (unitType === "KG" && unitLabel !== "kg") {
+  let unitType: "UNIDADE" | "CENTO" | "KG";
+  try {
+    unitType = normalizeUnitType(unitTypeRaw);
+  } catch {
     redirect(`/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=new`);
-  }
-  if (unitType === "CENTO" && unitLabel !== "cento") {
-    redirect(`/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=new`);
-  }
-  if (unitType === "UNIDADE" && (unitLabel === "kg" || unitLabel === "cento")) {
-    redirect(`/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=new`);
+    return;
   }
 
-  const normalizedQtyStep =
-    unitType === "KG" ? quantityStep : ensureInteger(quantityStep);
-  const normalizedMinQty =
-    unitType === "KG" ? minQty ?? 1 : ensureInteger(minQty ?? 1);
-
-  if (!normalizedQtyStep || !normalizedMinQty) {
+  const defaults = getSkuDefaults(unitType);
+  const qtyValidation = validateSkuQuantity(
+    {
+      unitType,
+      minQty: defaults.minQty,
+      quantityStep: defaults.quantityStep,
+    },
+    defaults.minQty
+  );
+  if (!qtyValidation.ok) {
     redirect(
       `/admin/products/${productId}?tab=skus&error=sku_quantidade&skuMode=new`
     );
@@ -191,9 +186,9 @@ export async function createSkuAction(formData: FormData) {
         flavorText: flavorText || null,
         isFrozen,
         unitType,
-        unitLabel,
-        quantityStep: normalizedQtyStep,
-        minQty: normalizedMinQty,
+        unitLabel: defaults.unitLabel,
+        quantityStep: defaults.quantityStep,
+        minQty: defaults.minQty,
         priceCurrent,
         cost: cost ?? null,
         attributesJson,
@@ -222,10 +217,7 @@ export async function updateSkuAction(formData: FormData) {
   const displayName = parseText(formData.get("displayName"));
   const sizeText = parseText(formData.get("sizeText"));
   const flavorText = parseText(formData.get("flavorText"));
-  const unitType = normalizeUnitType(parseText(formData.get("unitType")));
-  const unitLabel = normalizeUnitLabel(parseText(formData.get("unitLabel")));
-  const quantityStep = parseNumber(formData.get("quantityStep"));
-  const minQty = parseNumber(formData.get("minQty"));
+  const unitTypeRaw = parseText(formData.get("unitType"));
   const priceCurrent = parseNumber(formData.get("priceCurrent"));
   const cost = parseNumber(formData.get("cost"));
   const isFrozen = parseBool(formData.get("isFrozen"));
@@ -236,34 +228,32 @@ export async function updateSkuAction(formData: FormData) {
     formData.get("attributesJson")
   );
 
-  if (!productId || !skuId || !displayName || !quantityStep || !priceCurrent) {
+  if (!productId || !skuId || !displayName || !unitTypeRaw || !priceCurrent) {
     redirect(
       `/admin/products/${productId}?tab=skus&error=sku_campos&skuMode=edit&skuId=${skuId}`
     );
   }
 
-  if (unitType === "KG" && unitLabel !== "kg") {
+  let unitType: "UNIDADE" | "CENTO" | "KG";
+  try {
+    unitType = normalizeUnitType(unitTypeRaw);
+  } catch {
     redirect(
       `/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=edit&skuId=${skuId}`
     );
-  }
-  if (unitType === "CENTO" && unitLabel !== "cento") {
-    redirect(
-      `/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=edit&skuId=${skuId}`
-    );
-  }
-  if (unitType === "UNIDADE" && (unitLabel === "kg" || unitLabel === "cento")) {
-    redirect(
-      `/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=edit&skuId=${skuId}`
-    );
+    return;
   }
 
-  const normalizedQtyStep =
-    unitType === "KG" ? quantityStep : ensureInteger(quantityStep);
-  const normalizedMinQty =
-    unitType === "KG" ? minQty ?? 1 : ensureInteger(minQty ?? 1);
-
-  if (!normalizedQtyStep || !normalizedMinQty) {
+  const defaults = getSkuDefaults(unitType);
+  const qtyValidation = validateSkuQuantity(
+    {
+      unitType,
+      minQty: defaults.minQty,
+      quantityStep: defaults.quantityStep,
+    },
+    defaults.minQty
+  );
+  if (!qtyValidation.ok) {
     redirect(
       `/admin/products/${productId}?tab=skus&error=sku_quantidade&skuMode=edit&skuId=${skuId}`
     );
@@ -296,9 +286,9 @@ export async function updateSkuAction(formData: FormData) {
         flavorText: flavorText || null,
         isFrozen,
         unitType,
-        unitLabel,
-        quantityStep: normalizedQtyStep,
-        minQty: normalizedMinQty,
+        unitLabel: defaults.unitLabel,
+        quantityStep: defaults.quantityStep,
+        minQty: defaults.minQty,
         priceCurrent,
         cost: cost ?? null,
         attributesJson,
@@ -341,6 +331,7 @@ export async function duplicateSkuAction(formData: FormData) {
     const suffix = new Date().toISOString().slice(11, 19).replace(/:/g, "");
     const displayName = `${sku.displayName} (Copia ${suffix})`;
 
+    const defaults = getSkuDefaults(sku.unitType);
     const newSku = await tx.sku.create({
       data: {
         productId: sku.productId,
@@ -349,9 +340,9 @@ export async function duplicateSkuAction(formData: FormData) {
         flavorText: sku.flavorText,
         isFrozen: sku.isFrozen,
         unitType: sku.unitType,
-        unitLabel: sku.unitLabel,
-        quantityStep: sku.quantityStep,
-        minQty: sku.minQty,
+        unitLabel: defaults.unitLabel,
+        quantityStep: defaults.quantityStep,
+        minQty: defaults.minQty,
         priceCurrent: sku.priceCurrent,
         cost: sku.cost,
         attributesJson: sku.attributesJson,
