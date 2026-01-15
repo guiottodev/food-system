@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
+import { isSkuSellableInternal } from "@/lib/catalog";
 import type { Prisma } from "@prisma/client";
 
 async function hasValidSession() {
@@ -53,6 +54,7 @@ export async function GET(request: Request) {
       product: {
         select: {
           name: true,
+          isActive: true,
           category: { select: { name: true } },
         },
       },
@@ -61,15 +63,20 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     items: skus.map((sku) => ({
-      skuId: sku.id,
-      skuLabel: sku.displayName,
-      productName: sku.product.name,
-      categoryName: sku.product.category.name,
-      unit: sku.unitLabel,
-      unitType: sku.unitType,
-      price: Number(sku.priceCurrent),
-      minQty: Number(sku.minQty),
-      quantityStep: Number(sku.quantityStep),
-    })),
+      sku,
+      product: sku.product,
+    }))
+      .filter(({ sku, product }) => isSkuSellableInternal({ sku, product }))
+      .map(({ sku, product }) => ({
+        skuId: sku.id,
+        skuLabel: sku.displayName,
+        productName: product.name,
+        categoryName: product.category.name,
+        unit: sku.unitLabel,
+        unitType: sku.unitType,
+        price: Number(sku.priceCurrent),
+        minQty: Number(sku.minQty),
+        quantityStep: Number(sku.quantityStep),
+      })),
   });
 }

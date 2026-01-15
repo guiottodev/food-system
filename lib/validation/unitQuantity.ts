@@ -10,7 +10,11 @@ export type QuantityResult =
 
 const INVALID_ERROR = "Quantidade invalida.";
 
-export function parseQuantityInput(input: number | string): ParseResult {
+type Q100Result =
+  | { ok: true; normalized: number; q100: number }
+  | { ok: false; error: string };
+
+export function parseQuantityToQ100(input: number | string): Q100Result {
   const raw =
     typeof input === "string"
       ? input.trim().replace(",", ".")
@@ -20,40 +24,65 @@ export function parseQuantityInput(input: number | string): ParseResult {
     return { ok: false, error: INVALID_ERROR };
   }
 
-  const parsed = Number(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0) {
+  if (!/^\d+(\.\d+)?$/.test(raw)) {
     return { ok: false, error: INVALID_ERROR };
   }
 
-  return { ok: true, value: parsed };
+  const [intPart, decPart = ""] = raw.split(".");
+  if (decPart.length > 2) {
+    return {
+      ok: false,
+      error: "Quantidade invalida. Use no maximo duas casas decimais.",
+    };
+  }
+
+  const paddedDec = decPart.padEnd(2, "0");
+  const q100 =
+    Number(intPart) * 100 + (paddedDec ? Number(paddedDec) : 0);
+
+  if (!Number.isFinite(q100) || q100 <= 0) {
+    return { ok: false, error: INVALID_ERROR };
+  }
+
+  return { ok: true, normalized: q100 / 100, q100 };
+}
+
+export function parseQuantityInput(input: number | string): ParseResult {
+  const parsed = parseQuantityToQ100(input);
+  if (!parsed.ok) {
+    return parsed;
+  }
+
+  return { ok: true, value: parsed.normalized };
 }
 
 export function validateQuantity(
   unitType: UnitType,
   input: number | string
 ): QuantityResult {
-  const parsed = parseQuantityInput(input);
+  const parsed = parseQuantityToQ100(input);
   if (!parsed.ok) {
     return parsed;
   }
 
-  const value = parsed.value;
-
   if (unitType === "KG") {
-    const scaled = Math.round(value * 20);
-    const normalized = scaled / 20;
-    if (Math.abs(value * 20 - scaled) > 1e-6) {
+    if (parsed.q100 % 5 !== 0) {
       return { ok: false, error: "Para KG, use multiplos de 0,05." };
     }
-    return { ok: true, normalized, scaled };
+    return {
+      ok: true,
+      normalized: parsed.normalized,
+      scaled: parsed.q100 / 5,
+    };
   }
 
-  if (!Number.isInteger(value)) {
+  if (parsed.q100 % 100 !== 0) {
     return {
       ok: false,
       error: `Para ${unitType}, a quantidade deve ser inteira.`,
     };
   }
 
-  return { ok: true, normalized: Math.round(value), scaled: Math.round(value) };
+  const normalized = parsed.q100 / 100;
+  return { ok: true, normalized, scaled: normalized };
 }
