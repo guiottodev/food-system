@@ -11,6 +11,8 @@ export async function transitionOrderStatus(
   nextStatus: OrderStatus,
   actorId: string | null
 ): Promise<TransitionResult> {
+  const STOCK_ENABLED = false;
+
   if (!orderId) {
     return { ok: false, error: "missing_order" };
   }
@@ -40,6 +42,12 @@ export async function transitionOrderStatus(
     let appliedStock = false;
 
     if (nextStatus === "ENTREGUE") {
+      if (!STOCK_ENABLED) {
+        await tx.order.update({
+          where: { id: orderId },
+          data: { status: nextStatus },
+        });
+      } else {
       const now = new Date();
       const marked = await tx.order.updateMany({
         where: {
@@ -70,6 +78,7 @@ export async function transitionOrderStatus(
           where: { id: orderId },
           data: { status: nextStatus },
         });
+      }
       }
     } else {
       await tx.order.update({

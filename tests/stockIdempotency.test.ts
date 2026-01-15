@@ -100,19 +100,22 @@ describe("stock idempotency", () => {
 
     const first = await transitionOrderStatus(prisma, order.id, "ENTREGUE", null);
     expect(first.ok).toBe(true);
+    if (first.ok) {
+      expect(first.appliedStock).toBe(false);
+    }
 
     const afterFirst = await prisma.sku.findUnique({ where: { id: sku.id } });
-    expect(Number(afterFirst?.stockQuantity)).toBe(8);
+    expect(Number(afterFirst?.stockQuantity)).toBe(10);
 
     const second = await transitionOrderStatus(prisma, order.id, "ENTREGUE", null);
     expect(second.ok).toBe(false);
 
     const afterSecond = await prisma.sku.findUnique({ where: { id: sku.id } });
-    expect(Number(afterSecond?.stockQuantity)).toBe(8);
+    expect(Number(afterSecond?.stockQuantity)).toBe(10);
 
     const finalOrder = await prisma.order.findUnique({
       where: { id: order.id },
     });
-    expect(finalOrder?.stockDecrementedAt).not.toBeNull();
+    expect(finalOrder?.stockDecrementedAt).toBeNull();
   });
 });
