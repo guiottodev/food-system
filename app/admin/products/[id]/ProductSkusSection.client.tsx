@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
 import {
+  normalizeKey,
   validateSkuAttributes,
   type SkuAttributeInput,
 } from "@/lib/validation/skuAttributes";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "./productDetail.module.css";
+import { generateSkuDisplayName } from "./skuName";
 
 type SkuView = {
   id: string;
@@ -32,6 +34,7 @@ type SkuFormMode = "new" | "edit";
 
 type ProductSkusSectionProps = {
   productId: string;
+  productName: string;
   productSobConsulta: boolean;
   skus: SkuView[];
   createSkuAction: (formData: FormData) => void;
@@ -49,6 +52,17 @@ const unitTypeOptions = [
 ];
 
 const maxAttributes = 15;
+const maxSkuNameLength = 90;
+const attributeSuggestions = [
+  "sabor",
+  "tamanho",
+  "cor",
+  "modelo",
+  "tipo",
+  "fragrancia",
+  "peso",
+  "volume",
+];
 
 function createEmptyAttribute(): SkuAttributeInput {
   return { key: "", value: "" };
@@ -64,8 +78,15 @@ function getInitialAttributes(sku: SkuView | null): SkuAttributeInput[] {
   return [createEmptyAttribute()];
 }
 
-function SkuFormActions({ onCancel }: { onCancel: () => void }) {
+function SkuFormActions({
+  onCancel,
+  disableSave = false,
+}: {
+  onCancel: () => void;
+  disableSave?: boolean;
+}) {
   const { pending } = useFormStatus();
+  const saveDisabled = pending || disableSave;
   return (
     <div className={detailStyles.modalFooter}>
       <button
@@ -79,7 +100,7 @@ function SkuFormActions({ onCancel }: { onCancel: () => void }) {
       <button
         type="submit"
         className={`${styles.button} ${styles.buttonPrimary}`}
-        disabled={pending}
+        disabled={saveDisabled}
       >
         {pending ? "Salvando..." : "Salvar"}
       </button>
@@ -89,6 +110,7 @@ function SkuFormActions({ onCancel }: { onCancel: () => void }) {
 
 export default function ProductSkusSection({
   productId,
+  productName,
   productSobConsulta,
   skus,
   createSkuAction,
@@ -112,10 +134,19 @@ export default function ProductSkusSection({
     initialSku?.id ?? null
   );
   const [modalError, setModalError] = useState(skuErrorMessage ?? "");
+  const [displayName, setDisplayName] = useState(
+    () => initialSku?.displayName ?? ""
+  );
   const [attributeRows, setAttributeRows] = useState<SkuAttributeInput[]>(
     () => getInitialAttributes(initialSku)
   );
   const [showAttributeError, setShowAttributeError] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    "all" | "active" | "inactive"
+  >("all");
+  const valueInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const pendingFocusIndex = useRef<number | null>(null);
 
   const activeSku = useMemo(
     () => skus.find((sku) => sku.id === activeSkuId) ?? null,
@@ -134,10 +165,21 @@ export default function ProductSkusSection({
     return () => window.removeEventListener("keydown", handleKey);
   }, [modalOpen]);
 
+  useEffect(() => {
+    const targetIndex = pendingFocusIndex.current;
+    if (targetIndex === null) return;
+    const target = valueInputRefs.current[targetIndex];
+    if (target) {
+      target.focus();
+    }
+    pendingFocusIndex.current = null;
+  }, [attributeRows]);
+
   function openNew() {
     setMode("new");
     setActiveSkuId(null);
     setModalError("");
+    setDisplayName("");
     setAttributeRows(getInitialAttributes(null));
     setShowAttributeError(false);
     setModalOpen(true);
@@ -148,6 +190,7 @@ export default function ProductSkusSection({
     setMode("edit");
     setActiveSkuId(id);
     setModalError("");
+    setDisplayName(nextSku?.displayName ?? "");
     setAttributeRows(getInitialAttributes(nextSku));
     setShowAttributeError(false);
     setModalOpen(true);
@@ -167,6 +210,31 @@ export default function ProductSkusSection({
     () => validateSkuAttributes(attributeRows),
     [attributeRows]
   );
+  const existingAttributeKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const row of attributeRows) {
+      const normalized = normalizeKey(row.key);
+      if (normalized) {
+        keys.add(normalized);
+      }
+    }
+    return keys;
+  }, [attributeRows]);
+  const duplicateAttributeKeys = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const row of attributeRows) {
+      const normalized = normalizeKey(row.key);
+      if (!normalized) continue;
+      counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+    }
+    const duplicates = new Set<string>();
+    for (const [key, count] of counts) {
+      if (count > 1) {
+        duplicates.add(key);
+      }
+    }
+    return duplicates;
+  }, [attributeRows]);
   const attributesJsonValue = attributeValidation.ok
     ? attributeValidation.json
     : JSON.stringify(attributeRows);
@@ -177,10 +245,27 @@ export default function ProductSkusSection({
       ).length,
     [attributeRows]
   );
-  const attributesError =
-    showAttributeError && !attributeValidation.ok
-      ? attributeValidation.error
-      : "";
+  const attributesError = useMemo(() => {
+    if (attributeValidation.ok) return "";
+    const message =
+      attributeValidation.message ?? attributeValidation.error;
+    if (attributeValidation.error === "atributos_duplicados") {
+      return message;
+    }
+    return showAttributeError ? message : "";
+  }, [attributeValidation, showAttributeError]);
+  const hasDuplicateAttributes =
+    !attributeValidation.ok &&
+    attributeValidation.error === "atributos_duplicados";
+  const filteredSkus = useMemo(() => {
+    const query = searchText.trim().toLowerCase();
+    return skus.filter((sku) => {
+      if (statusFilter === "active" && !sku.isActive) return false;
+      if (statusFilter === "inactive" && sku.isActive) return false;
+      if (query && !sku.displayName.toLowerCase().includes(query)) return false;
+      return true;
+    });
+  }, [searchText, skus, statusFilter]);
 
   function updateAttributeRow(
     index: number,
@@ -205,6 +290,47 @@ export default function ProductSkusSection({
       const next = prev.filter((_, rowIndex) => rowIndex !== index);
       return next.length ? next : [createEmptyAttribute()];
     });
+  }
+
+  function handleSuggestionClick(suggestion: string) {
+    const normalized = normalizeKey(suggestion);
+    if (!normalized || existingAttributeKeys.has(normalized)) {
+      return;
+    }
+    setAttributeRows((prev) => {
+      let targetIndex = prev.findIndex(
+        (row) => !row.key.trim() && !row.value.trim()
+      );
+      if (targetIndex === -1) {
+        if (prev.length >= maxAttributes) {
+          return prev;
+        }
+        targetIndex = prev.length;
+        pendingFocusIndex.current = targetIndex;
+        return [
+          ...prev,
+          {
+            key: suggestion,
+            value: "",
+          },
+        ];
+      }
+      const next = [...prev];
+      next[targetIndex] = { ...next[targetIndex], key: suggestion };
+      pendingFocusIndex.current = targetIndex;
+      return next;
+    });
+  }
+
+  function handleGenerateName() {
+    if (displayName.trim()) return;
+    const generated = generateSkuDisplayName(
+      productName,
+      attributeRows,
+      maxSkuNameLength
+    );
+    if (!generated) return;
+    setDisplayName(generated);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -235,169 +361,233 @@ export default function ProductSkusSection({
         {skus.length === 0 ? (
           <div className={styles.emptyState}>Nenhum SKU cadastrado.</div>
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>SKU</th>
-                  <th>Unidade</th>
-                  <th className={styles.tableNumeric}>Preco</th>
-                  <th>Status</th>
-                  <th>Sob consulta</th>
-                  <th className={styles.tableActions}>Acoes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {skus.map((sku) => {
-                  const nextActive = !sku.isActive;
-                  const sobValue =
-                    sku.sobConsultaOverride === true
-                      ? "true"
-                      : sku.sobConsultaOverride === false
-                      ? "false"
-                      : "inherit";
-                  const attributesSummary = sku.attributes.length
-                    ? sku.attributes
-                        .map((attr) => `${attr.key}: ${attr.value}`)
-                        .join(" | ")
-                    : "Sem atributos";
-                  return (
-                    <tr key={sku.id}>
-                      <td>
-                        <div className={detailStyles.skuMeta}>
-                          <strong>{sku.displayName}</strong>
-                          <span className={detailStyles.skuSubline}>
-                            {attributesSummary}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        {sku.unitType} ({sku.unitLabel})
-                      </td>
-                      <td className={styles.tableNumeric}>
-                        R$ {sku.priceCurrent.toFixed(2)}
-                      </td>
-                      <td>{sku.isActive ? "ATIVO" : "INATIVO"}</td>
-                      <td>{renderSobConsultaLabel(sku)}</td>
-                      <td className={styles.tableActions}>
-                        <div className={styles.clusterSm}>
-                          <button
-                            type="button"
-                            onClick={() => openEdit(sku.id)}
-                            className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-                          >
-                            Editar
-                          </button>
-                          <form action={duplicateSkuAction}>
-                            <input
-                              type="hidden"
-                              name="productId"
-                              value={productId}
-                            />
-                            <input type="hidden" name="skuId" value={sku.id} />
-                            <button
-                              type="submit"
-                              className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-                            >
-                              Duplicar
-                            </button>
-                          </form>
-                          <form action={updateSkuAction}>
-                            <input
-                              type="hidden"
-                              name="productId"
-                              value={productId}
-                            />
-                            <input type="hidden" name="skuId" value={sku.id} />
-                            <input
-                              type="hidden"
-                              name="displayName"
-                              value={sku.displayName}
-                            />
-                            <input
-                              type="hidden"
-                              name="sizeText"
-                              value={sku.sizeText}
-                            />
-                            <input
-                              type="hidden"
-                              name="flavorText"
-                              value={sku.flavorText}
-                            />
-                            {sku.isFrozen ? (
-                              <input
-                                type="hidden"
-                                name="isFrozen"
-                                value="on"
-                              />
-                            ) : null}
-                            <input
-                              type="hidden"
-                              name="unitType"
-                              value={sku.unitType}
-                            />
-                            <input
-                              type="hidden"
-                              name="unitLabel"
-                              value={sku.unitLabel}
-                            />
-                            <input
-                              type="hidden"
-                              name="quantityStep"
-                              value={String(sku.quantityStep)}
-                            />
-                            <input
-                              type="hidden"
-                              name="minQty"
-                              value={String(sku.minQty)}
-                            />
-                            <input
-                              type="hidden"
-                              name="priceCurrent"
-                              value={String(sku.priceCurrent)}
-                            />
-                            <input
-                              type="hidden"
-                              name="cost"
-                              value={sku.cost !== null ? String(sku.cost) : ""}
-                            />
-                            <input
-                              type="hidden"
-                              name="tags"
-                              value={sku.tags.join(", ")}
-                            />
-                            <input
-                              type="hidden"
-                              name="attributesJson"
-                              value={sku.attributesJson ?? ""}
-                            />
-                            <input
-                              type="hidden"
-                              name="sobConsultaOverride"
-                              value={sobValue}
-                            />
-                            {nextActive ? (
-                              <input
-                                type="hidden"
-                                name="isActive"
-                                value="on"
-                              />
-                            ) : null}
-                            <button
-                              type="submit"
-                              className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-                            >
-                              {nextActive ? "Ativar" : "Desativar"}
-                            </button>
-                          </form>
-                        </div>
-                      </td>
+          <>
+            <div className={detailStyles.skuFilters}>
+              <input
+                type="search"
+                placeholder="Buscar por nome"
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
+                className={`${styles.control} ${detailStyles.skuFilterInput}`}
+              />
+              <select
+                value={statusFilter}
+                onChange={(event) =>
+                  setStatusFilter(
+                    event.target.value as "all" | "active" | "inactive"
+                  )
+                }
+                className={`${styles.control} ${detailStyles.skuFilterSelect}`}
+              >
+                <option value="all">Todos</option>
+                <option value="active">Ativos</option>
+                <option value="inactive">Inativos</option>
+              </select>
+            </div>
+            {filteredSkus.length === 0 ? (
+              <div className={styles.emptyState}>Nenhum SKU encontrado.</div>
+            ) : (
+              <div className={styles.tableWrap}>
+                <table className={styles.table}>
+                  <thead>
+                    <tr>
+                      <th>SKU</th>
+                      <th>Unidade</th>
+                      <th className={styles.tableNumeric}>Preco</th>
+                      <th>Status</th>
+                      <th>Sob consulta</th>
+                      <th className={styles.tableActions}>Acoes</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {filteredSkus.map((sku) => {
+                      const nextActive = !sku.isActive;
+                      const sobValue =
+                        sku.sobConsultaOverride === true
+                          ? "true"
+                          : sku.sobConsultaOverride === false
+                          ? "false"
+                          : "inherit";
+                      const attributePreview = sku.attributes.slice(0, 3);
+                      const attributeExtra =
+                        sku.attributes.length - attributePreview.length;
+                      const attributesTitle = sku.attributes
+                        .map((attr) => `${attr.key}: ${attr.value}`)
+                        .join(" | ");
+                      return (
+                        <tr key={sku.id}>
+                          <td>
+                            <div className={detailStyles.skuMeta}>
+                              <strong>{sku.displayName}</strong>
+                              <div
+                                className={detailStyles.skuSubline}
+                                title={attributesTitle}
+                              >
+                                {sku.attributes.length ? (
+                                  <div className={detailStyles.attributeBadges}>
+                                    {attributePreview.map((attr, index) => (
+                                      <span
+                                        key={`${sku.id}-attr-${index}`}
+                                        className={`${styles.badge} ${styles.badgeNeutral}`}
+                                      >
+                                        {attr.key}: {attr.value}
+                                      </span>
+                                    ))}
+                                    {attributeExtra > 0 ? (
+                                      <span
+                                        className={`${styles.badge} ${styles.badgeNeutral}`}
+                                      >
+                                        +{attributeExtra}
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                ) : (
+                                  <span className={styles.textMuted}>
+                                    Sem atributos
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            {sku.unitType} ({sku.unitLabel})
+                          </td>
+                          <td className={styles.tableNumeric}>
+                            R$ {sku.priceCurrent.toFixed(2)}
+                          </td>
+                          <td>{sku.isActive ? "ATIVO" : "INATIVO"}</td>
+                          <td>{renderSobConsultaLabel(sku)}</td>
+                          <td className={styles.tableActions}>
+                            <div className={styles.clusterSm}>
+                              <button
+                                type="button"
+                                onClick={() => openEdit(sku.id)}
+                                className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                              >
+                                Editar
+                              </button>
+                              <form action={duplicateSkuAction}>
+                                <input
+                                  type="hidden"
+                                  name="productId"
+                                  value={productId}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="skuId"
+                                  value={sku.id}
+                                />
+                                <button
+                                  type="submit"
+                                  className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                                >
+                                  Duplicar
+                                </button>
+                              </form>
+                              <form action={updateSkuAction}>
+                                <input
+                                  type="hidden"
+                                  name="productId"
+                                  value={productId}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="skuId"
+                                  value={sku.id}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="displayName"
+                                  value={sku.displayName}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="sizeText"
+                                  value={sku.sizeText}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="flavorText"
+                                  value={sku.flavorText}
+                                />
+                                {sku.isFrozen ? (
+                                  <input
+                                    type="hidden"
+                                    name="isFrozen"
+                                    value="on"
+                                  />
+                                ) : null}
+                                <input
+                                  type="hidden"
+                                  name="unitType"
+                                  value={sku.unitType}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="unitLabel"
+                                  value={sku.unitLabel}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="quantityStep"
+                                  value={String(sku.quantityStep)}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="minQty"
+                                  value={String(sku.minQty)}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="priceCurrent"
+                                  value={String(sku.priceCurrent)}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="cost"
+                                  value={
+                                    sku.cost !== null ? String(sku.cost) : ""
+                                  }
+                                />
+                                <input
+                                  type="hidden"
+                                  name="tags"
+                                  value={sku.tags.join(", ")}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="attributesJson"
+                                  value={sku.attributesJson ?? ""}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="sobConsultaOverride"
+                                  value={sobValue}
+                                />
+                                {nextActive ? (
+                                  <input
+                                    type="hidden"
+                                    name="isActive"
+                                    value="on"
+                                  />
+                                ) : null}
+                                <button
+                                  type="submit"
+                                  className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                                >
+                                  {nextActive ? "Ativar" : "Desativar"}
+                                </button>
+                              </form>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -439,13 +629,24 @@ export default function ProductSkusSection({
               {!modalSku && mode === "edit" ? (
                 <p className={styles.textError}>SKU nao encontrado.</p>
               ) : null}
-              <input
-                name="displayName"
-                placeholder="Nome exibido"
-                required
-                defaultValue={modalSku?.displayName ?? ""}
-                className={`${styles.control} ${styles.fieldFull}`}
-              />
+              <div className={`${detailStyles.skuNameRow} ${styles.fieldFull}`}>
+                <input
+                  name="displayName"
+                  placeholder="Nome exibido"
+                  required
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  className={`${styles.control} ${detailStyles.skuNameInput}`}
+                />
+                <button
+                  type="button"
+                  onClick={handleGenerateName}
+                  disabled={displayName.trim() !== ""}
+                  className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                >
+                  Gerar nome
+                </button>
+              </div>
               {mode === "edit" && modalSku ? (
                 <>
                   <input
@@ -562,11 +763,18 @@ export default function ProductSkusSection({
                   </span>
                 </div>
                 <div className={detailStyles.attributeList}>
-                  {attributeRows.map((row, index) => (
-                    <div
-                      key={`attr-${index}`}
-                      className={detailStyles.attributeRow}
-                    >
+                  {attributeRows.map((row, index) => {
+                    const normalizedKey = normalizeKey(row.key);
+                    const isDuplicate =
+                      Boolean(normalizedKey) &&
+                      duplicateAttributeKeys.has(normalizedKey);
+                    return (
+                      <div
+                        key={`attr-${index}`}
+                        className={`${detailStyles.attributeRow} ${
+                          isDuplicate ? detailStyles.attributeRowError : ""
+                        }`}
+                      >
                       <input
                         name={`attribute-key-${index}`}
                         placeholder="atributo"
@@ -587,6 +795,9 @@ export default function ProductSkusSection({
                             event.target.value
                           )
                         }
+                        ref={(element) => {
+                          valueInputRefs.current[index] = element;
+                        }}
                         className={styles.control}
                       />
                       <button
@@ -596,8 +807,32 @@ export default function ProductSkusSection({
                       >
                         Remover
                       </button>
-                    </div>
-                  ))}
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className={detailStyles.attributeSuggestions}>
+                  <span className={styles.textMuted}>Sugestoes:</span>
+                  <div className={detailStyles.attributeChips}>
+                    {attributeSuggestions.map((suggestion) => {
+                      const normalized = normalizeKey(suggestion);
+                      const disabled =
+                        !normalized ||
+                        existingAttributeKeys.has(normalized) ||
+                        filledAttributeCount >= maxAttributes;
+                      return (
+                        <button
+                          key={suggestion}
+                          type="button"
+                          onClick={() => handleSuggestionClick(suggestion)}
+                          disabled={disabled}
+                          className={detailStyles.attributeChip}
+                        >
+                          {suggestion}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
                 <div className={detailStyles.attributeFooter}>
                   <button
@@ -645,7 +880,10 @@ export default function ProductSkusSection({
                 <span className={styles.choiceLabel}>Ativo</span>
               </label>
 
-              <SkuFormActions onCancel={closeModal} />
+              <SkuFormActions
+                onCancel={closeModal}
+                disableSave={hasDuplicateAttributes}
+              />
             </form>
           </div>
         </div>

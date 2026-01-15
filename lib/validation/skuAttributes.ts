@@ -6,7 +6,7 @@ type ValidationOk = {
   json: string;
 };
 
-type ValidationError = { ok: false; error: string };
+type ValidationError = { ok: false; error: string; message?: string };
 
 export function normalizeKey(key: string): string {
   return key
@@ -45,7 +45,12 @@ export function validateSkuAttributes(
     }
 
     if (seen.has(key)) {
-      return { ok: false, error: "Chaves de atributo duplicadas." };
+      return {
+        ok: false,
+        error: "atributos_duplicados",
+        message:
+          "Cada atributo deve ter uma chave unica. Para multiplos sabores, crie SKUs separados (um por sabor).",
+      };
     }
 
     normalized.push({ key, value: rawValue });

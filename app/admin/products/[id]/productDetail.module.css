@@ -47,6 +47,41 @@
   color: var(--text-muted);
 }
 
+.skuFilters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.skuFilterInput {
+  min-width: 220px;
+  flex: 1;
+}
+
+.skuFilterSelect {
+  min-width: 160px;
+}
+
+.attributeBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.skuNameRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.skuNameInput {
+  width: 100%;
+}
+
 .modalOverlay {
   position: fixed;
   inset: 0;
@@ -121,6 +156,13 @@
   align-items: center;
 }
 
+.attributeRowError {
+  border: 1px solid var(--state-error);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1);
+  background: rgba(185, 28, 28, 0.04);
+}
+
 .attributeFooter {
   display: flex;
   flex-wrap: wrap;
@@ -130,8 +172,47 @@
   margin-top: var(--space-2);
 }
 
+.attributeSuggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-top: var(--space-2);
+}
+
+.attributeChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.attributeChip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  padding: 2px var(--space-2);
+  cursor: pointer;
+}
+
+.attributeChip:hover,
+.attributeChip:focus-visible {
+  color: var(--text-primary);
+  border-color: var(--text-primary);
+}
+
+.attributeChip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @media (max-width: 720px) {
   .attributeRow {
+    grid-template-columns: 1fr;
+  }
+
+  .skuNameRow {
     grid-template-columns: 1fr;
   }
 }

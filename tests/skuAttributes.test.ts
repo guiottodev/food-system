@@ -25,6 +25,31 @@ describe("validateSkuAttributes", () => {
       { key: " cor ", value: "Verde" },
     ]);
     expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe("atributos_duplicados");
+      expect(result.message).toBe(
+        "Cada atributo deve ter uma chave unica. Para multiplos sabores, crie SKUs separados (um por sabor)."
+      );
+    }
+  });
+
+  it("rejects duplicated keys with slug normalization", () => {
+    const result = validateSkuAttributes([
+      { key: "Cor do Produto", value: "Azul" },
+      { key: "cor-do-produto", value: "Verde" },
+    ]);
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toBe("atributos_duplicados");
+    }
+  });
+
+  it("accepts distinct keys", () => {
+    const result = validateSkuAttributes([
+      { key: "sabor", value: "calabresa" },
+      { key: "tamanho", value: "grande" },
+    ]);
+    expect(result.ok).toBe(true);
   });
 
   it("enforces max 15 attributes", () => {

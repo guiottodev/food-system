@@ -147,6 +147,7 @@ export default async function ProductDetailPage({
       {initialTab === "skus" ? (
         <ProductSkusSection
           productId={product.id}
+          productName={product.name}
           productSobConsulta={product.sobConsulta}
           skus={skusView}
           createSkuAction={createSkuAction}
