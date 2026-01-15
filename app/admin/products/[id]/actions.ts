@@ -28,6 +28,13 @@ function parseTags(value: FormDataEntryValue | null) {
     .filter(Boolean);
 }
 
+function parseLines(value: FormDataEntryValue | null) {
+  return String(value ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 function ensureInteger(value: number | null) {
   if (value === null || !Number.isInteger(value)) return null;
   return value;
@@ -43,14 +50,17 @@ export async function updateProductAction(formData: FormData) {
   const isActive = parseBool(formData.get("isActive"));
   const isPublicHidden = parseBool(formData.get("isPublicHidden"));
   const sobConsulta = parseBool(formData.get("sobConsulta"));
-  const imageMainUrl = parseText(formData.get("imageMainUrl"));
-  const imageExtraUrls = String(formData.get("imageExtraUrls") ?? "")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
+  const hasImageMainUrl = formData.has("imageMainUrl");
+  const hasImageExtraUrls = formData.has("imageExtraUrls");
+  const imageMainUrl = hasImageMainUrl
+    ? parseText(formData.get("imageMainUrl"))
+    : "";
+  const imageExtraUrls = hasImageExtraUrls
+    ? parseLines(formData.get("imageExtraUrls"))
+    : [];
 
   if (!id || !name || !categoryId) {
-    redirect(`/admin/products/${id}?error=campos`);
+    redirect(`/admin/products/${id}?tab=details&error=campos`);
   }
 
   await prisma.$transaction(async (tx) => {
@@ -64,23 +74,25 @@ export async function updateProductAction(formData: FormData) {
         isActive,
         isPublicHidden,
         sobConsulta,
-        imageMainUrl: imageMainUrl || null,
+        ...(hasImageMainUrl ? { imageMainUrl: imageMainUrl || null } : {}),
       },
     });
 
-    await tx.productImage.deleteMany({ where: { productId: id } });
-    if (imageExtraUrls.length) {
-      await tx.productImage.createMany({
-        data: imageExtraUrls.map((url, index) => ({
-          productId: id,
-          url,
-          sortOrder: index,
-        })),
-      });
+    if (hasImageExtraUrls) {
+      await tx.productImage.deleteMany({ where: { productId: id } });
+      if (imageExtraUrls.length) {
+        await tx.productImage.createMany({
+          data: imageExtraUrls.map((url, index) => ({
+            productId: id,
+            url,
+            sortOrder: index,
+          })),
+        });
+      }
     }
   });
 
-  redirect(`/admin/products/${id}`);
+  redirect(`/admin/products/${id}?tab=details`);
 }
 
 export async function createSkuAction(formData: FormData) {
@@ -101,17 +113,17 @@ export async function createSkuAction(formData: FormData) {
   const tags = parseTags(formData.get("tags"));
 
   if (!productId || !displayName || !sizeText || !quantityStep || !priceCurrent) {
-    redirect(`/admin/products/${productId}?error=sku_campos`);
+    redirect(`/admin/products/${productId}?tab=skus&error=sku_campos&skuMode=new`);
   }
 
   if (unitType === "KG" && unitLabel !== "kg") {
-    redirect(`/admin/products/${productId}?error=sku_unit`);
+    redirect(`/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=new`);
   }
   if (unitType === "CENTO" && unitLabel !== "cento") {
-    redirect(`/admin/products/${productId}?error=sku_unit`);
+    redirect(`/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=new`);
   }
   if (unitType === "UNIDADE" && (unitLabel === "kg" || unitLabel === "cento")) {
-    redirect(`/admin/products/${productId}?error=sku_unit`);
+    redirect(`/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=new`);
   }
 
   const normalizedQtyStep =
@@ -120,7 +132,9 @@ export async function createSkuAction(formData: FormData) {
     unitType === "KG" ? minQty ?? 1 : ensureInteger(minQty ?? 1);
 
   if (!normalizedQtyStep || !normalizedMinQty) {
-    redirect(`/admin/products/${productId}?error=sku_quantidade`);
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_quantidade&skuMode=new`
+    );
   }
 
   const sobConsultaOverride =
@@ -155,7 +169,7 @@ export async function createSkuAction(formData: FormData) {
     }
   });
 
-  redirect(`/admin/products/${productId}`);
+  redirect(`/admin/products/${productId}?tab=skus`);
 }
 
 export async function updateSkuAction(formData: FormData) {
@@ -177,17 +191,25 @@ export async function updateSkuAction(formData: FormData) {
   const tags = parseTags(formData.get("tags"));
 
   if (!productId || !skuId || !displayName || !sizeText || !quantityStep || !priceCurrent) {
-    redirect(`/admin/products/${productId}?error=sku_campos`);
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_campos&skuMode=edit&skuId=${skuId}`
+    );
   }
 
   if (unitType === "KG" && unitLabel !== "kg") {
-    redirect(`/admin/products/${productId}?error=sku_unit`);
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=edit&skuId=${skuId}`
+    );
   }
   if (unitType === "CENTO" && unitLabel !== "cento") {
-    redirect(`/admin/products/${productId}?error=sku_unit`);
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=edit&skuId=${skuId}`
+    );
   }
   if (unitType === "UNIDADE" && (unitLabel === "kg" || unitLabel === "cento")) {
-    redirect(`/admin/products/${productId}?error=sku_unit`);
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_unit&skuMode=edit&skuId=${skuId}`
+    );
   }
 
   const normalizedQtyStep =
@@ -196,7 +218,9 @@ export async function updateSkuAction(formData: FormData) {
     unitType === "KG" ? minQty ?? 1 : ensureInteger(minQty ?? 1);
 
   if (!normalizedQtyStep || !normalizedMinQty) {
-    redirect(`/admin/products/${productId}?error=sku_quantidade`);
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_quantidade&skuMode=edit&skuId=${skuId}`
+    );
   }
 
   const sobConsultaOverride =
@@ -232,7 +256,7 @@ export async function updateSkuAction(formData: FormData) {
     }
   });
 
-  redirect(`/admin/products/${productId}`);
+  redirect(`/admin/products/${productId}?tab=skus`);
 }
 
 export async function duplicateSkuAction(formData: FormData) {
@@ -240,7 +264,7 @@ export async function duplicateSkuAction(formData: FormData) {
   const productId = parseText(formData.get("productId"));
   const skuId = parseText(formData.get("skuId"));
   if (!productId || !skuId) {
-    redirect(`/admin/products/${productId}`);
+    redirect(`/admin/products/${productId}?tab=skus`);
   }
 
   await prisma.$transaction(async (tx) => {
@@ -249,7 +273,7 @@ export async function duplicateSkuAction(formData: FormData) {
       include: { tags: true },
     });
     if (!sku) {
-      redirect(`/admin/products/${productId}`);
+      redirect(`/admin/products/${productId}?tab=skus`);
     }
 
     const suffix = new Date().toISOString().slice(11, 19).replace(/:/g, "");
@@ -283,5 +307,38 @@ export async function duplicateSkuAction(formData: FormData) {
     }
   });
 
-  redirect(`/admin/products/${productId}`);
+  redirect(`/admin/products/${productId}?tab=skus`);
+}
+
+export async function updateProductImagesAction(formData: FormData) {
+  await requireAdminSession();
+  const id = parseText(formData.get("id"));
+  const imageMainUrl = parseText(formData.get("imageMainUrl"));
+  const imageExtraUrls = parseLines(formData.get("imageExtraUrls"));
+
+  if (!id) {
+    redirect(`/admin/products/${id}?tab=images`);
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.product.update({
+      where: { id },
+      data: {
+        imageMainUrl: imageMainUrl || null,
+      },
+    });
+
+    await tx.productImage.deleteMany({ where: { productId: id } });
+    if (imageExtraUrls.length) {
+      await tx.productImage.createMany({
+        data: imageExtraUrls.map((url, index) => ({
+          productId: id,
+          url,
+          sortOrder: index,
+        })),
+      });
+    }
+  });
+
+  redirect(`/admin/products/${id}?tab=images`);
 }
