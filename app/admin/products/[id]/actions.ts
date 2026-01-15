@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { normalizeUnitType, normalizeUnitLabel } from "@/lib/unit";
+import {
+  validateSkuAttributes,
+  type SkuAttributeInput,
+} from "@/lib/validation/skuAttributes";
 
 function parseText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -33,6 +37,23 @@ function parseLines(value: FormDataEntryValue | null) {
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+function parseAttributesJson(
+  value: FormDataEntryValue | null
+): SkuAttributeInput[] | null {
+  const raw = String(value ?? "").trim();
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    return parsed.map((item) => ({
+      key: String(item?.key ?? ""),
+      value: String(item?.value ?? ""),
+    }));
+  } catch {
+    return null;
+  }
 }
 
 function ensureInteger(value: number | null) {
@@ -111,9 +132,14 @@ export async function createSkuAction(formData: FormData) {
   const isActive = parseBool(formData.get("isActive"));
   const sobRaw = parseText(formData.get("sobConsultaOverride"));
   const tags = parseTags(formData.get("tags"));
+  const attributesInput = parseAttributesJson(
+    formData.get("attributesJson")
+  );
 
-  if (!productId || !displayName || !sizeText || !quantityStep || !priceCurrent) {
-    redirect(`/admin/products/${productId}?tab=skus&error=sku_campos&skuMode=new`);
+  if (!productId || !displayName || !quantityStep || !priceCurrent) {
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_campos&skuMode=new`
+    );
   }
 
   if (unitType === "KG" && unitLabel !== "kg") {
@@ -137,15 +163,30 @@ export async function createSkuAction(formData: FormData) {
     );
   }
 
+  if (attributesInput === null) {
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_atributos&skuMode=new`
+    );
+  }
+  const attributesValidation = validateSkuAttributes(attributesInput);
+  if (!attributesValidation.ok) {
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_atributos&skuMode=new`
+    );
+  }
+
   const sobConsultaOverride =
     sobRaw === "true" ? true : sobRaw === "false" ? false : null;
+  const attributesJson = attributesValidation.normalized.length
+    ? attributesValidation.json
+    : null;
 
   await prisma.$transaction(async (tx) => {
     const sku = await tx.sku.create({
       data: {
         productId,
         displayName,
-        sizeText,
+        sizeText: sizeText || "",
         flavorText: flavorText || null,
         isFrozen,
         unitType,
@@ -154,6 +195,7 @@ export async function createSkuAction(formData: FormData) {
         minQty: normalizedMinQty,
         priceCurrent,
         cost: cost ?? null,
+        attributesJson,
         isActive,
         sobConsultaOverride,
       },
@@ -189,8 +231,11 @@ export async function updateSkuAction(formData: FormData) {
   const isActive = parseBool(formData.get("isActive"));
   const sobRaw = parseText(formData.get("sobConsultaOverride"));
   const tags = parseTags(formData.get("tags"));
+  const attributesInput = parseAttributesJson(
+    formData.get("attributesJson")
+  );
 
-  if (!productId || !skuId || !displayName || !sizeText || !quantityStep || !priceCurrent) {
+  if (!productId || !skuId || !displayName || !quantityStep || !priceCurrent) {
     redirect(
       `/admin/products/${productId}?tab=skus&error=sku_campos&skuMode=edit&skuId=${skuId}`
     );
@@ -223,15 +268,30 @@ export async function updateSkuAction(formData: FormData) {
     );
   }
 
+  if (attributesInput === null) {
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_atributos&skuMode=edit&skuId=${skuId}`
+    );
+  }
+  const attributesValidation = validateSkuAttributes(attributesInput);
+  if (!attributesValidation.ok) {
+    redirect(
+      `/admin/products/${productId}?tab=skus&error=sku_atributos&skuMode=edit&skuId=${skuId}`
+    );
+  }
+
   const sobConsultaOverride =
     sobRaw === "true" ? true : sobRaw === "false" ? false : null;
+  const attributesJson = attributesValidation.normalized.length
+    ? attributesValidation.json
+    : null;
 
   await prisma.$transaction(async (tx) => {
     await tx.sku.update({
       where: { id: skuId },
       data: {
         displayName,
-        sizeText,
+        sizeText: sizeText || "",
         flavorText: flavorText || null,
         isFrozen,
         unitType,
@@ -240,6 +300,7 @@ export async function updateSkuAction(formData: FormData) {
         minQty: normalizedMinQty,
         priceCurrent,
         cost: cost ?? null,
+        attributesJson,
         isActive,
         sobConsultaOverride,
       },
@@ -292,6 +353,7 @@ export async function duplicateSkuAction(formData: FormData) {
         minQty: sku.minQty,
         priceCurrent: sku.priceCurrent,
         cost: sku.cost,
+        attributesJson: sku.attributesJson,
         isActive: sku.isActive,
         sobConsultaOverride: sku.sobConsultaOverride,
       },

@@ -1,7 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
+import {
+  validateSkuAttributes,
+  type SkuAttributeInput,
+} from "@/lib/validation/skuAttributes";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "./productDetail.module.css";
 
@@ -10,6 +14,8 @@ type SkuView = {
   displayName: string;
   sizeText: string;
   flavorText: string;
+  attributes: SkuAttributeInput[];
+  attributesJson: string | null;
   isFrozen: boolean;
   unitType: string;
   unitLabel: string;
@@ -41,6 +47,22 @@ const unitTypeOptions = [
   { value: "CENTO", label: "CENTO" },
   { value: "KG", label: "KG" },
 ];
+
+const maxAttributes = 15;
+
+function createEmptyAttribute(): SkuAttributeInput {
+  return { key: "", value: "" };
+}
+
+function getInitialAttributes(sku: SkuView | null): SkuAttributeInput[] {
+  if (sku?.attributes?.length) {
+    return sku.attributes.map((attr) => ({
+      key: attr.key,
+      value: attr.value,
+    }));
+  }
+  return [createEmptyAttribute()];
+}
 
 function SkuFormActions({ onCancel }: { onCancel: () => void }) {
   const { pending } = useFormStatus();
@@ -77,7 +99,10 @@ export default function ProductSkusSection({
   skuErrorMessage,
 }: ProductSkusSectionProps) {
   const initialSku = useMemo(
-    () => (initialSkuId ? skus.find((sku) => sku.id === initialSkuId) : null),
+    () =>
+      initialSkuId
+        ? skus.find((sku) => sku.id === initialSkuId) ?? null
+        : null,
     [initialSkuId, skus]
   );
   const shouldOpenInitial = Boolean(initialMode || skuErrorMessage);
@@ -87,11 +112,16 @@ export default function ProductSkusSection({
     initialSku?.id ?? null
   );
   const [modalError, setModalError] = useState(skuErrorMessage ?? "");
+  const [attributeRows, setAttributeRows] = useState<SkuAttributeInput[]>(
+    () => getInitialAttributes(initialSku)
+  );
+  const [showAttributeError, setShowAttributeError] = useState(false);
 
   const activeSku = useMemo(
     () => skus.find((sku) => sku.id === activeSkuId) ?? null,
     [activeSkuId, skus]
   );
+  const modalSku = mode === "edit" ? activeSku : null;
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -108,13 +138,18 @@ export default function ProductSkusSection({
     setMode("new");
     setActiveSkuId(null);
     setModalError("");
+    setAttributeRows(getInitialAttributes(null));
+    setShowAttributeError(false);
     setModalOpen(true);
   }
 
   function openEdit(id: string) {
+    const nextSku = skus.find((sku) => sku.id === id) ?? null;
     setMode("edit");
     setActiveSkuId(id);
     setModalError("");
+    setAttributeRows(getInitialAttributes(nextSku));
+    setShowAttributeError(false);
     setModalOpen(true);
   }
 
@@ -128,7 +163,60 @@ export default function ProductSkusSection({
     return productSobConsulta ? "SIM" : "NAO";
   }
 
-  const modalSku = mode === "edit" ? activeSku : null;
+  const attributeValidation = useMemo(
+    () => validateSkuAttributes(attributeRows),
+    [attributeRows]
+  );
+  const attributesJsonValue = attributeValidation.ok
+    ? attributeValidation.json
+    : JSON.stringify(attributeRows);
+  const filledAttributeCount = useMemo(
+    () =>
+      attributeRows.filter(
+        (row) => row.key.trim() !== "" || row.value.trim() !== ""
+      ).length,
+    [attributeRows]
+  );
+  const attributesError =
+    showAttributeError && !attributeValidation.ok
+      ? attributeValidation.error
+      : "";
+
+  function updateAttributeRow(
+    index: number,
+    field: "key" | "value",
+    value: string
+  ) {
+    setAttributeRows((prev) =>
+      prev.map((row, rowIndex) =>
+        rowIndex === index ? { ...row, [field]: value } : row
+      )
+    );
+  }
+
+  function addAttributeRow() {
+    setAttributeRows((prev) =>
+      prev.length >= maxAttributes ? prev : [...prev, createEmptyAttribute()]
+    );
+  }
+
+  function removeAttributeRow(index: number) {
+    setAttributeRows((prev) => {
+      const next = prev.filter((_, rowIndex) => rowIndex !== index);
+      return next.length ? next : [createEmptyAttribute()];
+    });
+  }
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    const validation = validateSkuAttributes(attributeRows);
+    if (!validation.ok) {
+      event.preventDefault();
+      setShowAttributeError(true);
+      return;
+    }
+    setShowAttributeError(false);
+  }
+
   const modalTitle = mode === "edit" ? "Editar SKU" : "Novo SKU";
 
   return (
@@ -168,14 +256,18 @@ export default function ProductSkusSection({
                       : sku.sobConsultaOverride === false
                       ? "false"
                       : "inherit";
+                  const attributesSummary = sku.attributes.length
+                    ? sku.attributes
+                        .map((attr) => `${attr.key}: ${attr.value}`)
+                        .join(" | ")
+                    : "Sem atributos";
                   return (
                     <tr key={sku.id}>
                       <td>
                         <div className={detailStyles.skuMeta}>
                           <strong>{sku.displayName}</strong>
                           <span className={detailStyles.skuSubline}>
-                            {sku.sizeText}
-                            {sku.flavorText ? ` · ${sku.flavorText}` : ""}
+                            {attributesSummary}
                           </span>
                         </div>
                       </td>
@@ -276,6 +368,11 @@ export default function ProductSkusSection({
                             />
                             <input
                               type="hidden"
+                              name="attributesJson"
+                              value={sku.attributesJson ?? ""}
+                            />
+                            <input
+                              type="hidden"
                               name="sobConsultaOverride"
                               value={sobValue}
                             />
@@ -333,6 +430,7 @@ export default function ProductSkusSection({
             <form
               action={mode === "edit" ? updateSkuAction : createSkuAction}
               className={styles.formGrid}
+              onSubmit={handleSubmit}
             >
               <input type="hidden" name="productId" value={productId} />
               {mode === "edit" && modalSku ? (
@@ -348,19 +446,20 @@ export default function ProductSkusSection({
                 defaultValue={modalSku?.displayName ?? ""}
                 className={`${styles.control} ${styles.fieldFull}`}
               />
-              <input
-                name="sizeText"
-                placeholder="Tamanho"
-                required
-                defaultValue={modalSku?.sizeText ?? ""}
-                className={styles.control}
-              />
-              <input
-                name="flavorText"
-                placeholder="Sabor (opcional)"
-                defaultValue={modalSku?.flavorText ?? ""}
-                className={styles.control}
-              />
+              {mode === "edit" && modalSku ? (
+                <>
+                  <input
+                    type="hidden"
+                    name="sizeText"
+                    value={modalSku.sizeText}
+                  />
+                  <input
+                    type="hidden"
+                    name="flavorText"
+                    value={modalSku.flavorText}
+                  />
+                </>
+              ) : null}
               <label className={styles.choiceRow}>
                 <input
                   type="checkbox"
@@ -450,6 +549,75 @@ export default function ProductSkusSection({
                   className={styles.control}
                 />
               </label>
+              <div className={styles.fieldFull}>
+                <div className={detailStyles.attributeHeader}>
+                  <div>
+                    <div className={detailStyles.attributeTitle}>Atributos</div>
+                    <div className={styles.textMuted}>
+                      Opcional. Chaves sao normalizadas.
+                    </div>
+                  </div>
+                  <span className={detailStyles.attributeCount}>
+                    {filledAttributeCount}/{maxAttributes}
+                  </span>
+                </div>
+                <div className={detailStyles.attributeList}>
+                  {attributeRows.map((row, index) => (
+                    <div
+                      key={`attr-${index}`}
+                      className={detailStyles.attributeRow}
+                    >
+                      <input
+                        name={`attribute-key-${index}`}
+                        placeholder="atributo"
+                        value={row.key}
+                        onChange={(event) =>
+                          updateAttributeRow(index, "key", event.target.value)
+                        }
+                        className={styles.control}
+                      />
+                      <input
+                        name={`attribute-value-${index}`}
+                        placeholder="valor"
+                        value={row.value}
+                        onChange={(event) =>
+                          updateAttributeRow(
+                            index,
+                            "value",
+                            event.target.value
+                          )
+                        }
+                        className={styles.control}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => removeAttributeRow(index)}
+                        className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                      >
+                        Remover
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <div className={detailStyles.attributeFooter}>
+                  <button
+                    type="button"
+                    onClick={addAttributeRow}
+                    disabled={attributeRows.length >= maxAttributes}
+                    className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                  >
+                    Adicionar atributo
+                  </button>
+                  {attributesError ? (
+                    <span className={styles.textError}>{attributesError}</span>
+                  ) : null}
+                </div>
+                <input
+                  type="hidden"
+                  name="attributesJson"
+                  value={attributesJsonValue}
+                />
+              </div>
               <label className={styles.field}>
                 Sob consulta
                 <select

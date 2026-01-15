@@ -10,6 +10,7 @@ import ProductDetailsForm from "./ProductDetailsForm";
 import ProductImagesForm from "./ProductImagesForm";
 import ProductSkusSection from "./ProductSkusSection.client";
 import styles from "../../_styles/adminPrimitives.module.css";
+import type { SkuAttributeInput } from "@/lib/validation/skuAttributes";
 
 type ProductSearchParams = {
   error?: string;
@@ -17,6 +18,22 @@ type ProductSearchParams = {
   skuMode?: string;
   skuId?: string;
 };
+
+function parseAttributesJson(value: string | null): SkuAttributeInput[] {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => ({
+        key: String(item?.key ?? ""),
+        value: String(item?.value ?? ""),
+      }))
+      .filter((item) => item.key || item.value);
+  } catch {
+    return [];
+  }
+}
 
 export default async function ProductDetailPage({
   params,
@@ -69,11 +86,13 @@ export default async function ProductDetailPage({
     error === "campos" ? "Preencha nome e categoria para salvar." : "";
   const skuErrorMessage =
     error === "sku_campos"
-      ? "Preencha nome, tamanho, tipo de venda, passo, minimo e preco."
+      ? "Preencha nome, tipo de venda, passo, minimo e preco."
       : error === "sku_unit"
       ? "Tipo de venda e label de unidade incoerentes."
       : error === "sku_quantidade"
       ? "Passo/minimo invalidos para o tipo de venda."
+      : error === "sku_atributos"
+      ? "Revise os atributos do SKU."
       : "";
 
   const initialTab =
@@ -87,6 +106,8 @@ export default async function ProductDetailPage({
     displayName: sku.displayName,
     sizeText: sku.sizeText,
     flavorText: sku.flavorText || "",
+    attributes: parseAttributesJson(sku.attributesJson),
+    attributesJson: sku.attributesJson ?? null,
     isFrozen: sku.isFrozen,
     unitType: sku.unitType,
     unitLabel: sku.unitLabel,

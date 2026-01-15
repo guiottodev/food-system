@@ -151,6 +151,7 @@ model Sku {
   minQty       Decimal  @default(1)
   priceCurrent Decimal
   cost         Decimal?
+  attributesJson String?
   isActive     Boolean  @default(true) @map("active")
   sobConsultaOverride Boolean? @map("isSobConsultaOverride")
   stockQuantity Decimal @default(0)
