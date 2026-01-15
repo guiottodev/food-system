@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createOrderAction } from "./actions";
-import { validateQtyByUnit } from "@/lib/quantity";
+import { validateSkuQuantity } from "@/lib/quantity";
 import styles from "../../_styles/adminPrimitives.module.css";
+
+const DRAFT_KEY = "order-new-draft-v1";
 
 type CustomerOption = {
   id: string;
@@ -40,6 +42,25 @@ type OrderItem = {
   minQty: number;
   quantity: string;
   priceAtTime: number;
+};
+
+type OrderDraft = {
+  customerMode: "existing" | "new";
+  customerId: string;
+  customerSearch: string;
+  customerName: string;
+  customerPhone: string;
+  deliveryMethod: "ENTREGA" | "RETIRADA";
+  scheduleDate: string;
+  scheduleTime: string;
+  addressText: string;
+  addressBairro: string;
+  addressReferencia: string;
+  addressCity: string;
+  deliveryFee: string;
+  notes: string;
+  categoryId: string;
+  items: OrderItem[];
 };
 
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
@@ -91,6 +112,88 @@ function shouldDefaultDelivery(errorCode?: string) {
     "taxa-invalida",
     "taxa-negativa",
   ].includes(errorCode || "");
+}
+
+function normalizeItem(item: unknown, index: number): OrderItem | null {
+  if (!item || typeof item !== "object") return null;
+  const record = item as Record<string, unknown>;
+  const skuId = typeof record.skuId === "string" ? record.skuId : "";
+  if (!skuId) return null;
+  const quantity =
+    typeof record.quantity === "string" || typeof record.quantity === "number"
+      ? String(record.quantity)
+      : "1";
+  const toNumber = (value: unknown, fallback: number) => {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  };
+  return {
+    lineId:
+      typeof record.lineId === "string"
+        ? record.lineId
+        : `line-${Date.now()}-${index}`,
+    skuId,
+    skuLabel: typeof record.skuLabel === "string" ? record.skuLabel : "",
+    productName:
+      typeof record.productName === "string" ? record.productName : "",
+    categoryName:
+      typeof record.categoryName === "string" ? record.categoryName : "",
+    unitLabel: typeof record.unitLabel === "string" ? record.unitLabel : "",
+    unitType: typeof record.unitType === "string" ? record.unitType : "UNIDADE",
+    quantityStep: toNumber(record.quantityStep, 1),
+    minQty: toNumber(record.minQty, 1),
+    quantity,
+    priceAtTime: toNumber(record.priceAtTime, 0),
+  };
+}
+
+function parseDraft(raw: string | null): OrderDraft | null {
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw) as Partial<OrderDraft>;
+    const items = Array.isArray(parsed.items)
+      ? parsed.items
+          .map((item, index) => normalizeItem(item, index))
+          .filter((item): item is OrderItem => Boolean(item))
+      : [];
+    const customerMode =
+      parsed.customerMode === "new" ? "new" : "existing";
+    const deliveryMethod =
+      parsed.deliveryMethod === "ENTREGA" ? "ENTREGA" : "RETIRADA";
+    return {
+      customerMode,
+      customerId: typeof parsed.customerId === "string" ? parsed.customerId : "",
+      customerSearch:
+        typeof parsed.customerSearch === "string" ? parsed.customerSearch : "",
+      customerName:
+        typeof parsed.customerName === "string" ? parsed.customerName : "",
+      customerPhone:
+        typeof parsed.customerPhone === "string" ? parsed.customerPhone : "",
+      deliveryMethod,
+      scheduleDate:
+        typeof parsed.scheduleDate === "string" ? parsed.scheduleDate : "",
+      scheduleTime:
+        typeof parsed.scheduleTime === "string" ? parsed.scheduleTime : "",
+      addressText:
+        typeof parsed.addressText === "string" ? parsed.addressText : "",
+      addressBairro:
+        typeof parsed.addressBairro === "string" ? parsed.addressBairro : "",
+      addressReferencia:
+        typeof parsed.addressReferencia === "string"
+          ? parsed.addressReferencia
+          : "",
+      addressCity:
+        typeof parsed.addressCity === "string" ? parsed.addressCity : "",
+      deliveryFee:
+        typeof parsed.deliveryFee === "string" ? parsed.deliveryFee : "",
+      notes: typeof parsed.notes === "string" ? parsed.notes : "",
+      categoryId:
+        typeof parsed.categoryId === "string" ? parsed.categoryId : "",
+      items,
+    };
+  } catch {
+    return null;
+  }
 }
 
 export default function OrderForm({
@@ -162,8 +265,12 @@ export default function OrderForm({
 
   const itemsWithTotals = useMemo(() => {
     return items.map((item) => {
-      const result = validateQtyByUnit(
-        item.unitType as "KG" | "UNIDADE" | "CENTO",
+      const result = validateSkuQuantity(
+        {
+          unitType: item.unitType as "KG" | "UNIDADE" | "CENTO" | "KIT",
+          minQty: item.minQty,
+          quantityStep: item.quantityStep,
+        },
         item.quantity
       );
       const normalized = result.ok ? result.normalized : 0;
@@ -269,6 +376,75 @@ export default function OrderForm({
   }, [items]);
 
   useEffect(() => {
+    if (errorCode) return;
+    if (typeof window === "undefined") return;
+    sessionStorage.removeItem(DRAFT_KEY);
+  }, [errorCode]);
+
+  useEffect(() => {
+    if (!errorCode) return;
+    if (typeof window === "undefined") return;
+    const draft = parseDraft(sessionStorage.getItem(DRAFT_KEY));
+    if (!draft) return;
+    setCustomerMode(draft.customerMode);
+    setCustomerId(draft.customerId);
+    setCustomerSearch(draft.customerSearch);
+    setCustomerName(draft.customerName);
+    setCustomerPhone(draft.customerPhone);
+    setDeliveryMethod(draft.deliveryMethod);
+    setScheduleDate(draft.scheduleDate);
+    setScheduleTime(draft.scheduleTime);
+    setAddressText(draft.addressText);
+    setAddressBairro(draft.addressBairro);
+    setAddressReferencia(draft.addressReferencia);
+    setAddressCity(draft.addressCity);
+    setDeliveryFee(draft.deliveryFee);
+    setNotes(draft.notes);
+    setCategoryId(draft.categoryId);
+    setItems(draft.items);
+  }, [errorCode]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const draft: OrderDraft = {
+      customerMode,
+      customerId,
+      customerSearch,
+      customerName,
+      customerPhone,
+      deliveryMethod,
+      scheduleDate,
+      scheduleTime,
+      addressText,
+      addressBairro,
+      addressReferencia,
+      addressCity,
+      deliveryFee,
+      notes,
+      categoryId,
+      items,
+    };
+    sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+  }, [
+    customerMode,
+    customerId,
+    customerSearch,
+    customerName,
+    customerPhone,
+    deliveryMethod,
+    scheduleDate,
+    scheduleTime,
+    addressText,
+    addressBairro,
+    addressReferencia,
+    addressCity,
+    deliveryFee,
+    notes,
+    categoryId,
+    items,
+  ]);
+
+  useEffect(() => {
     if (!errorCode) return;
     setSubmitAttempted(true);
     const focusMap: Record<string, () => void> = {
@@ -323,13 +499,17 @@ export default function OrderForm({
   }
 
   function getItemError(item: OrderItem) {
-    const result = validateQtyByUnit(
-      item.unitType as "KG" | "UNIDADE" | "CENTO",
+    const result = validateSkuQuantity(
+      {
+        unitType: item.unitType as "KG" | "UNIDADE" | "CENTO" | "KIT",
+        minQty: item.minQty,
+        quantityStep: item.quantityStep,
+      },
       item.quantity
     );
     if (!result.ok) {
       if (result.error === "Quantidade invalida.") {
-        return "Informe uma quantidade maior que zero.";
+        return "Quantidade invalida para este SKU.";
       }
       return result.error;
     }
@@ -415,7 +595,7 @@ export default function OrderForm({
     addressReferencia:
       deliveryMethod === "ENTREGA" ? addressReferencia : undefined,
     addressCity: deliveryMethod === "ENTREGA" ? addressCity : undefined,
-    orderType: "PRONTA_ENTREGA",
+    orderType: "ENCOMENDA",
     deliveryFee: deliveryMethod === "ENTREGA" ? deliveryFee : undefined,
     notes,
     items: items.map((item) => ({

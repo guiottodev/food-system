@@ -214,7 +214,6 @@ export async function createOrderAction(formData: FormData) {
     };
   });
 
-  const orderType = payload.orderType ?? "PRONTA_ENTREGA";
   let deliveryFee = 0;
   if (payload.deliveryMethod === "ENTREGA") {
     const feeResult = parseDeliveryFee(payload.deliveryFee);
@@ -236,18 +235,7 @@ export async function createOrderAction(formData: FormData) {
   );
   const total = subtotal + deliveryFee;
 
-  let shouldConvert = false;
-  if (orderType === "PRONTA_ENTREGA") {
-    for (const item of computedItems) {
-      const available = Number(item.sku.stockQuantity ?? 0);
-      if (available < item.quantity) {
-        shouldConvert = true;
-        break;
-      }
-    }
-  }
-
-  const finalOrderType = shouldConvert ? "ENCOMENDA" : orderType;
+  const finalOrderType: OrderType = "ENCOMENDA";
 
   const result = await prisma.$transaction(async (tx) => {
     let customerId = payload.customer.customerId;
@@ -339,24 +327,8 @@ export async function createOrderAction(formData: FormData) {
       },
     });
 
-    if (shouldConvert) {
-      await tx.auditLog.create({
-        data: {
-          actorId: actor?.id ?? null,
-          entityType: "orders",
-          entityId: order.id,
-          action: "auto_convert_encomenda",
-          changes: "Estoque insuficiente para pronta entrega.",
-        },
-      });
-    }
-
-    return { orderId: order.id, converted: shouldConvert };
+    return { orderId: order.id };
   });
 
-  const redirectUrl = result.converted
-    ? `/admin/orders/${result.orderId}?created=1&converted=1`
-    : `/admin/orders/${result.orderId}?created=1`;
-
-  redirect(redirectUrl);
+  redirect(`/admin/orders/${result.orderId}?created=1`);
 }

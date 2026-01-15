@@ -133,7 +133,7 @@ export default async function OrdersPage({
     dateFilter = { gte: startToday, lte: endWeek };
   }
   if (view === "all") {
-    dateFilter = { gte: startToday };
+    dateFilter = {};
   }
   if (view === "previous") {
     dateFilter = { gte: startPrevious, lte: endYesterday };
