@@ -19,8 +19,6 @@ type SkuView = {
   isFrozen: boolean;
   unitType: string;
   unitLabel: string;
-  quantityStep: number;
-  minQty: number;
   priceCurrent: number;
   cost: number | null;
   isActive: boolean;
@@ -46,6 +44,7 @@ const unitTypeOptions = [
   { value: "UNIDADE", label: "UNIDADE" },
   { value: "CENTO", label: "CENTO" },
   { value: "KG", label: "KG" },
+  { value: "KIT", label: "KIT" },
 ];
 
 const maxAttributes = 15;
@@ -336,26 +335,16 @@ export default function ProductSkusSection({
                               name="unitType"
                               value={sku.unitType}
                             />
-                            <input
-                              type="hidden"
-                              name="unitLabel"
-                              value={sku.unitLabel}
-                            />
-                            <input
-                              type="hidden"
-                              name="quantityStep"
-                              value={String(sku.quantityStep)}
-                            />
-                            <input
-                              type="hidden"
-                              name="minQty"
-                              value={String(sku.minQty)}
-                            />
-                            <input
-                              type="hidden"
-                              name="priceCurrent"
-                              value={String(sku.priceCurrent)}
-                            />
+                                <input
+                                  type="hidden"
+                                  name="unitLabel"
+                                  value={sku.unitLabel}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="priceCurrent"
+                                  value={String(sku.priceCurrent)}
+                                />
                             <input
                               type="hidden"
                               name="cost"
@@ -458,16 +447,11 @@ export default function ProductSkusSection({
                     name="flavorText"
                     value={modalSku.flavorText}
                   />
+                  {modalSku.isFrozen ? (
+                    <input type="hidden" name="isFrozen" value="on" />
+                  ) : null}
                 </>
               ) : null}
-              <label className={styles.choiceRow}>
-                <input
-                  type="checkbox"
-                  name="isFrozen"
-                  defaultChecked={modalSku?.isFrozen ?? false}
-                />
-                <span className={styles.choiceLabel}>Congelado</span>
-              </label>
               <label className={styles.field}>
                 Tipo de venda
                 <select
@@ -481,37 +465,6 @@ export default function ProductSkusSection({
                     </option>
                   ))}
                 </select>
-              </label>
-              <input
-                name="unitLabel"
-                placeholder="un/cento/kg/kit"
-                required
-                defaultValue={modalSku?.unitLabel ?? ""}
-                className={styles.control}
-              />
-              <label className={styles.field}>
-                Passo de quantidade
-                <input
-                  type="number"
-                  name="quantityStep"
-                  step="0.1"
-                  required
-                  defaultValue={
-                    modalSku ? String(modalSku.quantityStep) : ""
-                  }
-                  className={styles.control}
-                />
-              </label>
-              <label className={styles.field}>
-                Minimo
-                <input
-                  type="number"
-                  name="minQty"
-                  step="0.1"
-                  required
-                  defaultValue={modalSku ? String(modalSku.minQty) : ""}
-                  className={styles.control}
-                />
               </label>
               <label className={styles.field}>
                 Preco atual

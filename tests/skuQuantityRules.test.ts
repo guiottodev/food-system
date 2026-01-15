@@ -15,6 +15,15 @@ describe("validateSkuQuantity", () => {
     ).toBe(true);
   });
 
+  it("enforces integer quantities for KIT with step=1", () => {
+    expect(
+      validateSkuQuantity({ unitType: "KIT", quantityStep: 1 }, 1.5).ok
+    ).toBe(false);
+    expect(
+      validateSkuQuantity({ unitType: "KIT", quantityStep: 1 }, 2).ok
+    ).toBe(true);
+  });
+
   it("enforces step for KG", () => {
     expect(
       validateSkuQuantity({ unitType: "KG", quantityStep: 0.1 }, 0.15).ok

@@ -40,6 +40,7 @@ function formatUnit(item: OrderItem) {
   if (item.unitType === "KG") return "kg";
   if (item.unitType === "CENTO") return "cento";
   if (item.unitType === "UNIDADE") return "un";
+  if (item.unitType === "KIT") return "kit";
   return "legacy";
 }
 

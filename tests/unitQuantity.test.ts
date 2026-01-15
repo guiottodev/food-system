@@ -18,9 +18,18 @@ describe("validateQuantity", () => {
     }
   });
 
+  it("accepts integers for KIT", () => {
+    const result = validateQuantity("KIT", 4);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.normalized).toBe(4);
+    }
+  });
+
   it("rejects decimals for UNIDADE/CENTO", () => {
     expect(validateQuantity("UNIDADE", 1.5).ok).toBe(false);
     expect(validateQuantity("CENTO", 2.2).ok).toBe(false);
+    expect(validateQuantity("KIT", 2.5).ok).toBe(false);
   });
 
   it("accepts KG multiples of 0.05", () => {

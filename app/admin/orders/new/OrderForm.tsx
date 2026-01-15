@@ -163,7 +163,7 @@ export default function OrderForm({
   const itemsWithTotals = useMemo(() => {
     return items.map((item) => {
       const result = validateQtyByUnit(
-        item.unitType as "KG" | "UNIDADE" | "CENTO",
+        item.unitType as "KG" | "UNIDADE" | "CENTO" | "KIT",
         item.quantity
       );
       const normalized = result.ok ? result.normalized : 0;
@@ -324,7 +324,7 @@ export default function OrderForm({
 
   function getItemError(item: OrderItem) {
     const result = validateQtyByUnit(
-      item.unitType as "KG" | "UNIDADE" | "CENTO",
+      item.unitType as "KG" | "UNIDADE" | "CENTO" | "KIT",
       item.quantity
     );
     if (!result.ok) {

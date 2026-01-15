@@ -86,11 +86,11 @@ export default async function ProductDetailPage({
     error === "campos" ? "Preencha nome e categoria para salvar." : "";
   const skuErrorMessage =
     error === "sku_campos"
-      ? "Preencha nome, tipo de venda, passo, minimo e preco."
+      ? "Preencha nome, tipo de venda e preco."
       : error === "sku_unit"
-      ? "Tipo de venda e label de unidade incoerentes."
+      ? "Tipo de venda invalido."
       : error === "sku_quantidade"
-      ? "Passo/minimo invalidos para o tipo de venda."
+      ? "Regras de quantidade invalidas para o tipo de venda."
       : error === "sku_atributos"
       ? "Revise os atributos do SKU."
       : "";
@@ -111,8 +111,6 @@ export default async function ProductDetailPage({
     isFrozen: sku.isFrozen,
     unitType: sku.unitType,
     unitLabel: sku.unitLabel,
-    quantityStep: Number(sku.quantityStep),
-    minQty: Number(sku.minQty),
     priceCurrent: Number(sku.priceCurrent),
     cost: sku.cost ? Number(sku.cost) : null,
     isActive: sku.isActive,
