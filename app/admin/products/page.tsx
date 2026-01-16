@@ -2,6 +2,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import styles from "../_styles/adminPrimitives.module.css";
+import layoutStyles from "./products.module.css";
+import ProductsFilters from "./ProductsFilters.client";
 
 type ProductsSearchParams = {
   q?: string;
@@ -79,91 +81,22 @@ export default async function ProductsPage({
 
   return (
     <main className={styles.page}>
-      <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Produtos</h1>
-        <Link
-          href="/admin/products/new"
-          className={`${styles.button} ${styles.buttonPrimary}`}
-        >
-          Novo produto
-        </Link>
-      </div>
+      <h1 className={styles.pageTitle}>Produtos</h1>
+      <section className={styles.panel}>
+        <ProductsFilters
+          categories={categories}
+          initialQuery={query}
+          initialCategoryId={categoryId}
+          initialActive={activeFilter}
+          initialHidden={hiddenFilter}
+          initialSob={sobFilter}
+        />
 
-      <section className={`${styles.panel} ${styles.panelSecondary}`}>
-        <div className={styles.panelHeader}>
-          <h2>Filtros</h2>
-        </div>
-        <div className={styles.panelBody}>
-          <form className={styles.toolbar}>
-            <div className={styles.toolbarGroup}>
-              <input
-                type="text"
-                name="q"
-                placeholder="Buscar por nome"
-                defaultValue={query}
-                className={styles.control}
-              />
-              <select
-                name="categoryId"
-                defaultValue={categoryId}
-                className={styles.control}
-              >
-                <option value="">Todas categorias</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                name="active"
-                defaultValue={activeFilter}
-                className={styles.control}
-              >
-                <option value="all">Ativos e inativos</option>
-                <option value="active">Somente ativos</option>
-                <option value="inactive">Somente inativos</option>
-              </select>
-              <select
-                name="hidden"
-                defaultValue={hiddenFilter}
-                className={styles.control}
-              >
-                <option value="all">Publico e oculto</option>
-                <option value="public">Somente publico</option>
-                <option value="hidden">Somente oculto</option>
-              </select>
-              <select
-                name="sob"
-                defaultValue={sobFilter}
-                className={styles.control}
-              >
-                <option value="all">Com ou sem sob consulta</option>
-                <option value="yes">Somente sob consulta</option>
-                <option value="no">Sem sob consulta</option>
-              </select>
-            </div>
-            <div className={styles.toolbarActions}>
-              <button
-                type="submit"
-                className={`${styles.button} ${styles.buttonSecondary}`}
-              >
-                Aplicar
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <section className={`${styles.panel} ${styles.panelSecondary}`}>
-        <div className={styles.panelHeader}>
-          <h2>Lista</h2>
-        </div>
         {products.length === 0 ? (
           <div className={styles.emptyState}>Nenhum produto encontrado.</div>
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
+          <div className={layoutStyles.tableWrap}>
+            <table className={layoutStyles.table}>
               <thead>
                 <tr>
                   <th>Produto</th>

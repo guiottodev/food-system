@@ -1,0 +1,130 @@
+.toolbarBlock {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toolbarMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 360px;
+  min-width: 240px;
+}
+
+.searchWrap {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+
+.searchInput {
+  width: 100%;
+}
+
+.filtersWrap {
+  position: relative;
+}
+
+.filtersButton {
+  gap: var(--space-1);
+}
+
+.filtersButtonActive {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+}
+
+.filtersPanel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(520px, 92vw);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-3);
+  z-index: 20;
+}
+
+.filtersGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.chipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.chipButton {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  padding: 0;
+}
+
+.tableWrap {
+  border: 0;
+  padding: 0;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.table thead th {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  text-align: left;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .filtersPanel {
+    position: static;
+    width: 100%;
+  }
+
+  .filtersGrid {
+    grid-template-columns: 1fr;
+  }
+}
