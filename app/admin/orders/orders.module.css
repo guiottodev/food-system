@@ -1,0 +1,106 @@
+.toolbarBlock {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toolbarMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 520px;
+  min-width: 240px;
+}
+
+.segmented {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.searchWrap {
+  flex: 1 1 240px;
+  min-width: 200px;
+}
+
+.searchInput {
+  width: 100%;
+}
+
+.dateGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dateInput {
+  min-width: 170px;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.presetButton {
+  height: 32px;
+  padding: 0 var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.presetButtonActive {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+}
+
+.chipsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.chipButton {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: var(--text-xs);
+  padding: 0;
+}
+
+.filtersRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .toolbarMain {
+    flex: 1 1 100%;
+  }
+
+  .dateGroup {
+    width: 100%;
+  }
+}

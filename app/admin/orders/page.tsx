@@ -2,6 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { OrderStatus } from "@prisma/client";
 import OrdersTableClient from "./OrdersTableClient";
+import OrdersFilters from "./OrdersFilters.client";
 import styles from "../_styles/adminPrimitives.module.css";
 
 type OrdersSearchParams = {
@@ -11,6 +12,8 @@ type OrdersSearchParams = {
   dir?: string;
   page?: string;
   pageSize?: string;
+  deliveryDate?: string;
+  deliveryRange?: string;
 };
 
 const PAGE_SIZES = [15, 30, 50];
@@ -70,10 +73,27 @@ const deliveryMethodLabel = {
 };
 
 function normalizeView(view?: string) {
-  if (view === "week") return "week";
   if (view === "all") return "all";
   if (view === "previous" || view === "anteriores") return "previous";
-  return "day";
+  if (view === "upcoming") return "upcoming";
+  return "upcoming";
+}
+
+function parseDeliveryRange(value: string | undefined) {
+  if (value === "week") return "week";
+  if (value === "month") return "month";
+  if (value === "day") return "day";
+  return "";
+}
+
+function parseDateParam(value: string | undefined) {
+  if (!value) return null;
+  const parts = value.split("-");
+  if (parts.length !== 3) return null;
+  const [year, month, day] = parts.map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function withQuery(
@@ -116,27 +136,42 @@ export default async function OrdersPage({
   const dir = parseDir(sp?.dir);
   const page = parsePage(sp?.page);
   const pageSize = parsePageSize(sp?.pageSize);
+  const deliveryDateParam = sp?.deliveryDate ?? "";
+  const legacyRange =
+    sp?.view === "week" ? "week" : sp?.view === "day" ? "day" : "";
+  const deliveryRangeParam = parseDeliveryRange(
+    sp?.deliveryRange ?? legacyRange
+  );
 
   const now = new Date();
   const startToday = startOfDay(now);
   const endToday = endOfDay(now);
   const endYesterday = endOfDay(addDays(now, -1));
   const startPrevious = startOfDay(addDays(now, -30));
-  const endWeek = endOfDay(addDays(now, 6));
+  const daysToSunday = (7 - startToday.getDay()) % 7;
+  const endWeek = endOfDay(addDays(startToday, daysToSunday));
+  const startMonth = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
 
   // Ranges baseadas em data local (inicio/fim do dia) para inclusao correta.
   let dateFilter: { gte?: Date; lte?: Date } = {};
-  if (view === "day") {
-    dateFilter = { gte: startToday, lte: endToday };
-  }
-  if (view === "week") {
+  const parsedDeliveryDate = parseDateParam(deliveryDateParam);
+  if (parsedDeliveryDate) {
+    dateFilter = {
+      gte: startOfDay(parsedDeliveryDate),
+      lte: endOfDay(parsedDeliveryDate),
+    };
+  } else if (deliveryRangeParam === "week") {
     dateFilter = { gte: startToday, lte: endWeek };
-  }
-  if (view === "all") {
-    dateFilter = {};
-  }
-  if (view === "previous") {
+  } else if (deliveryRangeParam === "month") {
+    dateFilter = { gte: startMonth, lte: endToday };
+  } else if (deliveryRangeParam === "day") {
+    dateFilter = { gte: startToday, lte: endToday };
+  } else if (view === "upcoming") {
+    dateFilter = { gte: startToday };
+  } else if (view === "previous") {
     dateFilter = { gte: startPrevious, lte: endYesterday };
+  } else if (view === "all") {
+    dateFilter = {};
   }
 
   const statusFilter =
@@ -223,97 +258,35 @@ export default async function OrdersPage({
     status: statusParam,
     dir,
     pageSize,
+    view,
+    deliveryDate: deliveryDateParam,
+    deliveryRange: deliveryRangeParam || undefined,
   };
 
-  const tabLink = (tab: string) =>
-    withQuery("/admin/orders", { ...baseParams, view: tab, page: 1 });
-
   const pageLink = (nextPage: number) =>
-    withQuery("/admin/orders", { ...baseParams, view, page: nextPage });
+    withQuery("/admin/orders", { ...baseParams, page: nextPage });
 
   return (
     <main className={styles.page}>
-      <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Pedidos</h1>
-      </div>
-
-      <div className={styles.pageSubnav}>
-        <Link className={styles.pageSubnavLink} href={tabLink("day")}>
-          Hoje
-        </Link>
-        <Link className={styles.pageSubnavLink} href={tabLink("week")}>
-          Semana
-        </Link>
-        <Link className={styles.pageSubnavLink} href={tabLink("all")}>
-          Todos
-        </Link>
-        <Link className={styles.pageSubnavLink} href={tabLink("previous")}>
-          Anteriores
-        </Link>
-      </div>
+      <h1 className={styles.pageTitle}>Pedidos</h1>
 
       <section className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <h2>Filtros</h2>
-        </div>
-        <div className={styles.panelBody}>
-          <form className={styles.toolbar}>
-            <div className={styles.toolbarGroup}>
-              <input
-                type="text"
-                name="q"
-                placeholder="Buscar por cliente ou telefone"
-                defaultValue={query}
-                className={styles.control}
-              />
-              <select
-                name="status"
-                defaultValue={statusParam}
-                className={styles.control}
-              >
-                {statusOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <select name="dir" defaultValue={dir} className={styles.control}>
-                <option value="asc">Entrega: mais cedo</option>
-                <option value="desc">Entrega: mais tarde</option>
-              </select>
-              <select
-                name="pageSize"
-                defaultValue={pageSize}
-                className={styles.control}
-              >
-                {PAGE_SIZES.map((size) => (
-                  <option key={size} value={size}>
-                    {size} por pagina
-                  </option>
-                ))}
-              </select>
-              <input type="hidden" name="view" value={view} />
-            </div>
-            <div className={styles.toolbarActions}>
-              <button
-                type="submit"
-                className={`${styles.button} ${styles.buttonPrimary}`}
-              >
-                Aplicar
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
+        <OrdersFilters
+          statusOptions={statusOptions}
+          pageSizes={PAGE_SIZES}
+          initialView={view}
+          initialQuery={query}
+          initialStatus={statusParam}
+          initialDir={dir}
+          initialPageSize={pageSize}
+          initialDeliveryDate={deliveryDateParam}
+          initialDeliveryRange={deliveryRangeParam}
+        />
 
-      <p>
-        Mostrando {startIndex}-{endIndex} de {totalCount}
-      </p>
+        <p className={styles.textMuted}>
+          Mostrando {startIndex}-{endIndex} de {totalCount}
+        </p>
 
-      <section className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <h2>Lista</h2>
-        </div>
         {orders.length === 0 ? (
           <div className={styles.emptyState}>Nenhum pedido encontrado.</div>
         ) : (
@@ -362,13 +335,3 @@ export default async function OrdersPage({
     </main>
   );
 }
-
-
-
-
-
-
-
-
-
-
