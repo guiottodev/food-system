@@ -107,3 +107,256 @@
     - O fluxo mínimo de status é suficiente para operação inicial.
     - Impressão não é necessária para o MVP funcional.
     - Não há concorrência de múltiplos operadores simultâneos no início.
+
+SPECS da feature Controle de Pedidos com Tranquilidade
+
+📘 SPEC-MASTER.md
+Sistema de Pedidos – Controle Operacional com Tranquilidade Mental
+1. Objetivo do Produto
+Eliminar a ansiedade operacional de pequenos empreendedores que recebem pedidos por WhatsApp/Instagram, garantindo que:
+nenhum pedido seja esquecido
+nenhuma alteração passe despercebida
+o usuário não precise revisar histórico manualmente
+O sistema substitui o “controle mental” por sinalização ativa de atenção.
+
+2. Princípios do Sistema
+O usuário não procura problemas → o sistema aponta pendências.
+Estados, completude e pendências são conceitos distintos.
+A fonte da verdade é server-side.
+UI existe para reduzir ansiedade, não para criar culpa.
+Produção pode começar com incertezas, entrega não.
+
+3. Glossário
+READY: pedido tem requisitos mínimos para produção.
+CONFIRMADO: cliente validou o pedido como está naquele momento.
+Pendência: algo que exige atenção humana.
+Alteração crítica: mudança que invalida uma confirmação anterior.
+Reconfirmar: ação explícita de validação após alteração crítica.
+
+4. Estrutura de SPECS
+SPEC-Core-Orders.md
+SPEC-Attention-Inbox.md
+SPEC-Home.md
+SPEC-UI-FieldFlags.md
+SPEC-AuditLog.md
+
+📘 SPEC-Core-Orders.md
+Núcleo de Pedidos (Domínio)
+1. Estados do Pedido
+Estados possíveis:
+RASCUNHO
+CONFIRMADO
+EM_PRODUCAO
+PRONTO
+ENTREGUE
+CANCELADO
+
+2. Transições Permitidas
+RASCUNHO → CONFIRMADO
+RASCUNHO → EM_PRODUCAO
+CONFIRMADO → EM_PRODUCAO
+EM_PRODUCAO → PRONTO
+PRONTO → ENTREGUE
+Qualquer estado → CANCELADO
+
+3. Completude (READY)
+Definição
+Um pedido é considerado READY quando:
+possui itens
+possui data de entrega
+Nada além disso é obrigatório para READY.
+Observações
+Horário: opcional
+Endereço: opcional
+Pagamento: opcional
+READY não significa pedido fechado ou confirmado.
+
+4. Confirmação
+Definição
+CONFIRMADO significa:
+“O cliente validou esse pedido como ele está agora.”
+Um pedido pode ser CONFIRMADO mesmo incompleto.
+CONFIRMADO não implica pagamento.
+
+5. Alterações Críticas
+Campos críticos
+Itens / quantidades
+Data
+Horário
+Endereço
+Valor / preço
+Observações
+Regra
+Se um pedido CONFIRMADO sofrer alteração em qualquer campo crítico:
+marcar como Alterado
+gerar pendência ativa
+bloquear PRONTO e ENTREGUE
+exigir reconfirmação
+
+6. Reconfirmar
+Ação explícita do usuário
+Motivo opcional
+Remove pendência de alteração
+Libera PRONTO / ENTREGUE
+
+7. Produção
+Pedido pode ir para EM_PRODUCAO sem confirmação
+Requisito mínimo: READY
+Alteração crítica em produção:
+mantém status
+exige reconfirmação para concluir
+
+8. Pagamento
+Pagamento só é obrigatório para marcar ENTREGUE
+Falta de pagamento não gera pendência no MVP
+
+📘 SPEC-Attention-Inbox.md
+Pendências (Sistema Anti-Ansiedade)
+1. Definição
+Pendência é qualquer condição que:
+exige atenção humana
+representa risco operacional ou de esquecimento
+
+2. Tipos de Pendência (MVP)
+Tipo
+Descrição
+Pedido incompleto
+Falta requisito de READY
+Alterado após confirmação
+Campo crítico mudou
+Entrega em até 7 dias sem horário
+Risco de agenda
+Pedido de entrega sem endereço
+Impossível entregar
+
+
+3. Gatilhos
+Pedido incompleto → READY = false
+Alterado → alteração crítica pós CONFIRMADO
+Sem horário → data ≤ 7 dias e horário vazio
+Sem endereço → tipo = entrega e endereço vazio
+
+4. Severidade
+Forte
+bloqueia PRONTO / ENTREGUE
+ex: alteração crítica, incompleto
+Fraca
+alerta visual
+ex: sem horário próximo
+
+5. SLA Mental
+Pendências devem ser resolvidas:
+até confirmação
+ou antes de PRONTO / ENTREGUE
+Produção não é bloqueada por pendências fracas.
+
+6. Comportamento
+Pendências aparecem na Home
+Pendências podem ser filtradas na listagem
+Pendências são a fonte única de alerta
+
+📘 SPEC-Home.md
+Home Operacional
+1. Objetivo
+Substituir o hábito de revisar 30 dias por:
+“Se não há pendências, nada foi esquecido.”
+
+2. Papel da Home
+Primeira tela após login
+Central de controle operacional
+Não é BI avançado
+
+3. Blocos Obrigatórios
+Pendências
+contador destacado
+ação primária
+Pedidos
+hoje
+próximos 7 dias
+Receita
+filtrável por período
+
+4. Ações Principais
+Ver e resolver pendências
+Ver pedidos de hoje
+
+5. Filtros
+Hoje
+Próximos 7 dias
+Período customizado
+
+📘 SPEC-UI-FieldFlags.md
+Flags Visuais por Campo
+1. Objetivo
+Reduzir ansiedade mostrando claramente:
+“O que falta neste pedido?”
+
+2. Princípio
+Flags não são regra de negócio.
+Elas derivam de:
+completude
+pendências
+missingFields calculados no server
+
+3. Estados de Campo
+OK
+Pendente
+Opcional
+
+4. Campos com Flag
+Itens
+Data
+Horário
+Endereço
+Pagamento (informativo)
+
+5. Copy
+Curto
+Objetivo
+Sem tom de erro
+Ex:
+“Horário a confirmar”
+“Endereço ainda não informado”
+
+6. Listagem
+Badge “Incompleto”
+Badge “Com alteração”
+
+📘 SPEC-AuditLog.md
+Histórico e Prova de Controle
+1. Objetivo
+Eliminar paranoia e disputas com:
+evidência clara de mudanças
+
+2. O que gera log
+Criação de pedido
+Alteração de qualquer campo
+Confirmação
+Reconfirmação
+Mudança de status
+
+3. Estrutura do Log
+usuário
+data/hora
+campo alterado
+valor anterior
+novo valor
+motivo (se informado)
+
+4. Regras
+Alterações em rascunho → apenas log
+Motivo nunca obrigatório
+Histórico sempre visível no pedido
+
+✅ Encerramento
+Este conjunto de SPECS:
+resolve a dor emocional + operacional
+evita overengineering
+cria base sólida para evolução futura
+impede decisões implícitas na implementação
+Qualquer implementação que viole estes SPECS está errada.
+Quando você quiser, o próximo passo natural é:
+transformar isso em documentação oficial do repositório
+ou derivar critérios de aceite
+ou então preparar o terreno para o Codex executar sem inventar regra
+Aqui, como produto, está fechado.
