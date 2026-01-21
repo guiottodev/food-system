@@ -12,7 +12,7 @@ describe("order domain rules", () => {
   });
 
   it("blocks invalid transitions and final status changes", () => {
-    expect(validateStatusTransition("NOVO", "PRONTO").ok).toBe(false);
+    expect(validateStatusTransition("RASCUNHO", "PRONTO").ok).toBe(false);
     expect(validateStatusTransition("ENTREGUE", "CANCELADO").ok).toBe(false);
   });
 });

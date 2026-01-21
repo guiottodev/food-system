@@ -1,12 +1,20 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { getOrderAttentionSummary } from "@/lib/domain/attention";
+import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { OrderStatus } from "@prisma/client";
-import { cancelOrderAction, updateStatusAction } from "./actions";
+import {
+  cancelOrderAction,
+  confirmOrderAction,
+  reconfirmOrderAction,
+  updateStatusAction,
+} from "./actions";
 import styles from "../../_styles/adminPrimitives.module.css";
 
 const statusLabel: Record<OrderStatus, string> = {
-  NOVO: "Novo",
+  RASCUNHO: "Rascunho",
+  CONFIRMADO: "Confirmado",
   EM_PRODUCAO: "Em producao",
   PRONTO: "Pronto",
   ENTREGUE: "Entregue",
@@ -24,17 +32,39 @@ const deliveryMethodLabel = {
 };
 
 const statusOptions = [
-  OrderStatus.NOVO,
+  OrderStatus.RASCUNHO,
+  OrderStatus.CONFIRMADO,
   OrderStatus.EM_PRODUCAO,
   OrderStatus.PRONTO,
   OrderStatus.ENTREGUE,
 ];
 
-function formatDateTime(value: Date) {
+function formatDate(value?: Date | null) {
+  if (!value) return "-";
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
-    timeStyle: "short",
   }).format(value);
+}
+
+function formatDateTime(value?: Date | null, time?: string | null) {
+  if (!value) return "-";
+  const dateLabel = formatDate(value);
+  const trimmedTime = time?.trim();
+  if (!trimmedTime || trimmedTime === DEFAULT_DELIVERY_TIME) {
+    return dateLabel;
+  }
+  return `${dateLabel} ${trimmedTime}`;
+}
+
+function flagBadgeClass(state: string) {
+  if (state === "OK") return styles.badgeSuccess;
+  if (state === "PENDING") return styles.badgeWarning;
+  return styles.badgeNeutral;
+}
+
+function formatLogValue(value?: string | null) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : "-";
 }
 
 export default async function OrderDetailPage({
@@ -43,8 +73,20 @@ export default async function OrderDetailPage({
 }: {
   params: Promise<{ id: string }> | { id: string };
   searchParams?:
-    | Promise<{ converted?: string; created?: string; error?: string }>
-    | { converted?: string; created?: string; error?: string };
+    | Promise<{
+        converted?: string;
+        created?: string;
+        confirmed?: string;
+        reconfirmed?: string;
+        error?: string;
+      }>
+    | {
+        converted?: string;
+        created?: string;
+        confirmed?: string;
+        reconfirmed?: string;
+        error?: string;
+      };
 }) {
   const p = await Promise.resolve(params);
   const id = p?.id;
@@ -86,6 +128,18 @@ export default async function OrderDetailPage({
     );
   }
 
+  const attention = getOrderAttentionSummary({
+    status: order.status,
+    deliveryDatetime: order.deliveryDatetime,
+    deliveryTime: order.deliveryTime,
+    deliveryMethod: order.deliveryMethod,
+    addressText: order.addressText,
+    addressCity: order.addressCity,
+    items: order.items,
+    needsReconfirmation: order.needsReconfirmation,
+    paidAt: order.paidAt,
+  });
+
   const auditLogs = await prisma.auditLog.findMany({
     where: {
       entityType: "orders",
@@ -122,6 +176,38 @@ export default async function OrderDetailPage({
         <p className={styles.textError}>Transicao de status invalida.</p>
       ) : null}
 
+      {resolvedSearch?.error === "ready" ? (
+        <p className={styles.textError}>Pedido incompleto para producao.</p>
+      ) : null}
+
+      {resolvedSearch?.error === "pendencia" ? (
+        <p className={styles.textError}>
+          Pendencia forte impede avancar para Pronto/Entregue.
+        </p>
+      ) : null}
+
+      {resolvedSearch?.error === "pagamento" ? (
+        <p className={styles.textError}>
+          Pagamento pendente. Marque o pagamento para entregar.
+        </p>
+      ) : null}
+
+      {resolvedSearch?.error === "confirmacao" ? (
+        <p className={styles.textError}>Confirmacao invalida para este status.</p>
+      ) : null}
+
+      {resolvedSearch?.error === "reconfirmacao" ? (
+        <p className={styles.textError}>Nao ha pendencia para reconfirmar.</p>
+      ) : null}
+
+      {resolvedSearch?.confirmed ? (
+        <div className={styles.notice}>Pedido confirmado.</div>
+      ) : null}
+
+      {resolvedSearch?.reconfirmed ? (
+        <div className={styles.notice}>Pedido reconfirmado.</div>
+      ) : null}
+
       <section className={styles.panel}>
         <div className={styles.panelHeader}>
           <h2>Dados do pedido</h2>
@@ -130,10 +216,28 @@ export default async function OrderDetailPage({
           <div className={styles.stackSm}>
             <div>Cliente: {order.customer.name}</div>
             <div>Telefone: {order.customer.phone || "-"}</div>
-            <div>Status: {statusLabel[order.status]}</div>
+            <div className={styles.clusterSm}>
+              <span>Status: {statusLabel[order.status]}</span>
+              {attention.strongReasons.some(
+                (reason) => reason.type === "INCOMPLETE"
+              ) ? (
+                <span className={`${styles.badge} ${styles.badgeWarning}`}>
+                  Incompleto
+                </span>
+              ) : null}
+              {attention.strongReasons.some(
+                (reason) => reason.type === "ALTERADO_APOS_CONFIRMACAO"
+              ) ? (
+                <span className={`${styles.badge} ${styles.badgeDanger}`}>
+                  Alterado - requer reconfirmacao
+                </span>
+              ) : null}
+            </div>
             <div>Tipo: {orderTypeLabel[order.orderType]}</div>
             <div>Entrega/Retirada: {deliveryMethodLabel[order.deliveryMethod]}</div>
-            <div>Data/hora: {formatDateTime(order.deliveryDatetime)}</div>
+            <div>
+              Data/hora: {formatDateTime(order.deliveryDatetime, order.deliveryTime)}
+            </div>
             {order.deliveryMethod === "ENTREGA" ? (
               <>
                 <div>Endereco: {order.addressText || "-"}</div>
@@ -145,6 +249,72 @@ export default async function OrderDetailPage({
             <div>Taxa de entrega: R$ {Number(order.deliveryFee || 0).toFixed(2)}</div>
             <div>Subtotal: R$ {Number(order.subtotal).toFixed(2)}</div>
             <div>Total: R$ {Number(order.total).toFixed(2)}</div>
+            <div>Confirmado em: {formatDateTime(order.confirmedAt)}</div>
+            <div>Pagamento: {order.paidAt ? "Pago" : "Pendente"}</div>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Pendencias</h2>
+        </div>
+        <div className={styles.panelBody}>
+          {attention.reasons.length === 0 ? (
+            <div className={styles.emptyState}>Sem pendencias.</div>
+          ) : (
+            <ul>
+              {[...attention.strongReasons, ...attention.weakReasons].map(
+                (reason, index) => (
+                  <li key={`${reason.type}-${index}`}>{reason.label}</li>
+                )
+              )}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
+          <h2>Flags por campo</h2>
+        </div>
+        <div className={styles.panelBody}>
+          <div className={styles.clusterSm}>
+            <span
+              className={`${styles.badge} ${flagBadgeClass(
+                attention.flags.items.state
+              )}`}
+            >
+              Itens: {attention.flags.items.label}
+            </span>
+            <span
+              className={`${styles.badge} ${flagBadgeClass(
+                attention.flags.date.state
+              )}`}
+            >
+              Data: {attention.flags.date.label}
+            </span>
+            <span
+              className={`${styles.badge} ${flagBadgeClass(
+                attention.flags.time.state
+              )}`}
+            >
+              Horario: {attention.flags.time.label}
+            </span>
+            <span
+              className={`${styles.badge} ${flagBadgeClass(
+                attention.flags.address.state
+              )}`}
+            >
+              Endereco: {attention.flags.address.label}
+            </span>
+            <span
+              className={`${styles.badge} ${flagBadgeClass(
+                attention.flags.payment.state
+              )}`}
+            >
+              Pagamento: {attention.flags.payment.label}
+            </span>
           </div>
         </div>
       </section>
@@ -194,6 +364,13 @@ export default async function OrderDetailPage({
                 </option>
               ))}
             </select>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>Pagamento</span>
+              <div className={styles.clusterSm}>
+                <input type="checkbox" name="markPaid" value="1" />
+                <span>Marcar pagamento ao entregar</span>
+              </div>
+            </label>
             <button
               type="submit"
               disabled={order.status === "ENTREGUE" || order.status === "CANCELADO"}
@@ -204,6 +381,54 @@ export default async function OrderDetailPage({
           </form>
         </div>
       </section>
+
+      {order.status === "RASCUNHO" ? (
+        <section className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <h2>Confirmar pedido</h2>
+          </div>
+          <div className={styles.panelBody}>
+            <form action={confirmOrderAction} className={styles.formSection}>
+              <input type="hidden" name="orderId" value={order.id} />
+              <input
+                name="confirmReason"
+                placeholder="Motivo (opcional)"
+                className={styles.control}
+              />
+              <button
+                type="submit"
+                className={`${styles.button} ${styles.buttonPrimary}`}
+              >
+                Confirmar pedido
+              </button>
+            </form>
+          </div>
+        </section>
+      ) : null}
+
+      {order.needsReconfirmation ? (
+        <section className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <h2>Reconfirmar pedido</h2>
+          </div>
+          <div className={styles.panelBody}>
+            <form action={reconfirmOrderAction} className={styles.formSection}>
+              <input type="hidden" name="orderId" value={order.id} />
+              <input
+                name="reconfirmReason"
+                placeholder="Motivo (opcional)"
+                className={styles.control}
+              />
+              <button
+                type="submit"
+                className={`${styles.button} ${styles.buttonPrimary}`}
+              >
+                Reconfirmar pedido
+              </button>
+            </form>
+          </div>
+        </section>
+      ) : null}
 
       <section className={styles.panel}>
         <div className={styles.panelHeader}>
@@ -243,6 +468,18 @@ export default async function OrderDetailPage({
                     timeStyle: "short",
                   }).format(log.createdAt)}{" "}
                   - {log.action} ({log.actor?.username || "sistema"})
+                  {log.field ? ` | Campo: ${log.field}` : ""}
+                  {log.beforeValue || log.afterValue ? (
+                    <>
+                      {" "}
+                      | De: {formatLogValue(log.beforeValue)} | Para:{" "}
+                      {formatLogValue(log.afterValue)}
+                    </>
+                  ) : null}
+                  {!log.field && !log.beforeValue && !log.afterValue && log.changes
+                    ? ` | ${log.changes}`
+                    : ""}
+                  {log.reason ? ` | Motivo: ${log.reason}` : ""}
                 </li>
               ))}
             </ul>

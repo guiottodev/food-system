@@ -74,6 +74,12 @@ function toDecimal(value) {
   return new Prisma.Decimal(value);
 }
 
+function formatTime(date) {
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
 async function resetData() {
   const orders = await prisma.order.findMany({
     where: { notes: { contains: TAG } },
@@ -269,11 +275,10 @@ async function main() {
     const deliveryMethod = Math.random() < 0.6 ? "ENTREGA" : "RETIRADA";
     const orderType = Math.random() < 0.5 ? "PRONTA_ENTREGA" : "ENCOMENDA";
     const statusPool = [
-      "NOVO",
+      "RASCUNHO",
       "CONFIRMADO",
       "EM_PRODUCAO",
       "PRONTO",
-      "EM_ROTA",
       "ENTREGUE",
       "CANCELADO",
     ];
@@ -326,6 +331,7 @@ async function main() {
         status,
         orderType,
         deliveryDatetime,
+        deliveryTime: formatTime(deliveryDatetime),
         deliveryMethod,
         addressText: deliveryMethod === "ENTREGA" ? `${TAG} Rua teste` : null,
         addressBairro: deliveryMethod === "ENTREGA" ? "Centro" : null,

@@ -92,7 +92,7 @@ function formatCurrency(value: number) {
 function parseFeeValue(value: string) {
   const raw = value.trim();
   if (!raw) {
-    return { ok: false, error: "Informe a taxa de entrega (0 ou mais)." } as const;
+    return { ok: true, value: 0 } as const;
   }
   const parsed = Number(raw.replace(",", "."));
   if (!Number.isFinite(parsed)) {
@@ -530,36 +530,36 @@ export default function OrderForm({
       }
     }
 
-    if (!scheduleDate) {
-      errors.scheduleDate = "Informe a data.";
-    }
-
-    if (!scheduleTime) {
-      errors.scheduleTime = "Informe o horario.";
-    }
-
-    if (scheduleDate && scheduleTime) {
-      const schedule = buildLocalDate(scheduleDate, scheduleTime);
-      if (!schedule || schedule.getTime() <= Date.now()) {
-        errors.scheduleTime = "Selecione uma data e horario no futuro.";
-      }
-    }
-
     if (deliveryMethod === "ENTREGA") {
-      if (!addressText.trim()) {
-        errors.addressText = "Informe o endereco.";
-      }
-      if (!addressCity.trim()) {
-        errors.addressCity = "Informe a cidade.";
-      }
       const feeCheck = parseFeeValue(deliveryFee);
       if (!feeCheck.ok) {
         errors.deliveryFee = feeCheck.error;
       }
     }
 
-    if (items.length === 0) {
-      errors.items = "Adicione pelo menos 1 item ao pedido.";
+    if (scheduleDate) {
+      const checkTime = scheduleTime || "00:00";
+      const schedule = buildLocalDate(scheduleDate, checkTime);
+      if (!schedule) {
+        errors.scheduleDate = "Informe uma data valida.";
+      } else if (scheduleTime && schedule.getTime() <= Date.now()) {
+        errors.scheduleTime = "Selecione uma data e horario no futuro.";
+      } else if (!scheduleTime) {
+        const today = new Date();
+        const startToday = new Date(
+          today.getFullYear(),
+          today.getMonth(),
+          today.getDate()
+        );
+        const startSchedule = new Date(
+          schedule.getFullYear(),
+          schedule.getMonth(),
+          schedule.getDate()
+        );
+        if (startSchedule.getTime() < startToday.getTime()) {
+          errors.scheduleDate = "Selecione uma data futura.";
+        }
+      }
     }
 
     for (const item of items) {
@@ -884,7 +884,7 @@ export default function OrderForm({
                   ) : null}
                 </label>
                 <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Horario</span>
+                  <span className={styles.fieldLabel}>Horario (opcional)</span>
                   <select
                     ref={scheduleTimeRef}
                     value={scheduleTime}
@@ -908,7 +908,7 @@ export default function OrderForm({
                     ))}
                   </select>
                   <span className={styles.fieldHelp}>
-                    Horarios disponiveis de 30 em 30 minutos.
+                    Informe quando souber. Horarios de 30 em 30 minutos.
                   </span>
                   {showErrors && validation.errors.scheduleTime ? (
                     <span

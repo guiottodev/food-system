@@ -14,11 +14,12 @@ enum UserRole {
 }
 
 enum OrderStatus {
-  NOVO        @map("Novo")
+  RASCUNHO   @map("Rascunho")
+  CONFIRMADO @map("Confirmado")
   EM_PRODUCAO @map("Em producao")
-  PRONTO      @map("Pronto")
-  ENTREGUE    @map("Entregue")
-  CANCELADO   @map("Cancelado")
+  PRONTO     @map("Pronto")
+  ENTREGUE   @map("Entregue")
+  CANCELADO  @map("Cancelado")
 }
 
 enum OrderType {
@@ -188,7 +189,8 @@ model Order {
   customerId        String
   status            OrderStatus
   orderType         OrderType
-  deliveryDatetime  DateTime
+  deliveryDatetime  DateTime?
+  deliveryTime      String?
   deliveryMethod    DeliveryMethod
   addressText       String?
   addressBairro     String?
@@ -200,6 +202,9 @@ model Order {
   total             Decimal
   notes             String?
   cancellationReason String?
+  confirmedAt       DateTime?
+  needsReconfirmation Boolean @default(false)
+  paidAt            DateTime?
   stockDecrementedAt DateTime?
   createdById       String?
   createdAt         DateTime @default(now())
@@ -246,6 +251,10 @@ model AuditLog {
   entityType String
   entityId  String
   action    String
+  field     String?
+  beforeValue String?
+  afterValue String?
+  reason    String?
   changes   String?
   createdAt DateTime @default(now())
 

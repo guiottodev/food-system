@@ -1,6 +1,8 @@
 ﻿import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { OrderStatus } from "@prisma/client";
+import { getOrderAttentionSummary } from "@/lib/domain/attention";
+import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
+import { OrderStatus, Prisma } from "@prisma/client";
 import OrdersTableClient from "./OrdersTableClient";
 import OrdersFilters from "./OrdersFilters.client";
 import styles from "../_styles/adminPrimitives.module.css";
@@ -14,6 +16,8 @@ type OrdersSearchParams = {
   pageSize?: string;
   deliveryDate?: string;
   deliveryRange?: string;
+  attention?: string;
+  attentionType?: string;
 };
 
 const PAGE_SIZES = [15, 30, 50];
@@ -36,11 +40,21 @@ function addDays(date: Date, days: number) {
   return d;
 }
 
-function formatDateTime(value: Date) {
+function formatDate(value?: Date | null) {
+  if (!value) return "-";
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
-    timeStyle: "short",
   }).format(value);
+}
+
+function formatDeliveryLabel(value?: Date | null, time?: string | null) {
+  if (!value) return "-";
+  const dateLabel = formatDate(value);
+  const trimmedTime = time?.trim();
+  if (!trimmedTime || trimmedTime === DEFAULT_DELIVERY_TIME) {
+    return dateLabel;
+  }
+  return `${dateLabel} ${trimmedTime}`;
 }
 
 function formatCurrency(value: number) {
@@ -52,7 +66,8 @@ function formatCurrency(value: number) {
 
 const statusOptions = [
   { value: "ALL", label: "Todos" },
-  { value: OrderStatus.NOVO, label: "Novo" },
+  { value: OrderStatus.RASCUNHO, label: "Rascunho" },
+  { value: OrderStatus.CONFIRMADO, label: "Confirmado" },
   { value: OrderStatus.EM_PRODUCAO, label: "Em producao" },
   { value: OrderStatus.PRONTO, label: "Pronto" },
   { value: OrderStatus.ENTREGUE, label: "Entregue" },
@@ -60,12 +75,36 @@ const statusOptions = [
 ];
 
 const statusLabel: Record<OrderStatus, string> = {
-  NOVO: "Novo",
+  RASCUNHO: "Rascunho",
+  CONFIRMADO: "Confirmado",
   EM_PRODUCAO: "Em producao",
   PRONTO: "Pronto",
   ENTREGUE: "Entregue",
   CANCELADO: "Cancelado",
 };
+
+const orderInclude = {
+  customer: {
+    select: {
+      name: true,
+      phone: true,
+    },
+  },
+  items: {
+    select: {
+      id: true,
+      quantity: true,
+      snapshotUnitPrice: true,
+      lineTotal: true,
+      snapshotSkuName: true,
+      snapshotProductName: true,
+      snapshotUnitLabel: true,
+      snapshotUnitType: true,
+    },
+  },
+} as const;
+
+type OrderWithRelations = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
 
 const deliveryMethodLabel = {
   ENTREGA: "Entrega",
@@ -124,6 +163,39 @@ function parseDir(value: string | undefined) {
   return value === "desc" ? "desc" : "asc";
 }
 
+function normalizeAttention(value: string | undefined) {
+  return value === "with" ? "with" : "all";
+}
+
+const attentionTypeOptions = [
+  "all",
+  "INCOMPLETE",
+  "ALTERADO_APOS_CONFIRMACAO",
+  "MISSING_TIME",
+  "MISSING_ADDRESS",
+] as const;
+
+function normalizeAttentionType(value: string | undefined) {
+  if (attentionTypeOptions.includes(value as typeof attentionTypeOptions[number])) {
+    return value as typeof attentionTypeOptions[number];
+  }
+  return "all";
+}
+
+function matchesAttentionFilter(
+  attention: ReturnType<typeof getOrderAttentionSummary>,
+  attentionFilter: ReturnType<typeof normalizeAttention>,
+  attentionType: ReturnType<typeof normalizeAttentionType>
+) {
+  if (attentionType !== "all") {
+    return attention.reasons.some((reason) => reason.type === attentionType);
+  }
+  if (attentionFilter === "with") {
+    return attention.hasAttention;
+  }
+  return true;
+}
+
 export default async function OrdersPage({
   searchParams,
 }: {
@@ -137,6 +209,8 @@ export default async function OrdersPage({
   const page = parsePage(sp?.page);
   const pageSize = parsePageSize(sp?.pageSize);
   const deliveryDateParam = sp?.deliveryDate ?? "";
+  const attentionParam = normalizeAttention(sp?.attention);
+  const attentionTypeParam = normalizeAttentionType(sp?.attentionType);
   const legacyRange =
     sp?.view === "week" ? "week" : sp?.view === "day" ? "day" : "";
   const deliveryRangeParam = parseDeliveryRange(
@@ -213,37 +287,52 @@ export default async function OrdersPage({
     ...queryFilter,
   };
 
-  const [orders, totalCount] = await Promise.all([
-    prisma.order.findMany({
+  const shouldFilterByAttention =
+    attentionParam !== "all" || attentionTypeParam !== "all";
+
+  let orders: Array<{
+    order: OrderWithRelations;
+    attention: ReturnType<typeof getOrderAttentionSummary>;
+  }> = [];
+  let totalCount = 0;
+
+  if (shouldFilterByAttention) {
+    const allOrders = await prisma.order.findMany({
       where,
       orderBy: {
         deliveryDatetime: dir,
       },
-      take: pageSize,
-      skip: (page - 1) * pageSize,
-      include: {
-        customer: {
-          select: {
-            name: true,
-            phone: true,
-          },
+      include: orderInclude,
+    });
+    const decorated = allOrders.map((order) => ({
+      order,
+      attention: getOrderAttentionSummary(order),
+    }));
+    const filtered = decorated.filter((entry) =>
+      matchesAttentionFilter(entry.attention, attentionParam, attentionTypeParam)
+    );
+    totalCount = filtered.length;
+    const startIndex = (page - 1) * pageSize;
+    orders = filtered.slice(startIndex, startIndex + pageSize);
+  } else {
+    const [orderRows, count] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        orderBy: {
+          deliveryDatetime: dir,
         },
-        items: {
-          select: {
-            id: true,
-            quantity: true,
-            snapshotUnitPrice: true,
-            lineTotal: true,
-            snapshotSkuName: true,
-            snapshotProductName: true,
-            snapshotUnitLabel: true,
-            snapshotUnitType: true,
-          },
-        },
-      },
-    }),
-    prisma.order.count({ where }),
-  ]);
+        take: pageSize,
+        skip: (page - 1) * pageSize,
+        include: orderInclude,
+      }),
+      prisma.order.count({ where }),
+    ]);
+    totalCount = count;
+    orders = orderRows.map((order) => ({
+      order,
+      attention: getOrderAttentionSummary(order),
+    }));
+  }
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const clampedPage = Math.min(page, totalPages);
@@ -261,6 +350,8 @@ export default async function OrdersPage({
     view,
     deliveryDate: deliveryDateParam,
     deliveryRange: deliveryRangeParam || undefined,
+    attention: attentionParam,
+    attentionType: attentionTypeParam,
   };
 
   const pageLink = (nextPage: number) =>
@@ -281,6 +372,8 @@ export default async function OrdersPage({
           initialPageSize={pageSize}
           initialDeliveryDate={deliveryDateParam}
           initialDeliveryRange={deliveryRangeParam}
+          initialAttention={attentionParam}
+          initialAttentionType={attentionTypeParam}
         />
 
         <p className={styles.textMuted}>
@@ -292,33 +385,45 @@ export default async function OrdersPage({
         ) : (
           <OrdersTableClient
             columns={7}
-            orders={orders.map((order) => ({
-              id: order.id,
-              orderNumber: order.orderNumber,
-              customerName: order.customer.name,
-              customerPhone: order.customer.phone,
-              deliveryMethodLabel: deliveryMethodLabel[order.deliveryMethod],
-              status: order.status,
-              statusLabel: statusLabel[order.status],
-              deliveryDatetime: formatDateTime(order.deliveryDatetime),
-              totalLabel: formatCurrency(Number(order.total)),
-              items: order.items.map((item) => ({
-                id: item.id,
-                name: item.snapshotProductName
-                  ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
-                  : item.snapshotSkuName,
-                quantity: Number(item.quantity),
-                unitLabel: item.snapshotUnitLabel,
-                unitType: item.snapshotUnitType,
-                priceAtTime: item.snapshotUnitPrice
-                  ? Number(item.snapshotUnitPrice)
-                  : null,
-                lineTotal: item.lineTotal ? Number(item.lineTotal) : null,
-              })),
-              subtotal: Number(order.subtotal),
-              deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : 0,
-              total: Number(order.total),
-            }))}
+            orders={orders.map(({ order, attention }) => {
+              return {
+                id: order.id,
+                orderNumber: order.orderNumber,
+                customerName: order.customer.name,
+                customerPhone: order.customer.phone,
+                deliveryMethodLabel: deliveryMethodLabel[order.deliveryMethod],
+                status: order.status,
+                statusLabel: statusLabel[order.status],
+                incomplete: attention.reasons.some(
+                  (reason) => reason.type === "INCOMPLETE"
+                ),
+                altered: attention.reasons.some(
+                  (reason) => reason.type === "ALTERADO_APOS_CONFIRMACAO"
+                ),
+                deliveryDatetime: formatDeliveryLabel(
+                  order.deliveryDatetime,
+                  order.deliveryTime
+                ),
+                totalLabel: formatCurrency(Number(order.total)),
+                items: order.items.map((item) => ({
+                  id: item.id,
+                  name: item.snapshotProductName
+                    ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
+                    : item.snapshotSkuName,
+                  quantity: Number(item.quantity),
+                  unitLabel: item.snapshotUnitLabel,
+                  unitType: item.snapshotUnitType,
+                  priceAtTime: item.snapshotUnitPrice
+                    ? Number(item.snapshotUnitPrice)
+                    : null,
+                  lineTotal: item.lineTotal ? Number(item.lineTotal) : null,
+                })),
+                subtotal: Number(order.subtotal),
+                deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : 0,
+                total: Number(order.total),
+                attention: attention.reasons.map((reason) => reason.label),
+              };
+            })}
           />
         )}
       </section>

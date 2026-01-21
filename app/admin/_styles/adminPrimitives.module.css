@@ -343,8 +343,18 @@
   gap: var(--space-3);
 }
 
+.cardsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
 @media (max-width: 900px) {
   .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .cardsGrid {
     grid-template-columns: 1fr;
   }
 }

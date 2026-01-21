@@ -1,7 +1,8 @@
 import { OrderStatus } from "@prisma/client";
 
 const transitions: Record<OrderStatus, OrderStatus[]> = {
-  NOVO: ["EM_PRODUCAO", "CANCELADO"],
+  RASCUNHO: ["CONFIRMADO", "EM_PRODUCAO", "CANCELADO"],
+  CONFIRMADO: ["EM_PRODUCAO", "CANCELADO"],
   EM_PRODUCAO: ["PRONTO", "CANCELADO"],
   PRONTO: ["ENTREGUE", "CANCELADO"],
   ENTREGUE: [],

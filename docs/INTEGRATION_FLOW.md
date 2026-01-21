@@ -5,7 +5,7 @@ Use este roteiro quando nao houver testes de integracao automatizados.
 ## Fluxo 1 — Pedido ate Entregue (estoque uma vez)
 1) Criar ou escolher um SKU ativo com estoque > 0.
 2) Criar um novo pedido com o SKU e quantidade valida.
-3) Ir para o detalhe do pedido e transicionar: NOVO -> EM_PRODUCAO -> PRONTO -> ENTREGUE.
+3) Ir para o detalhe do pedido e transicionar: RASCUNHO -> EM_PRODUCAO -> PRONTO -> ENTREGUE.
 4) Verificar que o estoque foi decrementado uma unica vez.
 5) Repetir a transicao para ENTREGUE e confirmar que nao decrementa novamente.
 

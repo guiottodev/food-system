@@ -1,15 +1,30 @@
 import { PrismaClient, OrderStatus } from "@prisma/client";
-import { validateStatusTransition } from "./order";
+import { validateOrderTransition } from "./order";
 
 export type TransitionResult =
   | { ok: true; appliedStock: boolean }
-  | { ok: false; error: string };
+  | {
+      ok: false;
+      error:
+        | "missing_order"
+        | "order_not_found"
+        | "invalid_transition"
+        | "final_status"
+        | "not_ready"
+        | "strong_pending"
+        | "payment_required";
+    };
+
+type TransitionOptions = {
+  markPaid?: boolean;
+};
 
 export async function transitionOrderStatus(
   prisma: PrismaClient,
   orderId: string,
   nextStatus: OrderStatus,
-  actorId: string | null
+  actorId: string | null,
+  options: TransitionOptions = {}
 ): Promise<TransitionResult> {
   const STOCK_ENABLED = false;
 
@@ -34,18 +49,34 @@ export async function transitionOrderStatus(
       return { ok: false, error: "order_not_found" };
     }
 
-    const validation = validateStatusTransition(order.status, nextStatus);
+    const validation = validateOrderTransition(order, nextStatus, {
+      willMarkPaid: options.markPaid,
+    });
     if (!validation.ok) {
-      return { ok: false, error: "invalid_transition" };
+      return { ok: false, error: validation.error };
     }
 
     let appliedStock = false;
+    const shouldMarkPaid = Boolean(options.markPaid) && !order.paidAt;
+    const paidAt = shouldMarkPaid ? new Date() : order.paidAt;
 
-    if (nextStatus === "ENTREGUE") {
+    if (nextStatus === "CONFIRMADO") {
+      await tx.order.update({
+        where: { id: orderId },
+        data: {
+          status: nextStatus,
+          confirmedAt: new Date(),
+          needsReconfirmation: false,
+        },
+      });
+    } else if (nextStatus === "ENTREGUE") {
       if (!STOCK_ENABLED) {
         await tx.order.update({
           where: { id: orderId },
-          data: { status: nextStatus },
+          data: {
+            status: nextStatus,
+            paidAt: shouldMarkPaid ? paidAt : order.paidAt,
+          },
         });
       } else {
       const now = new Date();
@@ -57,6 +88,7 @@ export async function transitionOrderStatus(
         data: {
           status: nextStatus,
           stockDecrementedAt: now,
+          paidAt: shouldMarkPaid ? paidAt : order.paidAt,
         },
       });
 
@@ -76,7 +108,10 @@ export async function transitionOrderStatus(
       } else if (order.status !== "ENTREGUE") {
         await tx.order.update({
           where: { id: orderId },
-          data: { status: nextStatus },
+          data: {
+            status: nextStatus,
+            paidAt: shouldMarkPaid ? paidAt : order.paidAt,
+          },
         });
       }
       }
@@ -93,7 +128,9 @@ export async function transitionOrderStatus(
         entityType: "orders",
         entityId: orderId,
         action: "status_change",
-        changes: `${order.status} -> ${nextStatus}`,
+        field: "status",
+        beforeValue: order.status,
+        afterValue: nextStatus,
       },
     });
 

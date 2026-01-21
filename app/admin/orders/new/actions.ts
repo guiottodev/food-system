@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
 import { validateSkuQuantity } from "@/lib/quantity";
+import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { isSkuSellableInternal } from "@/lib/catalog";
 import { OrderStatus, OrderType, Prisma } from "@prisma/client";
 
@@ -44,16 +45,15 @@ function toDecimal(value: number) {
 function parseSchedule(payload: CreateOrderPayload) {
   const rawDate = payload.scheduleDate?.trim();
   if (!rawDate) {
-    redirect("/admin/orders/new?error=data-invalida");
+    return { scheduledAt: null, deliveryTime: null } as const;
   }
 
   const rawTime = payload.scheduleTime?.trim();
-  if (!rawTime) {
-    redirect("/admin/orders/new?error=hora-invalida");
-  }
+  const hasTime = Boolean(rawTime);
+  const parsedTime = rawTime || DEFAULT_DELIVERY_TIME;
 
   const [year, month, day] = rawDate.split("-").map((value) => Number(value));
-  const [hour, minute] = rawTime.split(":").map((value) => Number(value));
+  const [hour, minute] = parsedTime.split(":").map((value) => Number(value));
   if (
     !Number.isFinite(year) ||
     !Number.isFinite(month) ||
@@ -69,16 +69,27 @@ function parseSchedule(payload: CreateOrderPayload) {
     redirect("/admin/orders/new?error=data-invalida");
   }
 
-  if (scheduledAt.getTime() <= Date.now()) {
+  const today = new Date();
+  const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const startScheduled = new Date(year, month - 1, day);
+
+  if (hasTime) {
+    if (scheduledAt.getTime() <= Date.now()) {
+      redirect("/admin/orders/new?error=data-passada");
+    }
+  } else if (startScheduled.getTime() < startToday.getTime()) {
     redirect("/admin/orders/new?error=data-passada");
   }
 
-  return scheduledAt;
+  return {
+    scheduledAt,
+    deliveryTime: hasTime ? rawTime : DEFAULT_DELIVERY_TIME,
+  } as const;
 }
 
 function parseDeliveryFee(value: number | string | undefined | null) {
   if (value === undefined || value === null || String(value).trim() === "") {
-    return { ok: false, reason: "vazia" } as const;
+    return { ok: true, value: 0 } as const;
   }
 
   const parsed = Number(String(value).replace(",", "."));
@@ -117,20 +128,9 @@ async function generateOrderNumber(
 
 export async function createOrderAction(formData: FormData) {
   const payload = parsePayload(formData);
-  if (!payload.items?.length) {
-    redirect("/admin/orders/new?error=sem-itens");
-  }
+  const items = Array.isArray(payload.items) ? payload.items : [];
 
-  const scheduledAt = parseSchedule(payload);
-
-  if (payload.deliveryMethod === "ENTREGA") {
-    if (!payload.addressText || !payload.addressText.trim()) {
-      redirect("/admin/orders/new?error=endereco-invalido");
-    }
-    if (!payload.addressCity || !payload.addressCity.trim()) {
-      redirect("/admin/orders/new?error=cidade-invalida");
-    }
-  }
+  const { scheduledAt, deliveryTime } = parseSchedule(payload);
 
   const cookieStore = await cookies();
   const session = cookieStore.get("session");
@@ -144,7 +144,7 @@ export async function createOrderAction(formData: FormData) {
       })
     : null;
 
-  const skuIds = payload.items.map((item) => item.skuId);
+  const skuIds = items.map((item) => item.skuId);
   const skus = await prisma.sku.findMany({
     where: {
       id: { in: skuIds },
@@ -161,7 +161,7 @@ export async function createOrderAction(formData: FormData) {
   });
   const skuMap = new Map(skus.map((sku) => [sku.id, sku]));
 
-  const normalizedItems = payload.items.map((item) => {
+  const normalizedItems = items.map((item) => {
     const sku = skuMap.get(item.skuId);
     if (!sku) {
       redirect("/admin/orders/new?error=sku-invalido");
@@ -218,9 +218,6 @@ export async function createOrderAction(formData: FormData) {
   if (payload.deliveryMethod === "ENTREGA") {
     const feeResult = parseDeliveryFee(payload.deliveryFee);
     if (!feeResult.ok) {
-      if (feeResult.reason === "vazia") {
-        redirect("/admin/orders/new?error=taxa-vazia");
-      }
       if (feeResult.reason === "negativa") {
         redirect("/admin/orders/new?error=taxa-negativa");
       }
@@ -261,9 +258,10 @@ export async function createOrderAction(formData: FormData) {
       data: {
         orderNumber,
         customerId,
-        status: OrderStatus.NOVO,
+        status: OrderStatus.RASCUNHO,
         orderType: finalOrderType as OrderType,
         deliveryDatetime: scheduledAt,
+        deliveryTime,
         deliveryMethod: payload.deliveryMethod,
         addressText:
           payload.deliveryMethod === "ENTREGA"
@@ -289,23 +287,25 @@ export async function createOrderAction(formData: FormData) {
       },
     });
 
-    await tx.orderItem.createMany({
-      data: computedItems.map((item) => ({
-        orderId: order.id,
-        skuId: item.skuId,
-        quantity: toDecimal(item.quantity),
-        snapshotSkuName: item.snapshot.snapshotSkuName,
-        snapshotProductName: item.snapshot.snapshotProductName,
-        snapshotUnitLabel: item.snapshot.snapshotUnitLabel,
-        snapshotUnitType: item.snapshot.snapshotUnitType,
-        snapshotSizeText: item.snapshot.snapshotSizeText,
-        snapshotFlavorText: item.snapshot.snapshotFlavorText,
-        snapshotIsFrozen: item.snapshot.snapshotIsFrozen,
-        snapshotIsSobConsulta: item.snapshot.snapshotIsSobConsulta,
-        snapshotUnitPrice: toDecimal(item.unitPrice),
-        lineTotal: toDecimal(item.lineTotal),
-      })),
-    });
+    if (computedItems.length > 0) {
+      await tx.orderItem.createMany({
+        data: computedItems.map((item) => ({
+          orderId: order.id,
+          skuId: item.skuId,
+          quantity: toDecimal(item.quantity),
+          snapshotSkuName: item.snapshot.snapshotSkuName,
+          snapshotProductName: item.snapshot.snapshotProductName,
+          snapshotUnitLabel: item.snapshot.snapshotUnitLabel,
+          snapshotUnitType: item.snapshot.snapshotUnitType,
+          snapshotSizeText: item.snapshot.snapshotSizeText,
+          snapshotFlavorText: item.snapshot.snapshotFlavorText,
+          snapshotIsFrozen: item.snapshot.snapshotIsFrozen,
+          snapshotIsSobConsulta: item.snapshot.snapshotIsSobConsulta,
+          snapshotUnitPrice: toDecimal(item.unitPrice),
+          lineTotal: toDecimal(item.lineTotal),
+        })),
+      });
+    }
 
     await tx.auditLog.create({
       data: {
@@ -313,19 +313,25 @@ export async function createOrderAction(formData: FormData) {
         entityType: "orders",
         entityId: order.id,
         action: "create_order",
-        changes: `orderNumber=${order.orderNumber}`,
+        field: "orderNumber",
+        beforeValue: null,
+        afterValue: order.orderNumber,
       },
     });
 
-    await tx.auditLog.create({
-      data: {
-        actorId: actor?.id ?? null,
-        entityType: "orders",
-        entityId: order.id,
-        action: "create_items",
-        changes: `items=${computedItems.length}`,
-      },
-    });
+    if (computedItems.length > 0) {
+      await tx.auditLog.create({
+        data: {
+          actorId: actor?.id ?? null,
+          entityType: "orders",
+          entityId: order.id,
+          action: "create_items",
+          field: "items",
+          beforeValue: "0",
+          afterValue: String(computedItems.length),
+        },
+      });
+    }
 
     return { orderId: order.id };
   });

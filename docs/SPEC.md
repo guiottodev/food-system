@@ -108,7 +108,6 @@
     - Impressão não é necessária para o MVP funcional.
     - Não há concorrência de múltiplos operadores simultâneos no início.
 
-SPECS da feature Controle de Pedidos com Tranquilidade
 
 📘 SPEC-MASTER.md
 Sistema de Pedidos – Controle Operacional com Tranquilidade Mental

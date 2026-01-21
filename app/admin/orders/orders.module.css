@@ -32,6 +32,38 @@
   width: 100%;
 }
 
+.filtersWrap {
+  position: relative;
+}
+
+.filtersButton {
+  gap: var(--space-1);
+}
+
+.filtersButtonActive {
+  border-color: var(--border-strong);
+  background: var(--bg-subtle);
+}
+
+.filtersPanel {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(560px, 94vw);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-3);
+  z-index: 20;
+}
+
+.filtersGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
 .dateGroup {
   display: flex;
   flex-wrap: wrap;
@@ -95,6 +127,12 @@
   align-items: center;
 }
 
+.filterSelect {
+  width: auto;
+  min-width: 160px;
+  flex: 1 1 160px;
+}
+
 @media (max-width: 720px) {
   .toolbarMain {
     flex: 1 1 100%;
@@ -102,5 +140,14 @@
 
   .dateGroup {
     width: 100%;
+  }
+
+  .filtersPanel {
+    position: static;
+    width: 100%;
+  }
+
+  .filtersGrid {
+    grid-template-columns: 1fr;
   }
 }

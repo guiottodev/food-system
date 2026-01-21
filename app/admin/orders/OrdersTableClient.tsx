@@ -22,12 +22,15 @@ type OrderRow = {
   deliveryMethodLabel: string;
   status: string;
   statusLabel: string;
+  incomplete: boolean;
+  altered: boolean;
   deliveryDatetime: string;
   totalLabel: string;
   items: OrderItem[];
   subtotal: number;
   deliveryFee: number;
   total: number;
+  attention?: string[];
 };
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -120,13 +123,25 @@ export default function OrdersTableClient({
                   </td>
                   <td>{order.deliveryMethodLabel}</td>
                   <td>
-                    <span
-                      className={`${styles.badge} ${statusBadgeClass(
-                        order.status
-                      )}`}
-                    >
-                      {order.statusLabel}
-                    </span>
+                    <div className={styles.clusterSm}>
+                      <span
+                        className={`${styles.badge} ${statusBadgeClass(
+                          order.status
+                        )}`}
+                      >
+                        {order.statusLabel}
+                      </span>
+                      {order.incomplete ? (
+                        <span className={`${styles.badge} ${styles.badgeWarning}`}>
+                          Incompleto
+                        </span>
+                      ) : null}
+                      {order.altered ? (
+                        <span className={`${styles.badge} ${styles.badgeDanger}`}>
+                          Alterado
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
                   <td>{order.deliveryDatetime}</td>
                   <td className={styles.tableNumeric}>{order.totalLabel}</td>
@@ -168,6 +183,16 @@ export default function OrdersTableClient({
                           <div>
                             Total: {currencyFormatter.format(order.total)}
                           </div>
+                          {order.attention && order.attention.length > 0 ? (
+                            <div className={styles.stackSm}>
+                              <strong>Pendencias</strong>
+                              <ul>
+                                {order.attention.map((reason, index) => (
+                                  <li key={`${order.id}-att-${index}`}>{reason}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
                         </div>
                       </div>
                     </td>

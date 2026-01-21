@@ -72,7 +72,7 @@ describe("stock idempotency", () => {
       data: {
         orderNumber: "TESTE-0001",
         customerId: customer.id,
-        status: "NOVO",
+        status: "RASCUNHO",
         orderType: "PRONTA_ENTREGA",
         deliveryDatetime: new Date(),
         deliveryMethod: "RETIRADA",
@@ -98,7 +98,9 @@ describe("stock idempotency", () => {
     await transitionOrderStatus(prisma, order.id, "EM_PRODUCAO", null);
     await transitionOrderStatus(prisma, order.id, "PRONTO", null);
 
-    const first = await transitionOrderStatus(prisma, order.id, "ENTREGUE", null);
+    const first = await transitionOrderStatus(prisma, order.id, "ENTREGUE", null, {
+      markPaid: true,
+    });
     expect(first.ok).toBe(true);
     if (first.ok) {
       expect(first.appliedStock).toBe(false);
@@ -107,7 +109,9 @@ describe("stock idempotency", () => {
     const afterFirst = await prisma.sku.findUnique({ where: { id: sku.id } });
     expect(Number(afterFirst?.stockQuantity)).toBe(10);
 
-    const second = await transitionOrderStatus(prisma, order.id, "ENTREGUE", null);
+    const second = await transitionOrderStatus(prisma, order.id, "ENTREGUE", null, {
+      markPaid: true,
+    });
     expect(second.ok).toBe(false);
 
     const afterSecond = await prisma.sku.findUnique({ where: { id: sku.id } });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./orders.module.css";
@@ -20,6 +20,8 @@ type OrdersFiltersProps = {
   initialPageSize: number;
   initialDeliveryDate: string;
   initialDeliveryRange: string;
+  initialAttention: string;
+  initialAttentionType: string;
 };
 
 type ViewValue = "upcoming" | "all" | "previous";
@@ -54,12 +56,16 @@ export default function OrdersFilters({
   initialPageSize,
   initialDeliveryDate,
   initialDeliveryRange,
+  initialAttention,
+  initialAttentionType,
 }: OrdersFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const searchParamsString = searchParams.toString();
   const [isPending, startTransition] = useTransition();
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const panelRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<number | null>(null);
 
   const viewParam = searchParams.get("view") ?? initialView;
@@ -75,6 +81,10 @@ export default function OrdersFilters({
     searchParams.get("deliveryDate") ?? initialDeliveryDate;
   const currentDeliveryRange =
     searchParams.get("deliveryRange") ?? initialDeliveryRange ?? legacyRange;
+  const currentAttention =
+    searchParams.get("attention") ?? initialAttention ?? "all";
+  const currentAttentionType =
+    searchParams.get("attentionType") ?? initialAttentionType ?? "all";
 
   const todayLabel = useMemo(() => formatDateInput(new Date()), []);
 
@@ -132,6 +142,25 @@ export default function OrdersFilters({
           applyParams({ deliveryRange: "", deliveryDate: "", view: "upcoming" }),
       }
     : null;
+
+  const hasActiveFilters =
+    currentStatus !== "ALL" ||
+    currentAttention !== "all" ||
+    currentAttentionType !== "all" ||
+    currentDir !== "asc" ||
+    currentPageSize !== initialPageSize;
+
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const handleClick = (event: MouseEvent) => {
+      if (!panelRef.current) return;
+      if (!panelRef.current.contains(event.target as Node)) {
+        setFiltersOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [filtersOpen]);
 
   return (
     <div className={layoutStyles.toolbarBlock}>
@@ -269,49 +298,112 @@ export default function OrdersFilters({
               </button>
             </div>
           </div>
+          <div className={layoutStyles.filtersWrap} ref={panelRef}>
+            <button
+              type="button"
+              className={`${styles.button} ${layoutStyles.filtersButton} ${
+                filtersOpen || hasActiveFilters ? layoutStyles.filtersButtonActive : ""
+              }`}
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              aria-controls="orders-filters-panel"
+            >
+              Filtros <span aria-hidden="true">v</span>
+            </button>
+            {filtersOpen ? (
+              <div
+                id="orders-filters-panel"
+                className={layoutStyles.filtersPanel}
+                role="dialog"
+                aria-label="Filtros de pedidos"
+              >
+                <div className={layoutStyles.filtersGrid}>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Status</span>
+                    <select
+                      name="status"
+                      value={currentStatus}
+                      onChange={(event) => applyParams({ status: event.target.value })}
+                      className={`${styles.control} ${layoutStyles.filterSelect}`}
+                      aria-label="Status do pedido"
+                      disabled={isPending}
+                    >
+                      {statusOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Pendencias</span>
+                    <select
+                      name="attention"
+                      value={currentAttention}
+                      onChange={(event) => applyParams({ attention: event.target.value })}
+                      className={`${styles.control} ${layoutStyles.filterSelect}`}
+                      aria-label="Pendencias"
+                      disabled={isPending}
+                    >
+                      <option value="all">Pendencias: todas</option>
+                      <option value="with">Com pendencias</option>
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Tipo</span>
+                    <select
+                      name="attentionType"
+                      value={currentAttentionType}
+                      onChange={(event) =>
+                        applyParams({ attentionType: event.target.value })
+                      }
+                      className={`${styles.control} ${layoutStyles.filterSelect}`}
+                      aria-label="Tipo de pendencia"
+                      disabled={isPending}
+                    >
+                      <option value="all">Tipo: todos</option>
+                      <option value="INCOMPLETE">Incompleto</option>
+                      <option value="ALTERADO_APOS_CONFIRMACAO">Alterado</option>
+                      <option value="MISSING_TIME">Sem horario</option>
+                      <option value="MISSING_ADDRESS">Sem endereco</option>
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Entrega</span>
+                    <select
+                      name="dir"
+                      value={currentDir}
+                      onChange={(event) => applyParams({ dir: event.target.value })}
+                      className={`${styles.control} ${layoutStyles.filterSelect}`}
+                      aria-label="Ordenacao por entrega"
+                      disabled={isPending}
+                    >
+                      <option value="asc">Entrega: mais cedo</option>
+                      <option value="desc">Entrega: mais tarde</option>
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Pagina</span>
+                    <select
+                      name="pageSize"
+                      value={currentPageSize}
+                      onChange={(event) => applyParams({ pageSize: event.target.value })}
+                      className={`${styles.control} ${layoutStyles.filterSelect}`}
+                      aria-label="Itens por pagina"
+                      disabled={isPending}
+                    >
+                      {pageSizes.map((size) => (
+                        <option key={size} value={size}>
+                          {size} por pagina
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
-      </div>
-
-      <div className={layoutStyles.filtersRow}>
-        <select
-          name="status"
-          value={currentStatus}
-          onChange={(event) => applyParams({ status: event.target.value })}
-          className={styles.control}
-          aria-label="Status do pedido"
-          disabled={isPending}
-        >
-          {statusOptions.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <select
-          name="dir"
-          value={currentDir}
-          onChange={(event) => applyParams({ dir: event.target.value })}
-          className={styles.control}
-          aria-label="Ordenacao por entrega"
-          disabled={isPending}
-        >
-          <option value="asc">Entrega: mais cedo</option>
-          <option value="desc">Entrega: mais tarde</option>
-        </select>
-        <select
-          name="pageSize"
-          value={currentPageSize}
-          onChange={(event) => applyParams({ pageSize: event.target.value })}
-          className={styles.control}
-          aria-label="Itens por pagina"
-          disabled={isPending}
-        >
-          {pageSizes.map((size) => (
-            <option key={size} value={size}>
-              {size} por pagina
-            </option>
-          ))}
-        </select>
       </div>
 
       {dateChip ? (
