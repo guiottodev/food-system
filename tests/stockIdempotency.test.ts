@@ -65,7 +65,7 @@ describe("stock idempotency", () => {
     });
 
     const customer = await prisma.customer.create({
-      data: { name: "Cliente teste" },
+      data: { name: "Cliente teste", phone: "11999999999" },
     });
 
     const order = await prisma.order.create({

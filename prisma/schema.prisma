@@ -61,11 +61,18 @@ model User {
 model Customer {
   id           String   @id @default(cuid())
   name         String
-  phone        String?
+  phone        String
   email        String?
   document     String?
   notes        String?
   isAnonymized Boolean  @default(false)
+  addressCep          String?
+  addressStreet       String?
+  addressNumber       String?
+  addressComplement   String?
+  addressNeighborhood String?
+  addressCity         String?
+  addressState        String?
   createdAt    DateTime @default(now())
 
   addresses CustomerAddress[]

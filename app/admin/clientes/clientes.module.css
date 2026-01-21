@@ -1,0 +1,29 @@
+.toolbarBlock {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.toolbarMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1 1 360px;
+  min-width: 240px;
+}
+
+.searchWrap {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+
+.searchInput {
+  width: 100%;
+}

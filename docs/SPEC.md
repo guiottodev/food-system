@@ -359,3 +359,19 @@ transformar isso em documentação oficial do repositório
 ou derivar critérios de aceite
 ou então preparar o terreno para o Codex executar sem inventar regra
 Aqui, como produto, está fechado.
+## Clientes
+Regras do modulo de clientes (server-side):
+- name e phone sao obrigatorios.
+- phone deve ser normalizado para conter apenas digitos.
+- phone nao e chave unica rigida, mas e o identificador preferencial.
+  - ao criar/editar com telefone ja existente, o sistema avisa e permite abrir o cliente existente.
+- document e opcional.
+- endereco e opcional: cep, street, number, complement, neighborhood, city, state.
+- pedidos sempre referenciam customerId.
+  - no fluxo de criar pedido, se o telefone normalizado ja existir, reutiliza o cliente existente.
+
+UI minima:
+- /admin/clientes: lista com nome, telefone, ultimo pedido, #pedidos e link "Ver".
+- /admin/clientes/novo: cadastro com dados e endereco opcional.
+- /admin/clientes/[id]: abas Dados (editar) e Pedidos (lista com link).
+

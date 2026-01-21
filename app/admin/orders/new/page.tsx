@@ -24,6 +24,9 @@ export default async function NewOrderPage({
   if (error === "cliente-invalido") {
     errorMessage = "Informe um cliente valido.";
   }
+  if (error === "cliente-telefone") {
+    errorMessage = "Informe um telefone valido.";
+  }
   if (error === "sku-invalido") {
     errorMessage = "SKU invalido.";
   }

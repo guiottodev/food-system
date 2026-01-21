@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
 import { validateSkuQuantity } from "@/lib/quantity";
+import { normalizePhone, validateCustomerInput } from "@/lib/domain/customer";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { isSkuSellableInternal } from "@/lib/catalog";
 import { OrderStatus, OrderType, Prisma } from "@prisma/client";
@@ -237,16 +238,32 @@ export async function createOrderAction(formData: FormData) {
   const result = await prisma.$transaction(async (tx) => {
     let customerId = payload.customer.customerId;
     if (payload.customer.mode === "new") {
-      if (!payload.customer.name) {
-        redirect("/admin/orders/new?error=cliente-invalido");
+      const validation = validateCustomerInput(
+        payload.customer.name ?? "",
+        payload.customer.phone ?? ""
+      );
+      if (!validation.ok) {
+        redirect(
+          `/admin/orders/new?error=${
+            validation.error === "name_required" ? "cliente-invalido" : "cliente-telefone"
+          }`
+        );
       }
-      const customer = await tx.customer.create({
-        data: {
-          name: payload.customer.name,
-          phone: payload.customer.phone || null,
-        },
+      const normalizedPhone = normalizePhone(validation.phone);
+      const existingCustomer = await tx.customer.findFirst({
+        where: { phone: normalizedPhone },
       });
-      customerId = customer.id;
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+      } else {
+        const customer = await tx.customer.create({
+          data: {
+            name: validation.name,
+            phone: normalizedPhone,
+          },
+        });
+        customerId = customer.id;
+      }
     }
 
     if (!customerId) {

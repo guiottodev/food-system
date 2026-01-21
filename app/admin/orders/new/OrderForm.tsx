@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createOrderAction } from "./actions";
+import { MIN_PHONE_DIGITS, normalizePhone } from "@/lib/domain/customer";
 import { validateSkuQuantity } from "@/lib/quantity";
 import styles from "../../_styles/adminPrimitives.module.css";
 
@@ -10,7 +11,7 @@ const DRAFT_KEY = "order-new-draft-v1";
 type CustomerOption = {
   id: string;
   name: string;
-  phone: string | null;
+  phone: string;
 };
 
 type CategoryOption = {
@@ -245,6 +246,7 @@ export default function OrderForm({
   const deliveryMethodRef = useRef<HTMLInputElement | null>(null);
   const customerSelectRef = useRef<HTMLSelectElement | null>(null);
   const customerNameRef = useRef<HTMLInputElement | null>(null);
+  const customerPhoneRef = useRef<HTMLInputElement | null>(null);
   const scheduleDateRef = useRef<HTMLInputElement | null>(null);
   const scheduleTimeRef = useRef<HTMLSelectElement | null>(null);
   const addressTextRef = useRef<HTMLInputElement | null>(null);
@@ -254,10 +256,11 @@ export default function OrderForm({
   const filteredCustomers = useMemo(() => {
     if (!customerSearch.trim()) return customers;
     const query = customerSearch.toLowerCase();
+    const queryDigits = normalizePhone(query);
     return customers.filter((customer) => {
       const nameMatch = customer.name.toLowerCase().includes(query);
-      const phoneMatch = customer.phone
-        ? customer.phone.toLowerCase().includes(query)
+      const phoneMatch = queryDigits
+        ? normalizePhone(customer.phone ?? "").includes(queryDigits)
         : false;
       return nameMatch || phoneMatch;
     });
@@ -449,6 +452,7 @@ export default function OrderForm({
     setSubmitAttempted(true);
     const focusMap: Record<string, () => void> = {
       "cliente-invalido": () => customerSelectRef.current?.focus(),
+      "cliente-telefone": () => customerPhoneRef.current?.focus(),
       "data-invalida": () => scheduleDateRef.current?.focus(),
       "hora-invalida": () => scheduleTimeRef.current?.focus(),
       "data-passada": () => scheduleTimeRef.current?.focus(),
@@ -527,6 +531,10 @@ export default function OrderForm({
     } else {
       if (!customerName.trim()) {
         errors.customerName = "Informe um cliente valido.";
+      }
+      const normalizedPhone = normalizePhone(customerPhone);
+      if (!normalizedPhone || normalizedPhone.length < MIN_PHONE_DIGITS) {
+        errors.customerPhone = "Informe um telefone valido.";
       }
     }
 
@@ -621,6 +629,10 @@ export default function OrderForm({
     }
     if (validation.errors.customerName) {
       customerNameRef.current?.focus();
+      return;
+    }
+    if (validation.errors.customerPhone) {
+      customerPhoneRef.current?.focus();
       return;
     }
     if (validation.errors.scheduleDate) {
@@ -792,14 +804,31 @@ export default function OrderForm({
                     ) : null}
                   </label>
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Telefone (opcional)</span>
+                    <span className={styles.fieldLabel}>Telefone</span>
                     <input
+                      ref={customerPhoneRef}
                       type="text"
                       placeholder="Telefone"
                       value={customerPhone}
                       onChange={(event) => setCustomerPhone(event.target.value)}
+                      aria-invalid={
+                        showErrors && Boolean(validation.errors.customerPhone)
+                      }
+                      aria-describedby={
+                        showErrors && validation.errors.customerPhone
+                          ? "customer-phone-error"
+                          : undefined
+                      }
                       className={styles.control}
                     />
+                    {showErrors && validation.errors.customerPhone ? (
+                      <span
+                        id="customer-phone-error"
+                        className={styles.fieldError}
+                      >
+                        {validation.errors.customerPhone}
+                      </span>
+                    ) : null}
                   </label>
                 </div>
               )}

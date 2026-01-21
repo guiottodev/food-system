@@ -214,7 +214,12 @@ export default async function OrderDetailPage({
         </div>
         <div className={styles.panelBody}>
           <div className={styles.stackSm}>
-            <div>Cliente: {order.customer.name}</div>
+            <div>
+              Cliente:{" "}
+              <Link href={`/admin/clientes/${order.customer.id}`}>
+                {order.customer.name}
+              </Link>
+            </div>
             <div>Telefone: {order.customer.phone || "-"}</div>
             <div className={styles.clusterSm}>
               <span>Status: {statusLabel[order.status]}</span>
