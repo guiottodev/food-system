@@ -4,6 +4,8 @@ import styles from "../../_styles/adminPrimitives.module.css";
 
 type OrdersNewSearchParams = {
   error?: string;
+  existingCustomerId?: string;
+  existingCustomerName?: string;
 };
 
 export default async function NewOrderPage({
@@ -17,6 +19,10 @@ export default async function NewOrderPage({
   });
 
   const error = resolvedParams?.error;
+  const existingCustomerId = resolvedParams?.existingCustomerId;
+  const existingCustomerName = resolvedParams?.existingCustomerName
+    ? decodeURIComponent(resolvedParams.existingCustomerName)
+    : undefined;
   let errorMessage = "";
   if (error === "sem-itens") {
     errorMessage = "Adicione pelo menos 1 item ao pedido.";
@@ -26,6 +32,9 @@ export default async function NewOrderPage({
   }
   if (error === "cliente-telefone") {
     errorMessage = "Informe um telefone valido.";
+  }
+  if (error === "cliente-telefone-existente") {
+    errorMessage = "Telefone ja cadastrado.";
   }
   if (error === "sku-invalido") {
     errorMessage = "SKU invalido.";
@@ -66,6 +75,14 @@ export default async function NewOrderPage({
       ) : null}
       <OrderForm
         errorCode={error}
+        existingCustomer={
+          existingCustomerId
+            ? {
+                id: existingCustomerId,
+                name: existingCustomerName ?? "Cliente existente",
+              }
+            : undefined
+        }
         customers={customers.map((customer) => ({
           id: customer.id,
           name: customer.name,

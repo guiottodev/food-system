@@ -308,7 +308,7 @@ export default function OrdersFilters({
               aria-expanded={filtersOpen}
               aria-controls="orders-filters-panel"
             >
-              Filtros <span aria-hidden="true">v</span>
+              Filtros
             </button>
             {filtersOpen ? (
               <div

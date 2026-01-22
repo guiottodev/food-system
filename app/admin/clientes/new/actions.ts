@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
-import { normalizePhone, validateCustomerInput } from "@/lib/domain/customer";
+import { createCustomerWithPhone } from "@/lib/domain/customerService";
 
 function parseText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -22,23 +22,10 @@ export async function createCustomerAction(formData: FormData) {
   const addressCity = parseText(formData.get("addressCity"));
   const addressState = parseText(formData.get("addressState"));
 
-  const validation = validateCustomerInput(name, phone);
-  if (!validation.ok) {
-    redirect(`/admin/clientes/novo?error=${validation.error}`);
-  }
-
-  const normalizedPhone = normalizePhone(validation.phone ?? "");
-  const existing = await prisma.customer.findFirst({
-    where: { phone: normalizedPhone },
-  });
-  if (existing) {
-    redirect(`/admin/clientes/novo?error=duplicado&existingId=${existing.id}`);
-  }
-
-  const customer = await prisma.customer.create({
+  const result = await createCustomerWithPhone(prisma, {
+    name,
+    phone,
     data: {
-      name: validation.name,
-      phone: normalizedPhone,
       document: document || null,
       addressCep: addressCep || null,
       addressStreet: addressStreet || null,
@@ -50,5 +37,14 @@ export async function createCustomerAction(formData: FormData) {
     },
   });
 
-  redirect(`/admin/clientes/${customer.id}?created=1`);
+  if (!result.ok) {
+    if (result.error === "CUSTOMER_PHONE_EXISTS") {
+      redirect(
+        `/admin/clientes/novo?error=duplicado&existingId=${result.existingCustomerId}`
+      );
+    }
+    redirect(`/admin/clientes/novo?error=${result.error}`);
+  }
+
+  redirect(`/admin/clientes/${result.customerId}?created=1`);
 }

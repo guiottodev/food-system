@@ -5,25 +5,35 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
 import { validateSkuQuantity } from "@/lib/quantity";
-import { normalizePhone, validateCustomerInput } from "@/lib/domain/customer";
+import {
+  applyCustomerDefaultAddressForOrder,
+  normalizeDeliveryAddress,
+} from "@/lib/domain/customerDelivery";
+import { createCustomerWithPhone } from "@/lib/domain/customerService";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { isSkuSellableInternal } from "@/lib/catalog";
 import { OrderStatus, OrderType, Prisma } from "@prisma/client";
 
+type DeliveryAddressPayload = {
+  addressText?: string;
+  addressBairro?: string;
+  addressReferencia?: string;
+  addressCity?: string;
+  addressCep?: string;
+};
+
 type CreateOrderPayload = {
-  customer: {
-    mode: "existing" | "new";
-    customerId?: string;
+  customerMode: "existing" | "new";
+  customerId?: string;
+  newCustomer?: {
     name?: string;
     phone?: string;
   };
   scheduleDate?: string;
   scheduleTime?: string;
-  deliveryMethod: "ENTREGA" | "RETIRADA";
-  addressText?: string;
-  addressBairro?: string;
-  addressReferencia?: string;
-  addressCity?: string;
+  deliveryMode: "ENTREGA" | "RETIRADA";
+  address?: DeliveryAddressPayload | null;
+  saveAddressAsDefault?: boolean;
   orderType?: "PRONTA_ENTREGA" | "ENCOMENDA";
   deliveryFee?: number | string;
   notes?: string;
@@ -215,8 +225,10 @@ export async function createOrderAction(formData: FormData) {
     };
   });
 
+  const deliveryMode =
+    payload.deliveryMode === "ENTREGA" ? "ENTREGA" : "RETIRADA";
   let deliveryFee = 0;
-  if (payload.deliveryMethod === "ENTREGA") {
+  if (deliveryMode === "ENTREGA") {
     const feeResult = parseDeliveryFee(payload.deliveryFee);
     if (!feeResult.ok) {
       if (feeResult.reason === "negativa") {
@@ -234,40 +246,52 @@ export async function createOrderAction(formData: FormData) {
   const total = subtotal + deliveryFee;
 
   const finalOrderType: OrderType = "ENCOMENDA";
+  const normalizedAddress =
+    deliveryMode === "ENTREGA" ? normalizeDeliveryAddress(payload.address) : null;
 
   const result = await prisma.$transaction(async (tx) => {
-    let customerId = payload.customer.customerId;
-    if (payload.customer.mode === "new") {
-      const validation = validateCustomerInput(
-        payload.customer.name ?? "",
-        payload.customer.phone ?? ""
-      );
-      if (!validation.ok) {
+    let customerId =
+      payload.customerMode === "existing" ? payload.customerId : undefined;
+    let createdCustomer = false;
+
+    if (payload.customerMode === "new") {
+      const createResult = await createCustomerWithPhone(tx, {
+        name: payload.newCustomer?.name ?? "",
+        phone: payload.newCustomer?.phone ?? "",
+      });
+      if (!createResult.ok) {
+        if (createResult.error === "CUSTOMER_PHONE_EXISTS") {
+          const nameParam = encodeURIComponent(
+            createResult.existingCustomerName ?? ""
+          );
+          redirect(
+            `/admin/orders/new?error=cliente-telefone-existente&existingCustomerId=${createResult.existingCustomerId}&existingCustomerName=${nameParam}`
+          );
+        }
         redirect(
           `/admin/orders/new?error=${
-            validation.error === "name_required" ? "cliente-invalido" : "cliente-telefone"
+            createResult.error === "name_required"
+              ? "cliente-invalido"
+              : "cliente-telefone"
           }`
         );
       }
-      const normalizedPhone = normalizePhone(validation.phone);
-      const existingCustomer = await tx.customer.findFirst({
-        where: { phone: normalizedPhone },
-      });
-      if (existingCustomer) {
-        customerId = existingCustomer.id;
-      } else {
-        const customer = await tx.customer.create({
-          data: {
-            name: validation.name,
-            phone: normalizedPhone,
-          },
-        });
-        customerId = customer.id;
-      }
+      customerId = createResult.customerId;
+      createdCustomer = true;
     }
 
     if (!customerId) {
       redirect("/admin/orders/new?error=cliente-invalido");
+    }
+
+    if (payload.customerMode === "existing") {
+      const existing = await tx.customer.findUnique({
+        where: { id: customerId },
+        select: { id: true },
+      });
+      if (!existing) {
+        redirect("/admin/orders/new?error=cliente-invalido");
+      }
     }
 
     const orderNumber = await generateOrderNumber(tx);
@@ -279,22 +303,26 @@ export async function createOrderAction(formData: FormData) {
         orderType: finalOrderType as OrderType,
         deliveryDatetime: scheduledAt,
         deliveryTime,
-        deliveryMethod: payload.deliveryMethod,
+        deliveryMethod: deliveryMode,
         addressText:
-          payload.deliveryMethod === "ENTREGA"
-            ? payload.addressText?.trim() || null
+          deliveryMode === "ENTREGA"
+            ? normalizedAddress?.addressText ?? null
             : null,
         addressBairro:
-          payload.deliveryMethod === "ENTREGA"
-            ? payload.addressBairro?.trim() || null
+          deliveryMode === "ENTREGA"
+            ? normalizedAddress?.addressBairro ?? null
             : null,
         addressReferencia:
-          payload.deliveryMethod === "ENTREGA"
-            ? payload.addressReferencia?.trim() || null
+          deliveryMode === "ENTREGA"
+            ? normalizedAddress?.addressReferencia ?? null
             : null,
         addressCity:
-          payload.deliveryMethod === "ENTREGA"
-            ? payload.addressCity?.trim() || null
+          deliveryMode === "ENTREGA"
+            ? normalizedAddress?.addressCity ?? null
+            : null,
+        addressCep:
+          deliveryMode === "ENTREGA"
+            ? normalizedAddress?.addressCep ?? null
             : null,
         deliveryFee: toDecimal(deliveryFee),
         subtotal: toDecimal(subtotal),
@@ -349,6 +377,14 @@ export async function createOrderAction(formData: FormData) {
         },
       });
     }
+
+    await applyCustomerDefaultAddressForOrder(tx, {
+      customerId,
+      deliveryMode,
+      createdCustomer,
+      saveAddressAsDefault: Boolean(payload.saveAddressAsDefault),
+      address: normalizedAddress,
+    });
 
     return { orderId: order.id };
   });

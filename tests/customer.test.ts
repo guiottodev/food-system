@@ -4,9 +4,9 @@ import {
   buildCustomerListEntries,
   buildCustomerSearchFilter,
   getCustomerOrders,
-  normalizePhone,
   validateCustomerInput,
 } from "../lib/domain/customer";
+import { normalizePhoneBR, normalizePhoneDigits } from "../lib/phone";
 
 describe("customer domain", () => {
   let prisma: PrismaClient;
@@ -46,7 +46,13 @@ describe("customer domain", () => {
   });
 
   it("normalizes phone digits", () => {
-    expect(normalizePhone("(11) 91234-5678")).toBe("11912345678");
+    expect(normalizePhoneDigits("(11) 91234-5678")).toBe("11912345678");
+  });
+
+  it("normalizes BR phone format", () => {
+    expect(normalizePhoneBR("(41) 99999-0000")).toBe("41999990000");
+    expect(normalizePhoneBR("+55 (41) 99999-0000")).toBe("41999990000");
+    expect(normalizePhoneBR("123")).toBeNull();
   });
 
   it("creates valid customer with normalized phone", async () => {

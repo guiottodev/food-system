@@ -1,6 +1,5 @@
 import { Prisma, PrismaClient } from "@prisma/client";
-
-export const MIN_PHONE_DIGITS = 9;
+import { normalizePhoneBR, normalizePhoneDigits } from "../phone";
 
 export type CustomerValidationError = "name_required" | "phone_required" | "phone_invalid";
 export type CustomerValidationResult =
@@ -15,24 +14,20 @@ export type CustomerListEntry = {
   orderCount: number;
 };
 
-export function normalizePhone(value: string) {
-  return String(value ?? "").replace(/\D/g, "");
-}
-
 export function validateCustomerInput(
   name: string,
-  phone: string,
-  minDigits = MIN_PHONE_DIGITS
+  phone: string
 ): CustomerValidationResult {
   const normalizedName = String(name ?? "").trim();
-  const normalizedPhone = normalizePhone(phone);
+  const phoneDigits = normalizePhoneDigits(phone);
   if (!normalizedName) {
     return { ok: false, error: "name_required" as CustomerValidationError };
   }
-  if (!normalizedPhone) {
+  if (!phoneDigits) {
     return { ok: false, error: "phone_required" as CustomerValidationError };
   }
-  if (normalizedPhone.length < minDigits) {
+  const normalizedPhone = normalizePhoneBR(phone);
+  if (!normalizedPhone) {
     return { ok: false, error: "phone_invalid" as CustomerValidationError };
   }
   return { ok: true, name: normalizedName, phone: normalizedPhone };
@@ -41,7 +36,7 @@ export function validateCustomerInput(
 export function buildCustomerSearchFilter(query: string): Prisma.CustomerWhereInput {
   const trimmed = String(query ?? "").trim();
   if (!trimmed) return {};
-  const normalized = normalizePhone(trimmed);
+  const normalized = normalizePhoneDigits(trimmed);
   if (normalized) {
     return {
       OR: [

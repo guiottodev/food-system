@@ -189,7 +189,7 @@ export default function ProductsFilters({
               aria-expanded={filtersOpen}
               aria-controls="products-filters-panel"
             >
-              Filtros <span aria-hidden="true">v</span>
+              Filtros
             </button>
             {filtersOpen ? (
               <div

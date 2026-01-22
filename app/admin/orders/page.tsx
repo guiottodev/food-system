@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
-import { normalizePhone } from "@/lib/domain/customer";
+import { normalizePhoneDigits } from "@/lib/phone";
 import { OrderStatus, Prisma } from "@prisma/client";
 import OrdersTableClient from "./OrdersTableClient";
 import OrdersFilters from "./OrdersFilters.client";
@@ -256,7 +256,7 @@ export default async function OrdersPage({
         }
       : {};
 
-  const phoneQuery = normalizePhone(query);
+  const phoneQuery = normalizePhoneDigits(query);
   const queryFilter = query
     ? {
         OR: [

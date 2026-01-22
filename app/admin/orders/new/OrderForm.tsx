@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createOrderAction } from "./actions";
-import { MIN_PHONE_DIGITS, normalizePhone } from "@/lib/domain/customer";
+import { normalizePhoneBR, normalizePhoneDigits } from "@/lib/phone";
 import { validateSkuQuantity } from "@/lib/quantity";
 import styles from "../../_styles/adminPrimitives.module.css";
 
@@ -12,6 +12,11 @@ type CustomerOption = {
   id: string;
   name: string;
   phone: string;
+};
+
+type ExistingCustomerHint = {
+  id: string;
+  name: string;
 };
 
 type CategoryOption = {
@@ -52,12 +57,14 @@ type OrderDraft = {
   customerName: string;
   customerPhone: string;
   deliveryMethod: "ENTREGA" | "RETIRADA";
+  saveAddressAsDefault: boolean;
   scheduleDate: string;
   scheduleTime: string;
   addressText: string;
   addressBairro: string;
   addressReferencia: string;
   addressCity: string;
+  addressCep: string;
   deliveryFee: string;
   notes: string;
   categoryId: string;
@@ -88,6 +95,24 @@ function buildLocalDate(dateValue: string, timeValue: string) {
 
 function formatCurrency(value: number) {
   return value.toFixed(2);
+}
+
+function formatPhoneDisplay(value: string) {
+  const digits = normalizePhoneDigits(value);
+  if (digits.length === 11) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+  if (digits.length === 10) {
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  }
+  return digits;
+}
+
+function formatCustomerLabel(customer: CustomerOption) {
+  if (customer.phone) {
+    return `${customer.name} (${formatPhoneDisplay(customer.phone)})`;
+  }
+  return customer.name;
 }
 
 function parseFeeValue(value: string) {
@@ -161,6 +186,7 @@ function parseDraft(raw: string | null): OrderDraft | null {
       parsed.customerMode === "new" ? "new" : "existing";
     const deliveryMethod =
       parsed.deliveryMethod === "ENTREGA" ? "ENTREGA" : "RETIRADA";
+    const saveAddressAsDefault = parsed.saveAddressAsDefault === true;
     return {
       customerMode,
       customerId: typeof parsed.customerId === "string" ? parsed.customerId : "",
@@ -171,6 +197,7 @@ function parseDraft(raw: string | null): OrderDraft | null {
       customerPhone:
         typeof parsed.customerPhone === "string" ? parsed.customerPhone : "",
       deliveryMethod,
+      saveAddressAsDefault,
       scheduleDate:
         typeof parsed.scheduleDate === "string" ? parsed.scheduleDate : "",
       scheduleTime:
@@ -185,6 +212,7 @@ function parseDraft(raw: string | null): OrderDraft | null {
           : "",
       addressCity:
         typeof parsed.addressCity === "string" ? parsed.addressCity : "",
+      addressCep: typeof parsed.addressCep === "string" ? parsed.addressCep : "",
       deliveryFee:
         typeof parsed.deliveryFee === "string" ? parsed.deliveryFee : "",
       notes: typeof parsed.notes === "string" ? parsed.notes : "",
@@ -200,9 +228,11 @@ function parseDraft(raw: string | null): OrderDraft | null {
 export default function OrderForm({
   customers,
   errorCode,
+  existingCustomer,
 }: {
   customers: CustomerOption[];
   errorCode?: string;
+  existingCustomer?: ExistingCustomerHint;
 }) {
   const [customerMode, setCustomerMode] = useState<"existing" | "new">(
     "existing"
@@ -214,12 +244,15 @@ export default function OrderForm({
   const [deliveryMethod, setDeliveryMethod] = useState<
     "ENTREGA" | "RETIRADA"
   >(shouldDefaultDelivery(errorCode) ? "ENTREGA" : "RETIRADA");
+  const [saveAddressAsDefault, setSaveAddressAsDefault] = useState(false);
+  const [addressAutofillHint, setAddressAutofillHint] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
   const [scheduleTime, setScheduleTime] = useState("");
   const [addressText, setAddressText] = useState("");
   const [addressBairro, setAddressBairro] = useState("");
   const [addressReferencia, setAddressReferencia] = useState("");
   const [addressCity, setAddressCity] = useState("");
+  const [addressCep, setAddressCep] = useState("");
   const [deliveryFee, setDeliveryFee] = useState("");
   const [notes, setNotes] = useState("");
 
@@ -234,6 +267,9 @@ export default function OrderForm({
     "idle"
   );
 
+  const [customerOpen, setCustomerOpen] = useState(false);
+  const [customerActiveIndex, setCustomerActiveIndex] = useState(-1);
+
   const [items, setItems] = useState<OrderItem[]>([]);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [formError, setFormError] = useState("");
@@ -241,10 +277,11 @@ export default function OrderForm({
   const lineIdRef = useRef(0);
   const qtyRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const lastAddedRef = useRef<string | null>(null);
+  const lastAutofillRef = useRef<string | null>(null);
 
   const skuInputRef = useRef<HTMLInputElement | null>(null);
   const deliveryMethodRef = useRef<HTMLInputElement | null>(null);
-  const customerSelectRef = useRef<HTMLSelectElement | null>(null);
+  const customerSearchRef = useRef<HTMLInputElement | null>(null);
   const customerNameRef = useRef<HTMLInputElement | null>(null);
   const customerPhoneRef = useRef<HTMLInputElement | null>(null);
   const scheduleDateRef = useRef<HTMLInputElement | null>(null);
@@ -254,17 +291,25 @@ export default function OrderForm({
   const deliveryFeeRef = useRef<HTMLInputElement | null>(null);
 
   const filteredCustomers = useMemo(() => {
-    if (!customerSearch.trim()) return customers;
-    const query = customerSearch.toLowerCase();
-    const queryDigits = normalizePhone(query);
-    return customers.filter((customer) => {
-      const nameMatch = customer.name.toLowerCase().includes(query);
-      const phoneMatch = queryDigits
-        ? normalizePhone(customer.phone ?? "").includes(queryDigits)
-        : false;
-      return nameMatch || phoneMatch;
-    });
+    const trimmed = customerSearch.trim();
+    if (!trimmed) return customers.slice(0, 12);
+    const query = trimmed.toLowerCase();
+    const queryDigits = normalizePhoneDigits(trimmed);
+    return customers
+      .filter((customer) => {
+        const nameMatch = customer.name.toLowerCase().includes(query);
+        const phoneMatch = queryDigits
+          ? normalizePhoneDigits(customer.phone ?? "").includes(queryDigits)
+          : false;
+        return nameMatch || phoneMatch;
+      })
+      .slice(0, 12);
   }, [customers, customerSearch]);
+
+  const existingCustomerOption = useMemo(() => {
+    if (!existingCustomer?.id) return null;
+    return customers.find((customer) => customer.id === existingCustomer.id) ?? null;
+  }, [customers, existingCustomer]);
 
   const itemsWithTotals = useMemo(() => {
     return items.map((item) => {
@@ -296,6 +341,12 @@ export default function OrderForm({
       : ({ ok: true, value: 0 } as const);
   const total = subtotal + (feeValue.ok ? feeValue.value : 0);
 
+  const addressHasInput = useMemo(() => {
+    return [addressText, addressBairro, addressReferencia, addressCity].some(
+      (value) => value.trim() !== ""
+    );
+  }, [addressText, addressBairro, addressReferencia, addressCity]);
+
   useEffect(() => {
     let active = true;
 
@@ -318,6 +369,82 @@ export default function OrderForm({
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!customerOpen) return;
+    setCustomerActiveIndex(filteredCustomers.length > 0 ? 0 : -1);
+  }, [customerOpen, filteredCustomers]);
+
+  useEffect(() => {
+    if (deliveryMethod !== "ENTREGA") {
+      setSaveAddressAsDefault(false);
+    }
+  }, [deliveryMethod]);
+
+  useEffect(() => {
+    setSaveAddressAsDefault(false);
+    setAddressAutofillHint("");
+    lastAutofillRef.current = null;
+  }, [customerId]);
+
+  useEffect(() => {
+    if (deliveryMethod !== "ENTREGA") {
+      setAddressAutofillHint("");
+      return;
+    }
+    if (customerMode !== "existing" || !customerId) return;
+    if (addressHasInput) return;
+
+    const key = `${customerId}:${deliveryMethod}`;
+    if (lastAutofillRef.current === key) return;
+    lastAutofillRef.current = key;
+
+    let active = true;
+
+    async function loadAddress() {
+      try {
+        const response = await fetch(
+          `/api/customers/address?customerId=${customerId}`
+        );
+        if (!response.ok) return;
+        const data = (await response.json()) as {
+          address?: {
+            addressText?: string | null;
+            addressBairro?: string | null;
+            addressReferencia?: string | null;
+            addressCity?: string | null;
+            addressCep?: string | null;
+          } | null;
+          source?: "customer_default" | "last_order" | "none";
+        };
+        if (!active || addressHasInput) return;
+        if (!data.address) return;
+        setAddressText(data.address.addressText ?? "");
+        setAddressBairro(data.address.addressBairro ?? "");
+        setAddressReferencia(data.address.addressReferencia ?? "");
+        setAddressCity(data.address.addressCity ?? "");
+        setAddressCep(data.address.addressCep ?? "");
+
+        if (data.source === "customer_default") {
+          setAddressAutofillHint(
+            "Endereco preenchido com base no cadastro do cliente."
+          );
+        } else if (data.source === "last_order") {
+          setAddressAutofillHint(
+            "Endereco preenchido com base no ultimo pedido."
+          );
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    loadAddress();
+
+    return () => {
+      active = false;
+    };
+  }, [addressHasInput, customerId, customerMode, deliveryMethod]);
 
   useEffect(() => {
     if (!skuQuery.trim() && !categoryId) {
@@ -395,12 +522,14 @@ export default function OrderForm({
     setCustomerName(draft.customerName);
     setCustomerPhone(draft.customerPhone);
     setDeliveryMethod(draft.deliveryMethod);
+    setSaveAddressAsDefault(draft.saveAddressAsDefault);
     setScheduleDate(draft.scheduleDate);
     setScheduleTime(draft.scheduleTime);
     setAddressText(draft.addressText);
     setAddressBairro(draft.addressBairro);
     setAddressReferencia(draft.addressReferencia);
     setAddressCity(draft.addressCity);
+    setAddressCep(draft.addressCep);
     setDeliveryFee(draft.deliveryFee);
     setNotes(draft.notes);
     setCategoryId(draft.categoryId);
@@ -416,12 +545,14 @@ export default function OrderForm({
       customerName,
       customerPhone,
       deliveryMethod,
+      saveAddressAsDefault,
       scheduleDate,
       scheduleTime,
       addressText,
       addressBairro,
       addressReferencia,
       addressCity,
+      addressCep,
       deliveryFee,
       notes,
       categoryId,
@@ -435,12 +566,14 @@ export default function OrderForm({
     customerName,
     customerPhone,
     deliveryMethod,
+    saveAddressAsDefault,
     scheduleDate,
     scheduleTime,
     addressText,
     addressBairro,
     addressReferencia,
     addressCity,
+    addressCep,
     deliveryFee,
     notes,
     categoryId,
@@ -451,7 +584,8 @@ export default function OrderForm({
     if (!errorCode) return;
     setSubmitAttempted(true);
     const focusMap: Record<string, () => void> = {
-      "cliente-invalido": () => customerSelectRef.current?.focus(),
+      "cliente-invalido": () => customerSearchRef.current?.focus(),
+      "cliente-telefone-existente": () => customerSearchRef.current?.focus(),
       "cliente-telefone": () => customerPhoneRef.current?.focus(),
       "data-invalida": () => scheduleDateRef.current?.focus(),
       "hora-invalida": () => scheduleTimeRef.current?.focus(),
@@ -532,8 +666,8 @@ export default function OrderForm({
       if (!customerName.trim()) {
         errors.customerName = "Informe um cliente valido.";
       }
-      const normalizedPhone = normalizePhone(customerPhone);
-      if (!normalizedPhone || normalizedPhone.length < MIN_PHONE_DIGITS) {
+      const normalizedPhone = normalizePhoneBR(customerPhone);
+      if (!normalizedPhone) {
         errors.customerPhone = "Informe um telefone valido.";
       }
     }
@@ -588,21 +722,89 @@ export default function OrderForm({
 
   const validation = validateForm();
 
+  function applySearchToNewCustomer(value: string) {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+    const digits = normalizePhoneDigits(trimmed);
+    const hasLetters = /[a-zA-Z]/.test(trimmed);
+    if (hasLetters) {
+      setCustomerName(trimmed);
+      if (digits.length >= 10) {
+        setCustomerPhone(digits);
+      }
+      return;
+    }
+    if (digits) {
+      setCustomerPhone(digits);
+    }
+  }
+
+  function selectCustomer(customer: CustomerOption) {
+    setCustomerId(customer.id);
+    setCustomerSearch(formatCustomerLabel(customer));
+    setCustomerName(customer.name);
+    setCustomerPhone(customer.phone ?? "");
+    setCustomerOpen(false);
+    setCustomerActiveIndex(-1);
+    if (deliveryMethod === "ENTREGA") {
+      setTimeout(() => deliveryMethodRef.current?.focus(), 0);
+    }
+  }
+
+  function switchToNewCustomer(prefillSearch = false) {
+    setCustomerMode("new");
+    setCustomerId("");
+    setCustomerOpen(false);
+    if (prefillSearch) {
+      applySearchToNewCustomer(customerSearch);
+    } else {
+      setCustomerName("");
+      setCustomerPhone("");
+    }
+  }
+
+  function switchToExistingCustomer() {
+    setCustomerMode("existing");
+    setCustomerOpen(false);
+  }
+
+  function handleSelectExistingFromError() {
+    if (!existingCustomer) return;
+    switchToExistingCustomer();
+    if (existingCustomerOption) {
+      selectCustomer(existingCustomerOption);
+      return;
+    }
+    setCustomerId(existingCustomer.id);
+    setCustomerSearch(existingCustomer.name);
+    setCustomerName(existingCustomer.name);
+  }
+
   const payload = JSON.stringify({
-    customer: {
-      mode: customerMode,
-      customerId,
-      name: customerName,
-      phone: customerPhone || undefined,
-    },
+    customerMode,
+    customerId: customerMode === "existing" ? customerId : undefined,
+    newCustomer:
+      customerMode === "new"
+        ? {
+            name: customerName,
+            phone: customerPhone || undefined,
+          }
+        : undefined,
     scheduleDate,
     scheduleTime,
-    deliveryMethod,
-    addressText: deliveryMethod === "ENTREGA" ? addressText : undefined,
-    addressBairro: deliveryMethod === "ENTREGA" ? addressBairro : undefined,
-    addressReferencia:
-      deliveryMethod === "ENTREGA" ? addressReferencia : undefined,
-    addressCity: deliveryMethod === "ENTREGA" ? addressCity : undefined,
+    deliveryMode: deliveryMethod,
+    address:
+      deliveryMethod === "ENTREGA"
+        ? {
+            addressText,
+            addressBairro,
+            addressReferencia,
+            addressCity,
+            addressCep,
+          }
+        : null,
+    saveAddressAsDefault:
+      deliveryMethod === "ENTREGA" ? saveAddressAsDefault : false,
     orderType: "ENCOMENDA",
     deliveryFee: deliveryMethod === "ENTREGA" ? deliveryFee : undefined,
     notes,
@@ -624,7 +826,7 @@ export default function OrderForm({
     setFormError("Revise os campos destacados.");
 
     if (validation.errors.customerId) {
-      customerSelectRef.current?.focus();
+      customerSearchRef.current?.focus();
       return;
     }
     if (validation.errors.customerName) {
@@ -689,88 +891,172 @@ export default function OrderForm({
               <h2>Cliente</h2>
             </div>
             <div className={styles.panelBody}>
-              <div className={styles.clusterSm}>
-                <label className={styles.choiceRow}>
-                  <input
-                    type="radio"
-                    name="customerMode"
-                    checked={customerMode === "existing"}
-                    onChange={() => {
-                      setCustomerMode("existing");
-                      setCustomerName("");
-                    }}
-                  />
-                  <span className={styles.choiceLabel}>
-                    Selecionar cliente existente
-                  </span>
-                </label>
-                <label className={styles.choiceRow}>
-                  <input
-                    type="radio"
-                    name="customerMode"
-                    checked={customerMode === "new"}
-                    onChange={() => {
-                      setCustomerMode("new");
-                      setCustomerId("");
-                    }}
-                  />
-                  <span className={styles.choiceLabel}>
-                    Cadastrar novo cliente
-                  </span>
-                </label>
+              <div className={styles.tabs}>
+                <div className={styles.tabList} role="tablist" aria-label="Cliente">
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={customerMode === "existing"}
+                    className={`${styles.tabButton} ${
+                      customerMode === "existing" ? styles.tabButtonActive : ""
+                    }`}
+                    onClick={() => switchToExistingCustomer()}
+                  >
+                    Cliente existente
+                  </button>
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={customerMode === "new"}
+                    className={`${styles.tabButton} ${
+                      customerMode === "new" ? styles.tabButtonActive : ""
+                    }`}
+                    onClick={() => switchToNewCustomer(true)}
+                  >
+                    Novo cliente
+                  </button>
+                </div>
               </div>
+
+              {errorCode === "cliente-telefone-existente" && existingCustomer ? (
+                <div className={styles.notice}>
+                  Este telefone ja existe para{" "}
+                  {existingCustomerOption
+                    ? formatCustomerLabel(existingCustomerOption)
+                    : existingCustomer.name}
+                  .
+                  <button
+                    type="button"
+                    onClick={handleSelectExistingFromError}
+                    className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                  >
+                    Selecionar cliente existente
+                  </button>
+                </div>
+              ) : null}
+
               {customerMode === "existing" ? (
                 <div className={styles.stackSm}>
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Buscar cliente</span>
-                    <input
-                      type="text"
-                      placeholder="Buscar por nome ou telefone"
-                      value={customerSearch}
-                      onChange={(event) =>
-                        setCustomerSearch(event.target.value)
-                      }
-                      className={styles.control}
-                    />
-                  </label>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Cliente</span>
-                    <select
-                      ref={customerSelectRef}
-                      value={customerId}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setCustomerId(value);
-                        setCustomerSearch("");
-                        if (value) {
-                          setTimeout(
-                            () => deliveryMethodRef.current?.focus(),
-                            0
-                          );
+                    <span className={styles.fieldLabel}>Cliente existente</span>
+                    <div className={styles.autocomplete}>
+                      <input
+                        ref={customerSearchRef}
+                        type="text"
+                        placeholder="Buscar por nome ou telefone"
+                        value={customerSearch}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setCustomerSearch(value);
+                          if (customerId) {
+                            setCustomerId("");
+                            setCustomerName("");
+                            setCustomerPhone("");
+                          }
+                          setCustomerOpen(true);
+                        }}
+                        onFocus={() => {
+                          if (filteredCustomers.length > 0 || customerSearch.trim()) {
+                            setCustomerOpen(true);
+                          }
+                        }}
+                        onBlur={() => {
+                          setTimeout(() => setCustomerOpen(false), 150);
+                        }}
+                        onKeyDown={(event) => {
+                          if (!customerOpen) return;
+                          if (event.key === "ArrowDown") {
+                            event.preventDefault();
+                            setCustomerActiveIndex((prev) =>
+                              Math.min(prev + 1, filteredCustomers.length - 1)
+                            );
+                          }
+                          if (event.key === "ArrowUp") {
+                            event.preventDefault();
+                            setCustomerActiveIndex((prev) => Math.max(prev - 1, 0));
+                          }
+                          if (event.key === "Enter") {
+                            event.preventDefault();
+                            const option = filteredCustomers[customerActiveIndex];
+                            if (option) {
+                              selectCustomer(option);
+                            }
+                          }
+                          if (event.key === "Escape") {
+                            setCustomerOpen(false);
+                          }
+                        }}
+                        aria-invalid={
+                          showErrors && Boolean(validation.errors.customerId)
                         }
-                      }}
-                      aria-invalid={
-                        showErrors && Boolean(validation.errors.customerId)
-                      }
-                      aria-describedby={
-                        showErrors && validation.errors.customerId
-                          ? "customer-error"
-                          : undefined
-                      }
-                      className={styles.control}
-                    >
-                      <option value="">Selecione um cliente</option>
-                      {filteredCustomers.map((customer) => (
-                        <option key={customer.id} value={customer.id}>
-                          {customer.name}
-                          {customer.phone ? ` (${customer.phone})` : ""}
-                        </option>
-                      ))}
-                    </select>
+                        aria-describedby={
+                          showErrors && validation.errors.customerId
+                            ? "customer-error"
+                            : undefined
+                        }
+                        role="combobox"
+                        aria-expanded={customerOpen}
+                        aria-controls="customer-listbox"
+                        aria-autocomplete="list"
+                        className={styles.control}
+                      />
+                      {customerOpen ? (
+                        <ul
+                          className={styles.autocompleteList}
+                          role="listbox"
+                          id="customer-listbox"
+                        >
+                          {filteredCustomers.length === 0 ? (
+                            <li className={styles.autocompleteEmpty}>
+                              Nenhum cliente encontrado.
+                            </li>
+                          ) : null}
+                          {filteredCustomers.map((customer, index) => (
+                            <li
+                              key={customer.id}
+                              role="option"
+                              aria-selected={index === customerActiveIndex}
+                              className={`${styles.autocompleteOption} ${
+                                index === customerActiveIndex
+                                  ? styles.autocompleteOptionActive
+                                  : ""
+                              }`}
+                              onMouseDown={(event) => {
+                                event.preventDefault();
+                                selectCustomer(customer);
+                              }}
+                            >
+                              <div className={styles.autocompleteMain}>
+                                <strong>{customer.name}</strong>
+                                {customer.phone ? (
+                                  <span className={styles.textMuted}>
+                                    {formatPhoneDisplay(customer.phone)}
+                                  </span>
+                                ) : null}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
                   </label>
                   {showErrors && validation.errors.customerId ? (
                     <div id="customer-error" className={styles.fieldError}>
                       {validation.errors.customerId}
+                    </div>
+                  ) : null}
+                  {customerSearch.trim() && filteredCustomers.length === 0 ? (
+                    <div className={styles.clusterSm}>
+                      <span className={styles.textMuted}>
+                        Nenhum cliente encontrado.
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => switchToNewCustomer(true)}
+                        className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                      >
+                        Cadastrar novo cliente
+                      </button>
                     </div>
                   ) : null}
                 </div>
@@ -810,7 +1096,9 @@ export default function OrderForm({
                       type="text"
                       placeholder="Telefone"
                       value={customerPhone}
-                      onChange={(event) => setCustomerPhone(event.target.value)}
+                      onChange={(event) =>
+                        setCustomerPhone(normalizePhoneDigits(event.target.value))
+                      }
                       aria-invalid={
                         showErrors && Boolean(validation.errors.customerPhone)
                       }
@@ -951,11 +1239,15 @@ export default function OrderForm({
               </div>
 
               {deliveryMethod === "ENTREGA" ? (
-                <div className={styles.formGrid}>
-                  <label className={`${styles.field} ${styles.fieldFull}`}>
-                    <span className={styles.fieldLabel}>Endereco</span>
-                    <input
-                      ref={addressTextRef}
+                <div className={styles.stackSm}>
+                  {addressAutofillHint ? (
+                    <div className={styles.textMuted}>{addressAutofillHint}</div>
+                  ) : null}
+                  <div className={styles.formGrid}>
+                    <label className={`${styles.field} ${styles.fieldFull}`}>
+                      <span className={styles.fieldLabel}>Endereco</span>
+                      <input
+                        ref={addressTextRef}
                       type="text"
                       value={addressText}
                       onChange={(event) => setAddressText(event.target.value)}
@@ -1046,6 +1338,26 @@ export default function OrderForm({
                       </span>
                     ) : null}
                   </label>
+                </div>
+                {customerMode === "existing" && customerId ? (
+                  <div className={styles.stackSm}>
+                    <label className={styles.choiceRow}>
+                      <input
+                        type="checkbox"
+                        checked={saveAddressAsDefault}
+                        onChange={(event) =>
+                          setSaveAddressAsDefault(event.target.checked)
+                        }
+                      />
+                      <span className={styles.choiceLabel}>
+                        Salvar endereco como padrao do cliente
+                      </span>
+                    </label>
+                    <span className={styles.fieldHelp}>
+                      Usa este endereco nos proximos pedidos.
+                    </span>
+                  </div>
+                ) : null}
                 </div>
               ) : null}
             </div>

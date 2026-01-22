@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
-import { normalizePhone, validateCustomerInput } from "@/lib/domain/customer";
+import { validateCustomerInput } from "@/lib/domain/customer";
 
 function parseText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -32,7 +32,7 @@ export async function updateCustomerAction(formData: FormData) {
     redirect(`/admin/clientes/${id}?error=${validation.error}`);
   }
 
-  const normalizedPhone = normalizePhone(validation.phone ?? "");
+  const normalizedPhone = validation.phone;
   const existing = await prisma.customer.findFirst({
     where: {
       phone: normalizedPhone,
