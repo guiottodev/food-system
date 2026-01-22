@@ -364,6 +364,7 @@ export default function OrdersFilters({
                       <option value="all">Tipo: todos</option>
                       <option value="INCOMPLETE">Incompleto</option>
                       <option value="ALTERADO_APOS_CONFIRMACAO">Alterado</option>
+                      <option value="UNAVAILABLE_ITEMS">Itens indisponiveis</option>
                       <option value="MISSING_TIME">Sem horario</option>
                       <option value="MISSING_ADDRESS">Sem endereco</option>
                     </select>

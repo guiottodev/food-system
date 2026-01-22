@@ -1,6 +1,7 @@
 ﻿import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
+import { computeUnavailableItemsForOrders } from "@/lib/domain/production";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { normalizePhoneDigits } from "@/lib/phone";
 import { OrderStatus, Prisma } from "@prisma/client";
@@ -94,6 +95,7 @@ const orderInclude = {
   items: {
     select: {
       id: true,
+      skuId: true,
       quantity: true,
       snapshotUnitPrice: true,
       lineTotal: true,
@@ -172,6 +174,7 @@ const attentionTypeOptions = [
   "all",
   "INCOMPLETE",
   "ALTERADO_APOS_CONFIRMACAO",
+  "UNAVAILABLE_ITEMS",
   "MISSING_TIME",
   "MISSING_ADDRESS",
 ] as const;
@@ -310,9 +313,21 @@ export default async function OrdersPage({
       },
       include: orderInclude,
     });
+    const availabilityMap = await computeUnavailableItemsForOrders(
+      prisma,
+      allOrders.map((order) => ({
+        id: order.id,
+        status: order.status,
+        items: order.items,
+      }))
+    );
     const decorated = allOrders.map((order) => ({
       order,
-      attention: getOrderAttentionSummary(order),
+      attention: getOrderAttentionSummary({
+        ...order,
+        hasUnavailableItems:
+          availabilityMap.get(order.id)?.hasUnavailableItems ?? false,
+      }),
     }));
     const filtered = decorated.filter((entry) =>
       matchesAttentionFilter(entry.attention, attentionParam, attentionTypeParam)
@@ -334,9 +349,21 @@ export default async function OrdersPage({
       prisma.order.count({ where }),
     ]);
     totalCount = count;
+    const availabilityMap = await computeUnavailableItemsForOrders(
+      prisma,
+      orderRows.map((order) => ({
+        id: order.id,
+        status: order.status,
+        items: order.items,
+      }))
+    );
     orders = orderRows.map((order) => ({
       order,
-      attention: getOrderAttentionSummary(order),
+      attention: getOrderAttentionSummary({
+        ...order,
+        hasUnavailableItems:
+          availabilityMap.get(order.id)?.hasUnavailableItems ?? false,
+      }),
     }));
   }
 
@@ -405,6 +432,9 @@ export default async function OrdersPage({
                 ),
                 altered: attention.reasons.some(
                   (reason) => reason.type === "ALTERADO_APOS_CONFIRMACAO"
+                ),
+                unavailableItems: attention.reasons.some(
+                  (reason) => reason.type === "UNAVAILABLE_ITEMS"
                 ),
                 deliveryDatetime: formatDeliveryLabel(
                   order.deliveryDatetime,

@@ -5,6 +5,7 @@ export type AttentionSeverity = "strong" | "weak";
 export type AttentionReasonType =
   | "INCOMPLETE"
   | "ALTERADO_APOS_CONFIRMACAO"
+  | "UNAVAILABLE_ITEMS"
   | "MISSING_TIME"
   | "MISSING_ADDRESS";
 
@@ -31,6 +32,7 @@ export type OrderAttentionInput = {
   items?: OrderItemSnapshot[] | null;
   needsReconfirmation?: boolean | null;
   paidAt?: Date | null;
+  hasUnavailableItems?: boolean | null;
 };
 
 export type OrderAttentionSummary = {
@@ -130,6 +132,14 @@ export function getOrderAttentionSummary(
       type: "ALTERADO_APOS_CONFIRMACAO",
       severity: "strong",
       label: "Alterado apos confirmacao",
+    });
+  }
+
+  if (order.hasUnavailableItems) {
+    reasons.push({
+      type: "UNAVAILABLE_ITEMS",
+      severity: "weak",
+      label: "Itens indisponiveis",
     });
   }
 

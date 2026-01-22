@@ -31,6 +31,8 @@ const enginePath = path.join(
 dotenv.config({ path: envPath });
 process.env.NODE_ENV = "test";
 process.env.PRISMA_CLIENT_ENGINE_TYPE = "library";
+process.env.VITEST_MAX_THREADS = "1";
+process.env.VITEST_MIN_THREADS = "1";
 if (fs.existsSync(enginePath)) {
   process.env.PRISMA_QUERY_ENGINE_LIBRARY = enginePath;
 }
@@ -53,4 +55,4 @@ if (fs.existsSync(prismaClientIndex)) {
   }
 }
 run("npx prisma db push --force-reset --skip-generate");
-run("npx vitest run");
+run("npx vitest run --no-file-parallelism --maxWorkers=1");

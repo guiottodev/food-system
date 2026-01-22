@@ -57,6 +57,7 @@ type OrderDraft = {
   customerName: string;
   customerPhone: string;
   deliveryMethod: "ENTREGA" | "RETIRADA";
+  orderType: "ENCOMENDA" | "PRONTA_ENTREGA";
   saveAddressAsDefault: boolean;
   scheduleDate: string;
   scheduleTime: string;
@@ -184,6 +185,8 @@ function parseDraft(raw: string | null): OrderDraft | null {
       : [];
     const customerMode =
       parsed.customerMode === "new" ? "new" : "existing";
+    const orderType =
+      parsed.orderType === "PRONTA_ENTREGA" ? "PRONTA_ENTREGA" : "ENCOMENDA";
     const deliveryMethod =
       parsed.deliveryMethod === "ENTREGA" ? "ENTREGA" : "RETIRADA";
     const saveAddressAsDefault = parsed.saveAddressAsDefault === true;
@@ -197,6 +200,7 @@ function parseDraft(raw: string | null): OrderDraft | null {
       customerPhone:
         typeof parsed.customerPhone === "string" ? parsed.customerPhone : "",
       deliveryMethod,
+      orderType,
       saveAddressAsDefault,
       scheduleDate:
         typeof parsed.scheduleDate === "string" ? parsed.scheduleDate : "",
@@ -244,6 +248,9 @@ export default function OrderForm({
   const [deliveryMethod, setDeliveryMethod] = useState<
     "ENTREGA" | "RETIRADA"
   >(shouldDefaultDelivery(errorCode) ? "ENTREGA" : "RETIRADA");
+  const [orderType, setOrderType] = useState<"ENCOMENDA" | "PRONTA_ENTREGA">(
+    "ENCOMENDA"
+  );
   const [saveAddressAsDefault, setSaveAddressAsDefault] = useState(false);
   const [addressAutofillHint, setAddressAutofillHint] = useState("");
   const [scheduleDate, setScheduleDate] = useState("");
@@ -273,6 +280,10 @@ export default function OrderForm({
   const [items, setItems] = useState<OrderItem[]>([]);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [formError, setFormError] = useState("");
+  const [availabilityWarning, setAvailabilityWarning] = useState(false);
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const availabilityBypassRef = useRef(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
 
   const lineIdRef = useRef(0);
   const qtyRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -380,6 +391,13 @@ export default function OrderForm({
       setSaveAddressAsDefault(false);
     }
   }, [deliveryMethod]);
+
+  useEffect(() => {
+    if (orderType === "PRONTA_ENTREGA") {
+      setScheduleDate("");
+      setScheduleTime("");
+    }
+  }, [orderType]);
 
   useEffect(() => {
     setSaveAddressAsDefault(false);
@@ -506,6 +524,11 @@ export default function OrderForm({
   }, [items]);
 
   useEffect(() => {
+    availabilityBypassRef.current = false;
+    setAvailabilityWarning(false);
+  }, [items]);
+
+  useEffect(() => {
     if (errorCode) return;
     if (typeof window === "undefined") return;
     sessionStorage.removeItem(DRAFT_KEY);
@@ -522,6 +545,7 @@ export default function OrderForm({
     setCustomerName(draft.customerName);
     setCustomerPhone(draft.customerPhone);
     setDeliveryMethod(draft.deliveryMethod);
+    setOrderType(draft.orderType);
     setSaveAddressAsDefault(draft.saveAddressAsDefault);
     setScheduleDate(draft.scheduleDate);
     setScheduleTime(draft.scheduleTime);
@@ -545,6 +569,7 @@ export default function OrderForm({
       customerName,
       customerPhone,
       deliveryMethod,
+      orderType,
       saveAddressAsDefault,
       scheduleDate,
       scheduleTime,
@@ -566,6 +591,7 @@ export default function OrderForm({
     customerName,
     customerPhone,
     deliveryMethod,
+    orderType,
     saveAddressAsDefault,
     scheduleDate,
     scheduleTime,
@@ -679,7 +705,7 @@ export default function OrderForm({
       }
     }
 
-    if (scheduleDate) {
+    if (orderType === "ENCOMENDA" && scheduleDate) {
       const checkTime = scheduleTime || "00:00";
       const schedule = buildLocalDate(scheduleDate, checkTime);
       if (!schedule) {
@@ -790,8 +816,8 @@ export default function OrderForm({
             phone: customerPhone || undefined,
           }
         : undefined,
-    scheduleDate,
-    scheduleTime,
+    scheduleDate: orderType === "ENCOMENDA" ? scheduleDate : undefined,
+    scheduleTime: orderType === "ENCOMENDA" ? scheduleTime : undefined,
     deliveryMode: deliveryMethod,
     address:
       deliveryMethod === "ENTREGA"
@@ -805,7 +831,7 @@ export default function OrderForm({
         : null,
     saveAddressAsDefault:
       deliveryMethod === "ENTREGA" ? saveAddressAsDefault : false,
-    orderType: "ENCOMENDA",
+    orderType,
     deliveryFee: deliveryMethod === "ENTREGA" ? deliveryFee : undefined,
     notes,
     items: items.map((item) => ({
@@ -815,9 +841,51 @@ export default function OrderForm({
     })),
   });
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (validation.isValid) {
+      if (availabilityBypassRef.current) {
+        availabilityBypassRef.current = false;
+        setAvailabilityWarning(false);
+        setFormError("");
+        return;
+      }
+
+      event.preventDefault();
       setFormError("");
+      setAvailabilityLoading(true);
+
+      try {
+        const response = await fetch("/api/orders/availability", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            items: items.map((item) => ({
+              skuId: item.skuId,
+              quantity: item.quantity,
+            })),
+          }),
+        });
+        if (!response.ok) {
+          setAvailabilityLoading(false);
+          setFormError("Nao foi possivel verificar disponibilidade.");
+          return;
+        }
+        const data = (await response.json()) as {
+          hasUnavailableItems?: boolean;
+        };
+        setAvailabilityLoading(false);
+        if (data.hasUnavailableItems) {
+          setAvailabilityWarning(true);
+          return;
+        }
+      } catch {
+        setAvailabilityLoading(false);
+        setFormError("Nao foi possivel verificar disponibilidade.");
+        return;
+      }
+
+      availabilityBypassRef.current = true;
+      formRef.current?.requestSubmit();
       return;
     }
 
@@ -872,6 +940,7 @@ export default function OrderForm({
 
   return (
     <form
+      ref={formRef}
       action={createOrderAction}
       className={styles.stackMd}
       onSubmit={handleSubmit}
@@ -882,6 +951,39 @@ export default function OrderForm({
       {formError ? (
         <div className={`${styles.notice} ${styles.noticeError}`}>
           {formError}
+        </div>
+      ) : null}
+
+      {availabilityWarning ? (
+        <div className={`${styles.notice} ${styles.noticeWarning}`}>
+          <div className={styles.stackSm}>
+            <div>
+              <strong>Atencao:</strong> Alguns itens deste pedido nao estao
+              disponiveis no momento. Sera necessario produzir antes de atender.
+            </div>
+            <div>Voce ainda podera salvar o pedido.</div>
+            <div className={styles.clusterSm}>
+              <button
+                type="button"
+                className={styles.button}
+                disabled={availabilityLoading}
+                onClick={() => {
+                  availabilityBypassRef.current = true;
+                  setAvailabilityWarning(false);
+                  formRef.current?.requestSubmit();
+                }}
+              >
+                Salvar mesmo assim
+              </button>
+              <button
+                type="button"
+                className={`${styles.button} ${styles.buttonGhost}`}
+                onClick={() => setAvailabilityWarning(false)}
+              >
+                Revisar itens
+              </button>
+            </div>
+          </div>
         </div>
       ) : null}
       <div className={styles.pageGrid}>
@@ -1173,70 +1275,120 @@ export default function OrderForm({
                 </div>
               </label>
 
-              <div className={styles.formGrid}>
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Data</span>
-                  <input
-                    ref={scheduleDateRef}
-                    type="date"
-                    value={scheduleDate}
-                    onChange={(event) => setScheduleDate(event.target.value)}
-                    aria-invalid={
-                      showErrors && Boolean(validation.errors.scheduleDate)
-                    }
-                    aria-describedby={
-                      showErrors && validation.errors.scheduleDate
-                        ? "schedule-date-error"
-                        : undefined
-                    }
-                    className={styles.control}
-                  />
-                  {showErrors && validation.errors.scheduleDate ? (
-                    <span
-                      id="schedule-date-error"
-                      className={styles.fieldError}
-                    >
-                      {validation.errors.scheduleDate}
-                    </span>
-                  ) : null}
-                </label>
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Horario (opcional)</span>
-                  <select
-                    ref={scheduleTimeRef}
-                    value={scheduleTime}
-                    onChange={(event) => setScheduleTime(event.target.value)}
-                    disabled={!scheduleDate}
-                    aria-invalid={
-                      showErrors && Boolean(validation.errors.scheduleTime)
-                    }
-                    aria-describedby={
-                      showErrors && validation.errors.scheduleTime
-                        ? "schedule-time-error"
-                        : undefined
-                    }
-                    className={styles.control}
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Encomenda ou pronta entrega?</span>
+                <div
+                  className={styles.segmented}
+                  role="radiogroup"
+                  aria-label="Tipo de pedido"
+                >
+                  <label
+                    className={`${styles.segmentedOption} ${
+                      orderType === "ENCOMENDA" ? styles.segmentedActive : ""
+                    }`}
                   >
-                    <option value="">Selecione o horario</option>
-                    {TIME_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
-                  <span className={styles.fieldHelp}>
-                    Informe quando souber. Horarios de 30 em 30 minutos.
-                  </span>
-                  {showErrors && validation.errors.scheduleTime ? (
-                    <span
-                      id="schedule-time-error"
-                      className={styles.fieldError}
-                    >
-                      {validation.errors.scheduleTime}
+                    <input
+                      type="radio"
+                      name="orderType"
+                      value="ENCOMENDA"
+                      checked={orderType === "ENCOMENDA"}
+                      onChange={() => setOrderType("ENCOMENDA")}
+                    />
+                    <span className={styles.segmentedTitle}>Encomenda</span>
+                    <span className={styles.segmentedHelp}>
+                      Informe data e horario quando houver.
                     </span>
-                  ) : null}
-                </label>
-              </div>
+                  </label>
+                  <label
+                    className={`${styles.segmentedOption} ${
+                      orderType === "PRONTA_ENTREGA" ? styles.segmentedActive : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="orderType"
+                      value="PRONTA_ENTREGA"
+                      checked={orderType === "PRONTA_ENTREGA"}
+                      onChange={() => setOrderType("PRONTA_ENTREGA")}
+                    />
+                    <span className={styles.segmentedTitle}>Pronta entrega</span>
+                    <span className={styles.segmentedHelp}>
+                      Usa a data e hora do cadastro.
+                    </span>
+                  </label>
+                </div>
+              </label>
+
+              {orderType === "ENCOMENDA" ? (
+                <div className={styles.formGrid}>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Data</span>
+                    <input
+                      ref={scheduleDateRef}
+                      type="date"
+                      value={scheduleDate}
+                      onChange={(event) => setScheduleDate(event.target.value)}
+                      aria-invalid={
+                        showErrors && Boolean(validation.errors.scheduleDate)
+                      }
+                      aria-describedby={
+                        showErrors && validation.errors.scheduleDate
+                          ? "schedule-date-error"
+                          : undefined
+                      }
+                      className={styles.control}
+                    />
+                    {showErrors && validation.errors.scheduleDate ? (
+                      <span
+                        id="schedule-date-error"
+                        className={styles.fieldError}
+                      >
+                        {validation.errors.scheduleDate}
+                      </span>
+                    ) : null}
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Horario (opcional)</span>
+                    <select
+                      ref={scheduleTimeRef}
+                      value={scheduleTime}
+                      onChange={(event) => setScheduleTime(event.target.value)}
+                      disabled={!scheduleDate}
+                      aria-invalid={
+                        showErrors && Boolean(validation.errors.scheduleTime)
+                      }
+                      aria-describedby={
+                        showErrors && validation.errors.scheduleTime
+                          ? "schedule-time-error"
+                          : undefined
+                      }
+                      className={styles.control}
+                    >
+                      <option value="">Selecione o horario</option>
+                      {TIME_OPTIONS.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                    <span className={styles.fieldHelp}>
+                      Informe quando souber. Horarios de 30 em 30 minutos.
+                    </span>
+                    {showErrors && validation.errors.scheduleTime ? (
+                      <span
+                        id="schedule-time-error"
+                        className={styles.fieldError}
+                      >
+                        {validation.errors.scheduleTime}
+                      </span>
+                    ) : null}
+                  </label>
+                </div>
+              ) : (
+                <div className={styles.textMuted}>
+                  A data e o horario serao registrados automaticamente.
+                </div>
+              )}
 
               {deliveryMethod === "ENTREGA" ? (
                 <div className={styles.stackSm}>

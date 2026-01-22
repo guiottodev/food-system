@@ -17,6 +17,10 @@ export default function AdminTopNav() {
     pathname === "/admin/pendencias" || pathname.startsWith("/admin/pendencias/");
   const isClientes =
     pathname === "/admin/clientes" || pathname.startsWith("/admin/clientes/");
+  const isProducao =
+    pathname === "/admin/producao" || pathname.startsWith("/admin/producao/");
+  const isCapacidade =
+    pathname === "/admin/capacidade" || pathname.startsWith("/admin/capacidade/");
   const isAdminHome = pathname === "/admin" || pathname === "/admin/";
   const isCatalog = pathname === "/admin/catalog" || pathname.startsWith("/admin/catalog/");
   const isCategories =
@@ -53,6 +57,20 @@ export default function AdminTopNav() {
         aria-current={isPendencias ? "page" : undefined}
       >
         Pendencias
+      </Link>
+      <Link
+        className={linkClass(isCapacidade)}
+        href="/admin/capacidade"
+        aria-current={isCapacidade ? "page" : undefined}
+      >
+        Capacidade
+      </Link>
+      <Link
+        className={linkClass(isProducao)}
+        href="/admin/producao"
+        aria-current={isProducao ? "page" : undefined}
+      >
+        Producao
       </Link>
       <Link
         className={linkClass(isOrdersNew)}

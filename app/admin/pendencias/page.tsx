@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary, hasStrongAttention } from "@/lib/domain/attention";
+import { computeUnavailableItemsForOrders } from "@/lib/domain/production";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { OrderStatus } from "@prisma/client";
 import OrdersTableClient from "../orders/OrdersTableClient";
@@ -49,10 +50,18 @@ function formatCurrency(value: number) {
   }).format(value);
 }
 
-type PendingType = "all" | "INCOMPLETE" | "ALTERADO_APOS_CONFIRMACAO";
+type PendingType =
+  | "all"
+  | "INCOMPLETE"
+  | "ALTERADO_APOS_CONFIRMACAO"
+  | "UNAVAILABLE_ITEMS";
 
 function normalizeType(value: string | undefined): PendingType {
-  if (value === "INCOMPLETE" || value === "ALTERADO_APOS_CONFIRMACAO") {
+  if (
+    value === "INCOMPLETE" ||
+    value === "ALTERADO_APOS_CONFIRMACAO" ||
+    value === "UNAVAILABLE_ITEMS"
+  ) {
     return value;
   }
   return "all";
@@ -85,6 +94,7 @@ export default async function PendenciasPage({
       items: {
         select: {
           id: true,
+          skuId: true,
           quantity: true,
           snapshotUnitPrice: true,
           lineTotal: true,
@@ -97,17 +107,36 @@ export default async function PendenciasPage({
     },
   });
 
-  const entries = orders.map((order) => ({
-    order,
-    attention: getOrderAttentionSummary(order),
-  }));
-  const strongEntries = entries.filter((entry) =>
-    hasStrongAttention(entry.attention)
+  const availabilityMap = await computeUnavailableItemsForOrders(
+    prisma,
+    orders.map((order) => ({
+      id: order.id,
+      status: order.status,
+      items: order.items,
+    }))
   );
+
+  const entries = orders.map((order) => {
+    const hasUnavailableItems =
+      availabilityMap.get(order.id)?.hasUnavailableItems ?? false;
+    return {
+      order,
+      attention: getOrderAttentionSummary({
+        ...order,
+        hasUnavailableItems,
+      }),
+      hasUnavailableItems,
+    };
+  });
+
   const filtered =
     typeParam === "all"
-      ? strongEntries
-      : strongEntries.filter((entry) =>
+      ? entries.filter(
+          (entry) => hasStrongAttention(entry.attention) || entry.hasUnavailableItems
+        )
+      : typeParam === "UNAVAILABLE_ITEMS"
+      ? entries.filter((entry) => entry.hasUnavailableItems)
+      : entries.filter((entry) =>
           entry.attention.strongReasons.some((reason) => reason.type === typeParam)
         );
 
@@ -120,12 +149,10 @@ export default async function PendenciasPage({
 
       <section className={styles.panel}>
         <PendenciasFilters initialType={typeParam} />
-        <p className={styles.textMuted}>
-          {filtered.length} pendencia(s) forte(s)
-        </p>
+        <p className={styles.textMuted}>{filtered.length} pendencia(s)</p>
 
         {filtered.length === 0 ? (
-          <div className={styles.emptyState}>Sem pendencias fortes.</div>
+          <div className={styles.emptyState}>Sem pendencias.</div>
         ) : (
           <OrdersTableClient
             columns={7}
@@ -142,6 +169,9 @@ export default async function PendenciasPage({
               ),
               altered: attention.strongReasons.some(
                 (reason) => reason.type === "ALTERADO_APOS_CONFIRMACAO"
+              ),
+              unavailableItems: attention.reasons.some(
+                (reason) => reason.type === "UNAVAILABLE_ITEMS"
               ),
               deliveryDatetime: formatDeliveryLabel(
                 order.deliveryDatetime,
@@ -164,7 +194,7 @@ export default async function PendenciasPage({
               subtotal: Number(order.subtotal),
               deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : 0,
               total: Number(order.total),
-              attention: attention.strongReasons.map((reason) => reason.label),
+              attention: attention.reasons.map((reason) => reason.label),
             }))}
           />
         )}

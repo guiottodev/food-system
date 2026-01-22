@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
+import { computeOrderPendingFlags } from "@/lib/domain/production";
 import { OrderStatus } from "@prisma/client";
 import {
   cancelOrderAction,
@@ -107,6 +108,7 @@ export default async function OrderDetailPage({
       items: {
         select: {
           id: true,
+          skuId: true,
           quantity: true,
           snapshotUnitPrice: true,
           lineTotal: true,
@@ -128,6 +130,12 @@ export default async function OrderDetailPage({
     );
   }
 
+  const availability = await computeOrderPendingFlags(prisma, {
+    id: order.id,
+    status: order.status,
+    items: order.items,
+  });
+
   const attention = getOrderAttentionSummary({
     status: order.status,
     deliveryDatetime: order.deliveryDatetime,
@@ -138,6 +146,7 @@ export default async function OrderDetailPage({
     items: order.items,
     needsReconfirmation: order.needsReconfirmation,
     paidAt: order.paidAt,
+    hasUnavailableItems: availability.hasUnavailableItems,
   });
 
   const auditLogs = await prisma.auditLog.findMany({
@@ -237,6 +246,16 @@ export default async function OrderDetailPage({
                   Alterado - requer reconfirmacao
                 </span>
               ) : null}
+              {attention.reasons.some(
+                (reason) => reason.type === "UNAVAILABLE_ITEMS"
+              ) ? (
+                <span
+                  className={`${styles.badge} ${styles.badgeWarning}`}
+                  title="Alguns itens deste pedido nao estao disponiveis no momento. Sera necessario produzir antes de atender."
+                >
+                  Itens indisponiveis
+                </span>
+              ) : null}
             </div>
             <div>Tipo: {orderTypeLabel[order.orderType]}</div>
             <div>Entrega/Retirada: {deliveryMethodLabel[order.deliveryMethod]}</div>
@@ -271,7 +290,12 @@ export default async function OrderDetailPage({
             <ul>
               {[...attention.strongReasons, ...attention.weakReasons].map(
                 (reason, index) => (
-                  <li key={`${reason.type}-${index}`}>{reason.label}</li>
+                  <li key={`${reason.type}-${index}`}>
+                    {reason.label}
+                    {reason.type === "UNAVAILABLE_ITEMS"
+                      ? " — Alguns itens deste pedido nao estao disponiveis no momento. Sera necessario produzir antes de atender."
+                      : ""}
+                  </li>
                 )
               )}
             </ul>

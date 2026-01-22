@@ -24,6 +24,7 @@ type OrderRow = {
   statusLabel: string;
   incomplete: boolean;
   altered: boolean;
+  unavailableItems?: boolean;
   deliveryDatetime: string;
   totalLabel: string;
   items: OrderItem[];
@@ -139,6 +140,14 @@ export default function OrdersTableClient({
                       {order.altered ? (
                         <span className={`${styles.badge} ${styles.badgeDanger}`}>
                           Alterado
+                        </span>
+                      ) : null}
+                      {order.unavailableItems ? (
+                        <span
+                          className={`${styles.badge} ${styles.badgeWarning}`}
+                          title="Alguns itens deste pedido nao estao disponiveis no momento. Sera necessario produzir antes de atender."
+                        >
+                          Itens indisponiveis
                         </span>
                       ) : null}
                     </div>

@@ -4,16 +4,25 @@ import { useCallback, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import styles from "../_styles/adminPrimitives.module.css";
 
-type PendingType = "all" | "INCOMPLETE" | "ALTERADO_APOS_CONFIRMACAO";
+type PendingType =
+  | "all"
+  | "INCOMPLETE"
+  | "ALTERADO_APOS_CONFIRMACAO"
+  | "UNAVAILABLE_ITEMS";
 
 const options: Array<{ value: PendingType; label: string }> = [
   { value: "all", label: "Todas" },
   { value: "INCOMPLETE", label: "Incompletas" },
   { value: "ALTERADO_APOS_CONFIRMACAO", label: "Alteradas" },
+  { value: "UNAVAILABLE_ITEMS", label: "Itens indisponiveis" },
 ];
 
 function normalizeType(value: string | null, fallback: PendingType): PendingType {
-  if (value === "INCOMPLETE" || value === "ALTERADO_APOS_CONFIRMACAO") {
+  if (
+    value === "INCOMPLETE" ||
+    value === "ALTERADO_APOS_CONFIRMACAO" ||
+    value === "UNAVAILABLE_ITEMS"
+  ) {
     return value;
   }
   if (value === "all") return "all";

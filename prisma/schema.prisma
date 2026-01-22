@@ -44,6 +44,11 @@ enum InventoryMovementType {
   ADJUSTMENT @map("adjustment")
 }
 
+enum ProductionConsumptionSourceType {
+  IMMEDIATE @map("immediate")
+  MANUAL    @map("manual")
+}
+
 model User {
   id        String   @id @default(cuid())
   username  String   @unique
@@ -53,6 +58,8 @@ model User {
 
   auditLogs      AuditLog[]
   inventoryMoves InventoryMovement[]
+  productionSessions ProductionSession[]
+  productionConsumptions ProductionConsumption[]
   ordersCreated  Order[] @relation("OrdersCreatedBy")
 
   @@map("users")
@@ -133,9 +140,58 @@ model Product {
   category Category @relation(fields: [categoryId], references: [id])
   skus     Sku[]
   images   ProductImage[]
+  productionItems ProductionSessionItem[]
+  productionConsumptions ProductionConsumption[]
 
   @@map("products")
   @@unique([name, categoryId])
+}
+
+model ProductionSession {
+  id         String   @id @default(cuid())
+  producedAt DateTime
+  note       String?
+  createdAt  DateTime @default(now())
+  createdById String?
+
+  items     ProductionSessionItem[]
+  createdBy User? @relation(fields: [createdById], references: [id])
+
+  @@map("production_sessions")
+  @@index([producedAt])
+}
+
+model ProductionSessionItem {
+  id        String   @id @default(cuid())
+  sessionId String
+  productId String
+  quantity  Decimal
+  note      String?
+
+  session ProductionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("production_session_items")
+  @@index([productId])
+  @@index([sessionId])
+}
+
+model ProductionConsumption {
+  id        String   @id @default(cuid())
+  productId String
+  quantity  Decimal
+  consumedAt DateTime
+  sourceType ProductionConsumptionSourceType
+  note      String?
+  createdAt DateTime @default(now())
+  createdById String?
+
+  product   Product @relation(fields: [productId], references: [id])
+  createdBy User? @relation(fields: [createdById], references: [id])
+
+  @@map("production_consumptions")
+  @@index([productId])
+  @@index([consumedAt])
 }
 
 model ProductImage {

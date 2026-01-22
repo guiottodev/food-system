@@ -53,7 +53,21 @@ function toDecimal(value: number) {
   return new Prisma.Decimal(value);
 }
 
-function parseSchedule(payload: CreateOrderPayload) {
+function formatTimeValue(value: number) {
+  return String(value).padStart(2, "0");
+}
+
+function parseSchedule(payload: CreateOrderPayload, orderType: OrderType) {
+  if (orderType === "PRONTA_ENTREGA") {
+    const now = new Date();
+    return {
+      scheduledAt: now,
+      deliveryTime: `${formatTimeValue(now.getHours())}:${formatTimeValue(
+        now.getMinutes()
+      )}`,
+    } as const;
+  }
+
   const rawDate = payload.scheduleDate?.trim();
   if (!rawDate) {
     return { scheduledAt: null, deliveryTime: null } as const;
@@ -141,7 +155,9 @@ export async function createOrderAction(formData: FormData) {
   const payload = parsePayload(formData);
   const items = Array.isArray(payload.items) ? payload.items : [];
 
-  const { scheduledAt, deliveryTime } = parseSchedule(payload);
+  const finalOrderType: OrderType =
+    payload.orderType === "PRONTA_ENTREGA" ? "PRONTA_ENTREGA" : "ENCOMENDA";
+  const { scheduledAt, deliveryTime } = parseSchedule(payload, finalOrderType);
 
   const cookieStore = await cookies();
   const session = cookieStore.get("session");
@@ -245,7 +261,6 @@ export async function createOrderAction(formData: FormData) {
   );
   const total = subtotal + deliveryFee;
 
-  const finalOrderType: OrderType = "ENCOMENDA";
   const normalizedAddress =
     deliveryMode === "ENTREGA" ? normalizeDeliveryAddress(payload.address) : null;
 
@@ -300,7 +315,7 @@ export async function createOrderAction(formData: FormData) {
         orderNumber,
         customerId,
         status: OrderStatus.RASCUNHO,
-        orderType: finalOrderType as OrderType,
+        orderType: finalOrderType,
         deliveryDatetime: scheduledAt,
         deliveryTime,
         deliveryMethod: deliveryMode,
