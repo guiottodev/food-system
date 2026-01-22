@@ -1,0 +1,325 @@
+# Telas do Admin
+
+## /admin - Painel
+- O que faz: mostra indicadores do dia/periodo (receita, pendencias fortes, pedidos em producao).
+- Campos/controles: Periodo (Hoje, Proximos 7 dias, Periodo customizado), Inicio (date), Fim (date), botao Aplicar.
+- Conteudo exibido: Receita (soma de pedidos ENTREGUE no periodo), Pendencias fortes (contador), Pedidos em producao (contador).
+- Acoes/links: Ver pendencias -> /admin/pendencias, Ver pedidos -> /admin/orders?status=EM_PRODUCAO.
+
+## /admin/catalog - Catalogo
+- O que faz: hub de catalogo para navegar entre categorias e produtos.
+- Conteudo exibido: contagem "SKUs ativos".
+- Acoes/links: links para /admin/categories e /admin/products.
+
+## /admin/products - Produtos
+- O que faz: lista produtos com filtros e acesso ao detalhe.
+- Campos/controles:
+  - Busca: input "Buscar por nome".
+  - Botao "Filtros" abre painel com:
+    - Categoria (select).
+    - Status (Ativos/Inativos).
+    - Publico (Publico/Oculto).
+    - Sob consulta (Sim/Nao).
+  - Botao "Novo produto".
+  - Chips de filtros ativos com botao "x".
+- Conteudo exibido (tabela): Produto, Categoria, Status (badge Ativo/Inativo), Sob consulta (badge Sim/Nao), SKUs (contador), Acoes (Ver detalhes).
+- Regras: filtros e busca server-side, ordenacao por nome.
+
+## /admin/products/new - Novo produto
+- O que faz: cria um novo produto.
+- Campos:
+  - Nome do produto (input, required).
+  - Categoria (select, required).
+  - Descricao longa (textarea, opcional).
+  - Ativo (checkbox).
+  - Ocultar do publico (checkbox).
+  - Sob consulta (checkbox).
+  - URL da imagem principal (input).
+  - URLs extras (textarea, uma por linha).
+- Acoes: Criar produto.
+- Validacao/erros: erro "campos" quando nome/categoria nao informados.
+
+## /admin/products/[id] - Produto (abas)
+- O que faz: editar dados do produto, SKUs e imagens.
+- Abas: Detalhes, SKUs, Imagens.
+
+### Aba: Detalhes
+- Campos: Nome, Categoria, Descricao longa, Ativo, Ocultar do publico, Sob consulta.
+- Acoes: Salvar produto.
+
+### Aba: SKUs
+- O que faz: listar e manter SKUs do produto.
+- Campos/controles:
+  - Busca: "Buscar por nome".
+  - Status: Todos/Ativos/Inativos.
+  - Botao "+ Novo SKU" (abre modal).
+- Conteudo exibido (tabela):
+  - SKU (nome exibido + badges de atributos).
+  - Unidade (unitType + unitLabel).
+  - Preco (preco atual).
+  - Status (ATIVO/INATIVO).
+  - Sob consulta (herdado ou override).
+  - Acoes: Editar, Duplicar, Ativar/Desativar.
+- Modal "Novo SKU" / "Editar SKU":
+  - Nome exibido (input, required) + botao "Gerar nome".
+  - Tipo de venda (select: UNIDADE/CENTO/KG).
+  - Preco atual (input number, required).
+  - Custo (opcional).
+  - Tags (texto separado por virgula).
+  - Atributos (lista key/value, ate 15 linhas, sugestoes clicaveis).
+  - Sob consulta (Herdar/Forcar sim/Forcar nao).
+  - Ativo (checkbox).
+  - Acoes: Cancelar/Salvar.
+
+### Aba: Imagens
+- Campos:
+  - URL da imagem principal.
+  - URLs extras (textarea, uma por linha).
+- Acoes: Salvar imagens.
+
+## /admin/categories - Categorias
+- O que faz: buscar, editar e criar categorias.
+- Campos/controles:
+  - Busca: input "Buscar por nome".
+  - Botao "Filtros" (sem filtros extras).
+  - Botao "Nova categoria" (abre modal).
+- Modal "Nova categoria":
+  - Nome (required).
+  - Descricao (opcional).
+  - Ativa (checkbox).
+  - Acoes: Cancelar / Criar categoria.
+- Conteudo exibido (tabela com edicao inline):
+  - Nome (input).
+  - Descricao (textarea).
+  - Ativo (checkbox).
+  - Acoes: Salvar.
+
+## /admin/orders - Pedidos
+- O que faz: lista pedidos com filtros unificados e acesso ao detalhe.
+- Header:
+  - Busca: "Buscar por cliente ou telefone".
+  - Botao "Filtros".
+  - Botao "Limpar filtros" (aparece quando ha filtros ativos).
+- Drawer de filtros (ordem do painel):
+  1) Periodo: Proximos pedidos (default), Hoje, Intervalo de datas (inicio/fim), Historico (entregues).
+  2) Status do pedido: Todos, Rascunho/Anotado, Confirmado/Ready, Em producao, Pronto, Entregue, Cancelado.
+  3) Pendencias: Todas, Com pendencias, Itens indisponiveis, Pedido incompleto, Alterado apos confirmacao, Endereco nao informado, Horario a confirmar.
+  4) Tipo de pedido: Todos, Encomenda, Pronta entrega.
+  5) Logistica: Todos, Entrega, Retirada.
+  6) Ordenacao: Data mais proxima, Data mais distante, Criado recentemente.
+  7) Itens por pagina: 15/30/50.
+- Conteudo exibido:
+  - Texto: "Mostrando X-Y de N" + "Mostrando: <periodo>" e "Filtros ativos: ...".
+  - Tabela: N do pedido, Cliente, Metodo, Status (badge + pendencias), Entrega, Total.
+  - Expansao por linha (botao) com lista de itens, subtotal, taxa de entrega, total e pendencias.
+  - Paginacao: Anterior / Pagina X de Y / Proxima.
+- Regras:
+  - Default mostra pedidos com deliveryDatetime >= hoje 00:00, ordenado por data mais proxima.
+  - Historico força status Entregue.
+  - Busca por numero do pedido, nome do cliente e telefone (digitos).
+
+## /admin/orders/new - Novo pedido
+- O que faz: cria um pedido com cliente, itens, entrega, pagamento combinado e observacoes.
+- Blocos (ordem):
+  1) Cliente
+  2) Itens
+  3) Entrega
+  4) Pagamento combinado
+  5) Observacoes
+  6) Resumo + Salvar
+
+### Bloco Cliente
+- Abas: Cliente existente / Novo cliente.
+- Cliente existente:
+  - Input unico com autocomplete "Buscar por nome ou telefone".
+  - Dropdown com resultados (nome + telefone).
+  - Estado vazio com mensagem e botao "Cadastrar novo cliente".
+- Novo cliente:
+  - Nome (input).
+  - Telefone (input, normaliza digitos).
+- Duplicidade: quando telefone ja existe, exibe aviso e CTA "Selecionar cliente existente".
+
+### Bloco Itens
+- Filtros e busca:
+  - Buscar produto (autocomplete).
+  - Categoria (select + botao Limpar).
+- Lista de itens adicionados:
+  - Colunas: Produto, Quantidade, Unidade, Preco unitario, Total, Remover.
+  - Input de quantidade valida regras de unidade.
+  - Estado vazio: "Nenhum item adicionado".
+
+### Bloco Entrega
+- Tipo de pedido:
+  - Pronta entrega (default): data/hora registradas automaticamente.
+  - Encomenda: data (date) e horario (select 30 min).
+- Entrega ou retirada:
+  - Retirada (sem endereco, sem taxa).
+  - Entrega (exige endereco e taxa).
+- Endereco (apenas se Entrega):
+  - Endereco, Cidade, Bairro, Referencia, Taxa de entrega.
+  - Autofill quando cliente existente + Entrega e campos vazios (usa endereco padrao do cliente ou ultimo pedido).
+  - Checkbox "Salvar endereco como padrao do cliente" (apenas para cliente existente).
+
+### Bloco Pagamento combinado
+- Informativo: "nao processamos pagamento".
+- Campos:
+  - Forma de pagamento (Pix, Dinheiro, Cartao, Transferencia, A combinar).
+  - Teve sinal? (Nao/Sim).
+  - Valor do sinal (aparece apenas se "Sim").
+
+### Bloco Observacoes
+- Campo Observacoes (textarea).
+
+### Resumo + Salvar
+- Subtotal, Taxa de entrega (quando aplicavel) e Total.
+- Botao "Salvar pedido".
+- Aviso de disponibilidade:
+  - Antes de salvar, faz checagem de itens indisponiveis.
+  - Se houver, mostra aviso e permite "Salvar mesmo assim" ou "Revisar itens".
+
+## /admin/orders/[id] - Pedido (detalhe)
+- O que faz: exibe o pedido e permite atualizar status, confirmar, reconfirmar e cancelar.
+- Dados do pedido:
+  - Cliente (link), Telefone, Status (badge).
+  - Badges: Incompleto, Alterado - requer reconfirmacao, Itens indisponiveis.
+  - Tipo (Encomenda/Pronta entrega).
+  - Entrega/Retirada.
+  - Data/hora.
+  - Endereco (se Entrega): Endereco, Bairro, Referencia, Cidade.
+  - Taxa de entrega, Subtotal, Total, Confirmado em, Pagamento (Pago/Pendente).
+- Pendencias:
+  - Lista pendencias (fortes + fracas).
+  - "Itens indisponiveis" inclui texto explicativo.
+- Flags por campo:
+  - Itens, Data, Horario, Endereco, Pagamento (badge OK/PENDING/OPTIONAL).
+- Itens:
+  - Lista de itens com quantidade, preco unitario e total por linha.
+- Atualizar status:
+  - Select de status.
+  - Checkbox "Marcar pagamento ao entregar".
+  - Botao "Atualizar".
+- Confirmar pedido:
+  - Visivel apenas quando status = RASCUNHO.
+  - Campo "Motivo (opcional)" + botao Confirmar pedido.
+- Reconfirmar pedido:
+  - Visivel apenas quando needsReconfirmation = true.
+  - Campo "Motivo (opcional)" + botao Reconfirmar pedido.
+- Cancelar pedido:
+  - Campo "Motivo do cancelamento" + botao Cancelar pedido.
+- Auditoria:
+  - Lista ultimos 10 logs: data/hora, acao, actor, campo, before/after, motivo.
+
+## /admin/pendencias - Pendencias
+- O que faz: lista pedidos com pendencias fortes e/ou itens indisponiveis.
+- Campos/controles: select "Tipo de pendencia" (Todas, Incompletas, Alteradas, Itens indisponiveis).
+- Conteudo exibido: contador de pendencias + tabela de pedidos (mesmo layout de /admin/orders).
+
+### Logica exata da tela de pendencias
+- Fonte de pedidos:
+  - Busca todos os pedidos com status != ENTREGUE e != CANCELADO.
+  - Ordena por deliveryDatetime asc.
+- Calculo de pendencias:
+  - Para cada pedido, calcula "strongReasons" via getOrderAttentionSummary:
+    - INCOMPLETE quando nao tem itens ou nao tem data de entrega.
+    - ALTERADO_APOS_CONFIRMACAO quando needsReconfirmation = true.
+  - Calcula "Itens indisponiveis" via computeUnavailableItemsForOrders:
+    - availableNow por produto = soma produzida - soma consumida.
+    - Se qualquer item do pedido tiver qty > availableNow, marca hasUnavailableItems = true.
+    - Se pedido estiver CANCELADO ou ENTREGUE, hasUnavailableItems = false (ignorado).
+- Filtro "Todas":
+  - Inclui pedidos com pendencia forte (INCOMPLETE ou ALTERADO_APOS_CONFIRMACAO)
+    OU pedidos com hasUnavailableItems = true.
+  - Pendencias fracas (ex: endereco/horario) nao entram sozinhas.
+- Filtro "Incompletas" / "Alteradas":
+  - Inclui apenas quando o tipo esta presente em attention.strongReasons.
+- Filtro "Itens indisponiveis":
+  - Inclui apenas pedidos com hasUnavailableItems = true.
+
+## /admin/capacidade - Capacidade
+- O que faz: mostra capacidade operacional por produto.
+- Campos/controles:
+  - Janela (Hoje / 7 / 14 / 30 dias).
+  - Produto (busca por nome).
+  - Gap (Todos / Somente com gap).
+  - Botao "Filtrar".
+- Conteudo exibido (tabela):
+  - Produto, Categoria, Disponivel agora, Demanda futura, Necessario produzir.
+- Acoes/links: Registrar producao (/admin/producao) e Registrar consumo (/admin/consumo).
+
+## /admin/producao - Producao
+- O que faz: registra uma sessao de producao (itens em massa).
+- Campos:
+  - Data da producao (date).
+  - Nota (opcional).
+  - Produto (autocomplete).
+  - Quantidade (input).
+  - Nota do item (opcional).
+- Conteudo exibido:
+  - Lista de itens da sessao (Produto, Quantidade, Nota, Remover).
+- Acoes: Adicionar item, Salvar producao.
+- Validacao: quantidade segue regras do SKU; nao salva sem itens validos.
+
+## /admin/consumo - Consumo
+- O que faz: registra consumo de producao (pronta entrega ou ajuste).
+- Campos:
+  - Produto (autocomplete).
+  - Quantidade.
+  - Janela de impacto (Hoje/7/14/30 dias).
+  - Origem (Pronta entrega / Ajuste manual).
+  - Nota (opcional).
+- Avisos:
+  - Impacto futuro (demanda/gap).
+  - Consumo maior que o disponivel (saldo negativo permitido).
+  - Ambos exigem confirmacao "Continuar mesmo assim".
+- Acoes: Registrar consumo.
+
+## /admin/clientes - Clientes
+- O que faz: lista clientes e permite busca e acesso ao detalhe.
+- Campos/controles:
+  - Busca: "Buscar por nome ou telefone".
+  - Botao "Buscar".
+  - Botao "Novo cliente".
+- Conteudo exibido (tabela):
+  - Nome, Telefone, Ultimo pedido, #Pedidos, Acao (Ver).
+- Regras:
+  - Busca por nome ou telefone (digitos).
+  - Ordena por ultimo pedido mais recente; clientes sem pedido ficam por ultimo.
+
+## /admin/clientes/novo - Novo cliente
+- O que faz: cria um cliente.
+- Campos (Dados):
+  - Nome (required).
+  - Telefone (required).
+  - Documento (opcional).
+- Campos (Endereco opcional):
+  - CEP, Rua, Numero, Complemento, Bairro, Cidade, Estado.
+- Acoes: Salvar cliente.
+- Validacao/erros: nome e telefone obrigatorios; telefone normalizado; aviso de duplicidade com link.
+
+## /admin/clientes/[id] - Cliente (detalhe)
+- O que faz: exibe e permite editar dados do cliente e ver pedidos.
+- Abas: Dados / Pedidos.
+
+### Aba: Dados
+- Campos:
+  - Nome, Telefone, Documento.
+  - Endereco opcional: CEP, Rua, Numero, Complemento, Bairro, Cidade, Estado.
+- Acoes: Salvar.
+- Avisos: "Cliente criado", "Dados salvos", "Telefone ja cadastrado".
+
+### Aba: Pedidos
+- Conteudo exibido (tabela):
+  - Entrega (data), Status, Total, Pedido (link).
+  - Limite: 20 pedidos mais recentes.
+- Estado vazio: "Cliente sem pedidos".
+
+## /admin/design-system - Design System Playground
+- O que faz: pagina de testes visuais do admin (nao disponivel em producao).
+- Conteudo exibido:
+  - Typography (titulos, paragrafos, link).
+  - Form (inputs, select, textarea).
+  - Buttons.
+  - Table (exemplos).
+  - States (empty/error).
+  - Layout mock (Novo pedido V2).
+  - Focus test (link + input + botao).

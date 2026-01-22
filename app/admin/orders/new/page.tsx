@@ -66,6 +66,12 @@ export default async function NewOrderPage({
   if (error === "taxa-invalida") {
     errorMessage = "Informe um valor numerico.";
   }
+  if (error === "pagamento-invalido") {
+    errorMessage = "Selecione uma forma de pagamento valida.";
+  }
+  if (error === "sinal-invalido") {
+    errorMessage = "Informe um valor de sinal valido.";
+  }
 
   return (
     <main className={styles.page}>

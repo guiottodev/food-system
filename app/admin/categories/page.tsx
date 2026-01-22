@@ -1,10 +1,13 @@
 import { prisma } from "@/lib/prisma";
-import { createCategoryAction, updateCategoryAction } from "./actions";
+import { updateCategoryAction } from "./actions";
+import CategoriesFilters from "./CategoriesFilters.client";
+import layoutStyles from "./categories.module.css";
 import styles from "../_styles/adminPrimitives.module.css";
 
 type CategoriesSearchParams = {
   q?: string;
   error?: string;
+  modal?: string;
 };
 
 export default async function CategoriesPage({
@@ -15,6 +18,7 @@ export default async function CategoriesPage({
   const sp = await Promise.resolve(searchParams);
   const query = (sp?.q ?? "").trim();
   const error = sp?.error;
+  const openModal = sp?.modal === "1";
 
   const categories = await prisma.category.findMany({
     where: query
@@ -29,74 +33,23 @@ export default async function CategoriesPage({
 
   return (
     <main className={styles.page}>
-      <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Categorias</h1>
-      </div>
-
-      <form className={styles.toolbar} action="">
-        <div className={styles.toolbarGroup}>
-          <input
-            type="text"
-            name="q"
-            placeholder="Buscar por nome"
-            defaultValue={query}
-            className={styles.control}
-          />
-          <button
-            type="submit"
-            className={`${styles.button} ${styles.buttonSecondary}`}
-          >
-            Buscar
-          </button>
-        </div>
-      </form>
-
-      {error === "nome" ? (
-        <p className={styles.textError}>Informe o nome da categoria.</p>
-      ) : null}
-
+      <h1 className={styles.pageTitle}>Categorias</h1>
       <section className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <h2>Nova categoria</h2>
-        </div>
-        <div className={styles.panelBody}>
-          <form action={createCategoryAction} className={styles.formSection}>
-            <input
-              name="name"
-              placeholder="Nome"
-              required
-              className={styles.control}
-            />
-            <textarea
-              name="description"
-              placeholder="Descricao (opcional)"
-              className={`${styles.control} ${styles.controlTextarea}`}
-            ></textarea>
-            <label className={styles.choiceRow}>
-              <input type="checkbox" name="isActive" defaultChecked />
-              <span className={styles.choiceLabel}>Ativa</span>
-            </label>
-            <button
-              type="submit"
-              className={`${styles.button} ${styles.buttonPrimary}`}
-            >
-              Criar categoria
-            </button>
-          </form>
-        </div>
-      </section>
-
-      <section className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <h2>Lista</h2>
-        </div>
+        <CategoriesFilters
+          initialQuery={query}
+          error={error}
+          openModalOnLoad={openModal}
+        />
+        {error === "nome" && !openModal ? (
+          <p className={styles.textError}>Informe o nome da categoria.</p>
+        ) : null}
         {categories.length === 0 ? (
           <div className={styles.emptyState}>
             Nenhuma categoria cadastrada.
           </div>
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
+          <div className={layoutStyles.tableWrap}>
+            <table className={layoutStyles.table}>
               <thead>
                 <tr>
                   <th>Nome</th>

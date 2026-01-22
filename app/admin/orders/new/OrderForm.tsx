@@ -67,6 +67,9 @@ type OrderDraft = {
   addressCity: string;
   addressCep: string;
   deliveryFee: string;
+  paymentMethod: string;
+  hasDeposit: boolean;
+  depositAmount: string;
   notes: string;
   categoryId: string;
   items: OrderItem[];
@@ -131,6 +134,21 @@ function parseFeeValue(value: string) {
   return { ok: true, value: parsed } as const;
 }
 
+function parseDepositValue(value: string) {
+  const raw = value.trim();
+  if (!raw) {
+    return { ok: false, error: "Informe o valor do sinal." } as const;
+  }
+  const parsed = Number(raw.replace(",", "."));
+  if (!Number.isFinite(parsed)) {
+    return { ok: false, error: "Informe um valor numerico." } as const;
+  }
+  if (parsed <= 0) {
+    return { ok: false, error: "Informe um valor de sinal valido." } as const;
+  }
+  return { ok: true, value: parsed } as const;
+}
+
 function shouldDefaultDelivery(errorCode?: string) {
   return [
     "endereco-invalido",
@@ -186,7 +204,7 @@ function parseDraft(raw: string | null): OrderDraft | null {
     const customerMode =
       parsed.customerMode === "new" ? "new" : "existing";
     const orderType =
-      parsed.orderType === "PRONTA_ENTREGA" ? "PRONTA_ENTREGA" : "ENCOMENDA";
+      parsed.orderType === "ENCOMENDA" ? "ENCOMENDA" : "PRONTA_ENTREGA";
     const deliveryMethod =
       parsed.deliveryMethod === "ENTREGA" ? "ENTREGA" : "RETIRADA";
     const saveAddressAsDefault = parsed.saveAddressAsDefault === true;
@@ -219,6 +237,11 @@ function parseDraft(raw: string | null): OrderDraft | null {
       addressCep: typeof parsed.addressCep === "string" ? parsed.addressCep : "",
       deliveryFee:
         typeof parsed.deliveryFee === "string" ? parsed.deliveryFee : "",
+      paymentMethod:
+        typeof parsed.paymentMethod === "string" ? parsed.paymentMethod : "",
+      hasDeposit: parsed.hasDeposit === true,
+      depositAmount:
+        typeof parsed.depositAmount === "string" ? parsed.depositAmount : "",
       notes: typeof parsed.notes === "string" ? parsed.notes : "",
       categoryId:
         typeof parsed.categoryId === "string" ? parsed.categoryId : "",
@@ -249,7 +272,7 @@ export default function OrderForm({
     "ENTREGA" | "RETIRADA"
   >(shouldDefaultDelivery(errorCode) ? "ENTREGA" : "RETIRADA");
   const [orderType, setOrderType] = useState<"ENCOMENDA" | "PRONTA_ENTREGA">(
-    "ENCOMENDA"
+    "PRONTA_ENTREGA"
   );
   const [saveAddressAsDefault, setSaveAddressAsDefault] = useState(false);
   const [addressAutofillHint, setAddressAutofillHint] = useState("");
@@ -261,6 +284,9 @@ export default function OrderForm({
   const [addressCity, setAddressCity] = useState("");
   const [addressCep, setAddressCep] = useState("");
   const [deliveryFee, setDeliveryFee] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [hasDeposit, setHasDeposit] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
   const [notes, setNotes] = useState("");
 
   const [categoryId, setCategoryId] = useState("");
@@ -300,6 +326,8 @@ export default function OrderForm({
   const addressTextRef = useRef<HTMLInputElement | null>(null);
   const addressCityRef = useRef<HTMLInputElement | null>(null);
   const deliveryFeeRef = useRef<HTMLInputElement | null>(null);
+  const paymentMethodRef = useRef<HTMLSelectElement | null>(null);
+  const depositAmountRef = useRef<HTMLInputElement | null>(null);
 
   const filteredCustomers = useMemo(() => {
     const trimmed = customerSearch.trim();
@@ -398,6 +426,12 @@ export default function OrderForm({
       setScheduleTime("");
     }
   }, [orderType]);
+
+  useEffect(() => {
+    if (!hasDeposit) {
+      setDepositAmount("");
+    }
+  }, [hasDeposit]);
 
   useEffect(() => {
     setSaveAddressAsDefault(false);
@@ -555,6 +589,9 @@ export default function OrderForm({
     setAddressCity(draft.addressCity);
     setAddressCep(draft.addressCep);
     setDeliveryFee(draft.deliveryFee);
+    setPaymentMethod(draft.paymentMethod);
+    setHasDeposit(draft.hasDeposit);
+    setDepositAmount(draft.depositAmount);
     setNotes(draft.notes);
     setCategoryId(draft.categoryId);
     setItems(draft.items);
@@ -579,6 +616,9 @@ export default function OrderForm({
       addressCity,
       addressCep,
       deliveryFee,
+      paymentMethod,
+      hasDeposit,
+      depositAmount,
       notes,
       categoryId,
       items,
@@ -601,6 +641,9 @@ export default function OrderForm({
     addressCity,
     addressCep,
     deliveryFee,
+    paymentMethod,
+    hasDeposit,
+    depositAmount,
     notes,
     categoryId,
     items,
@@ -621,6 +664,8 @@ export default function OrderForm({
       "taxa-vazia": () => deliveryFeeRef.current?.focus(),
       "taxa-negativa": () => deliveryFeeRef.current?.focus(),
       "taxa-invalida": () => deliveryFeeRef.current?.focus(),
+      "pagamento-invalido": () => paymentMethodRef.current?.focus(),
+      "sinal-invalido": () => depositAmountRef.current?.focus(),
       "sem-itens": () => skuInputRef.current?.focus(),
     };
     const focus = focusMap[errorCode];
@@ -702,6 +747,13 @@ export default function OrderForm({
       const feeCheck = parseFeeValue(deliveryFee);
       if (!feeCheck.ok) {
         errors.deliveryFee = feeCheck.error;
+      }
+    }
+
+    if (hasDeposit) {
+      const depositCheck = parseDepositValue(depositAmount);
+      if (!depositCheck.ok) {
+        errors.depositAmount = depositCheck.error;
       }
     }
 
@@ -833,6 +885,9 @@ export default function OrderForm({
       deliveryMethod === "ENTREGA" ? saveAddressAsDefault : false,
     orderType,
     deliveryFee: deliveryMethod === "ENTREGA" ? deliveryFee : undefined,
+    paymentMethod: paymentMethod || undefined,
+    hasDeposit,
+    depositAmount: hasDeposit ? depositAmount : undefined,
     notes,
     items: items.map((item) => ({
       skuId: item.skuId,
@@ -923,6 +978,10 @@ export default function OrderForm({
     }
     if (validation.errors.deliveryFee) {
       deliveryFeeRef.current?.focus();
+      return;
+    }
+    if (validation.errors.depositAmount) {
+      depositAmountRef.current?.focus();
       return;
     }
     if (validation.errors.items) {
@@ -1227,54 +1286,237 @@ export default function OrderForm({
 
           <section className={`${styles.panel} ${styles.panelSecondary}`}>
             <div className={styles.panelHeader}>
+              <h2>Itens</h2>
+            </div>
+            <div className={styles.panelBody}>
+              <div className={styles.itemsFiltersRow}>
+                <label className={`${styles.field} ${styles.itemsFilterMain}`}>
+                  <span className={styles.fieldLabel}>Buscar produto</span>
+                  <div className={styles.autocomplete}>
+                    <input
+                      ref={skuInputRef}
+                      type="text"
+                      placeholder="Digite o nome do produto..."
+                      value={skuQuery}
+                      onChange={(event) => {
+                        setSkuQuery(event.target.value);
+                        setSkuOpen(true);
+                      }}
+                      onFocus={() => {
+                        if (skuResults.length > 0) setSkuOpen(true);
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => setSkuOpen(false), 150);
+                      }}
+                      onKeyDown={(event) => {
+                        if (!skuOpen || skuResults.length === 0) return;
+                        if (event.key === "ArrowDown") {
+                          event.preventDefault();
+                          setSkuActiveIndex((prev) =>
+                            Math.min(prev + 1, skuResults.length - 1)
+                          );
+                        }
+                        if (event.key === "ArrowUp") {
+                          event.preventDefault();
+                          setSkuActiveIndex((prev) => Math.max(prev - 1, 0));
+                        }
+                        if (event.key === "Enter") {
+                          event.preventDefault();
+                          const option = skuResults[skuActiveIndex];
+                          if (option) {
+                            addItem(option);
+                            setSkuQuery("");
+                            setSkuResults([]);
+                            setSkuOpen(false);
+                            setSkuActiveIndex(-1);
+                          }
+                        }
+                        if (event.key === "Escape") {
+                          setSkuOpen(false);
+                        }
+                      }}
+                      role="combobox"
+                      aria-expanded={skuOpen}
+                      aria-controls="sku-listbox"
+                      aria-autocomplete="list"
+                      className={styles.control}
+                    />
+                    {skuOpen ? (
+                      <ul
+                        className={styles.autocompleteList}
+                        role="listbox"
+                        id="sku-listbox"
+                      >
+                        {skuStatus === "loading" ? (
+                          <li className={styles.autocompleteEmpty}>Buscando...</li>
+                        ) : null}
+                        {skuStatus === "error" ? (
+                          <li className={styles.autocompleteEmpty}>
+                            Nao foi possivel carregar.
+                          </li>
+                        ) : null}
+                        {skuStatus === "idle" && skuResults.length === 0 ? (
+                          <li className={styles.autocompleteEmpty}>
+                            Nenhum produto encontrado.
+                          </li>
+                        ) : null}
+                        {skuResults.map((option, index) => (
+                          <li
+                            key={`${option.skuId}-${index}`}
+                            role="option"
+                            aria-selected={index === skuActiveIndex}
+                            className={`${styles.autocompleteOption} ${
+                              index === skuActiveIndex
+                                ? styles.autocompleteOptionActive
+                                : ""
+                            }`}
+                            onMouseDown={(event) => {
+                              event.preventDefault();
+                              addItem(option);
+                              setSkuQuery("");
+                              setSkuResults([]);
+                              setSkuOpen(false);
+                              setSkuActiveIndex(-1);
+                            }}
+                          >
+                            <div className={styles.autocompleteMain}>
+                              <strong>{option.productName}</strong>
+                              <span className={styles.autocompletePrice}>
+                                R$ {formatCurrency(option.price)}
+                              </span>
+                            </div>
+                            <div className={styles.autocompleteMetaRow}>
+                              <span>
+                                {option.categoryName}
+                                {option.skuLabel ? ` - ${option.skuLabel}` : ""}
+                              </span>
+                              <span>{option.unit}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                  </div>
+                </label>
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Categoria</span>
+                  <div className={styles.clusterSm}>
+                    <select
+                      value={categoryId}
+                      onChange={(event) => setCategoryId(event.target.value)}
+                      className={styles.control}
+                    >
+                      <option value="">Todas</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                    {categoryId ? (
+                      <button
+                        type="button"
+                        onClick={() => setCategoryId("")}
+                        className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                      >
+                        Limpar
+                      </button>
+                    ) : null}
+                  </div>
+                </label>
+              </div>
+
+              {showErrors && validation.errors.items ? (
+                <div className={styles.fieldError}>{validation.errors.items}</div>
+              ) : null}
+
+              {items.length === 0 ? (
+                <div className={styles.emptyState}>
+                  <div>Nenhum item adicionado.</div>
+                  <div className={styles.textMuted}>
+                    Busque um produto acima.
+                  </div>
+                </div>
+              ) : (
+                <div className={styles.itemsList}>
+                  <div className={`${styles.itemsRow} ${styles.itemsHeader}`}>
+                    <div>Produto</div>
+                    <div>Quantidade</div>
+                    <div>Unidade</div>
+                    <div className={styles.itemsCellNumeric}>Preco unitario</div>
+                    <div className={styles.itemsCellNumeric}>Total</div>
+                    <div className={styles.itemsCellActions}>Remover</div>
+                  </div>
+                  {itemsWithTotals.map((item) => {
+                    const itemError = validation.itemErrors[item.lineId];
+                    return (
+                      <div key={item.lineId} className={styles.itemsRow}>
+                        <div>
+                          <div className={styles.itemsProductTitle}>
+                            {item.productName}
+                          </div>
+                          <div className={styles.itemsProductMeta}>
+                            {item.categoryName}
+                            {item.skuLabel ? ` - ${item.skuLabel}` : ""}
+                          </div>
+                        </div>
+                        <div>
+                          <input
+                            ref={(el) => {
+                              qtyRefs.current[item.lineId] = el;
+                            }}
+                            type="text"
+                            inputMode="decimal"
+                            value={item.quantity}
+                            onChange={(event) =>
+                              updateItemQuantity(item.lineId, event.target.value)
+                            }
+                            aria-invalid={showErrors && Boolean(itemError)}
+                            aria-describedby={
+                              showErrors && itemError
+                                ? `qty-error-${item.lineId}`
+                                : undefined
+                            }
+                            className={`${styles.control} ${styles.itemsQtyInput}`}
+                          />
+                          {showErrors && itemError ? (
+                            <div
+                              id={`qty-error-${item.lineId}`}
+                              className={styles.fieldError}
+                            >
+                              {itemError}
+                            </div>
+                          ) : null}
+                        </div>
+                        <div>{item.unitLabel}</div>
+                        <div className={styles.itemsCellNumeric}>
+                          R$ {formatCurrency(item.priceAtTime)}
+                        </div>
+                        <div className={styles.itemsCellNumeric}>
+                          R$ {formatCurrency(item.lineTotal)}
+                        </div>
+                        <div className={styles.itemsCellActions}>
+                          <button
+                            type="button"
+                            onClick={() => removeItem(item.lineId)}
+                            className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm} ${styles.itemsRemoveButton}`}
+                          >
+                            Remover
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <section className={`${styles.panel} ${styles.panelSecondary}`}>
+            <div className={styles.panelHeader}>
               <h2>Entrega</h2>
             </div>
             <div className={styles.panelBody}>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Entrega ou retirada?</span>
-                <div
-                  className={styles.segmented}
-                  role="radiogroup"
-                  aria-label="Metodo"
-                >
-                  <label
-                    className={`${styles.segmentedOption} ${
-                      deliveryMethod === "RETIRADA" ? styles.segmentedActive : ""
-                    }`}
-                  >
-                    <input
-                      ref={deliveryMethodRef}
-                      type="radio"
-                      name="deliveryMethod"
-                      value="RETIRADA"
-                      checked={deliveryMethod === "RETIRADA"}
-                      onChange={() => setDeliveryMethod("RETIRADA")}
-                    />
-                    <span className={styles.segmentedTitle}>Retirada</span>
-                    <span className={styles.segmentedHelp}>
-                      Sem endereco e sem taxa.
-                    </span>
-                  </label>
-                  <label
-                    className={`${styles.segmentedOption} ${
-                      deliveryMethod === "ENTREGA" ? styles.segmentedActive : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="deliveryMethod"
-                      value="ENTREGA"
-                      checked={deliveryMethod === "ENTREGA"}
-                      onChange={() => setDeliveryMethod("ENTREGA")}
-                    />
-                    <span className={styles.segmentedTitle}>Entrega</span>
-                    <span className={styles.segmentedHelp}>
-                      Informe endereco e taxa de entrega.
-                    </span>
-                  </label>
-                </div>
-              </label>
-
               <label className={styles.field}>
                 <span className={styles.fieldLabel}>Encomenda ou pronta entrega?</span>
                 <div
@@ -1282,23 +1524,6 @@ export default function OrderForm({
                   role="radiogroup"
                   aria-label="Tipo de pedido"
                 >
-                  <label
-                    className={`${styles.segmentedOption} ${
-                      orderType === "ENCOMENDA" ? styles.segmentedActive : ""
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="orderType"
-                      value="ENCOMENDA"
-                      checked={orderType === "ENCOMENDA"}
-                      onChange={() => setOrderType("ENCOMENDA")}
-                    />
-                    <span className={styles.segmentedTitle}>Encomenda</span>
-                    <span className={styles.segmentedHelp}>
-                      Informe data e horario quando houver.
-                    </span>
-                  </label>
                   <label
                     className={`${styles.segmentedOption} ${
                       orderType === "PRONTA_ENTREGA" ? styles.segmentedActive : ""
@@ -1314,6 +1539,23 @@ export default function OrderForm({
                     <span className={styles.segmentedTitle}>Pronta entrega</span>
                     <span className={styles.segmentedHelp}>
                       Usa a data e hora do cadastro.
+                    </span>
+                  </label>
+                  <label
+                    className={`${styles.segmentedOption} ${
+                      orderType === "ENCOMENDA" ? styles.segmentedActive : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="orderType"
+                      value="ENCOMENDA"
+                      checked={orderType === "ENCOMENDA"}
+                      onChange={() => setOrderType("ENCOMENDA")}
+                    />
+                    <span className={styles.segmentedTitle}>Encomenda</span>
+                    <span className={styles.segmentedHelp}>
+                      Informe data e horario quando houver.
                     </span>
                   </label>
                 </div>
@@ -1390,6 +1632,51 @@ export default function OrderForm({
                 </div>
               )}
 
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Entrega ou retirada?</span>
+                <div
+                  className={styles.segmented}
+                  role="radiogroup"
+                  aria-label="Metodo"
+                >
+                  <label
+                    className={`${styles.segmentedOption} ${
+                      deliveryMethod === "RETIRADA" ? styles.segmentedActive : ""
+                    }`}
+                  >
+                    <input
+                      ref={deliveryMethodRef}
+                      type="radio"
+                      name="deliveryMethod"
+                      value="RETIRADA"
+                      checked={deliveryMethod === "RETIRADA"}
+                      onChange={() => setDeliveryMethod("RETIRADA")}
+                    />
+                    <span className={styles.segmentedTitle}>Retirada</span>
+                    <span className={styles.segmentedHelp}>
+                      Sem endereco e sem taxa.
+                    </span>
+                  </label>
+                  <label
+                    className={`${styles.segmentedOption} ${
+                      deliveryMethod === "ENTREGA" ? styles.segmentedActive : ""
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="deliveryMethod"
+                      value="ENTREGA"
+                      checked={deliveryMethod === "ENTREGA"}
+                      onChange={() => setDeliveryMethod("ENTREGA")}
+                    />
+                    <span className={styles.segmentedTitle}>Entrega</span>
+                    <span className={styles.segmentedHelp}>
+                      Informe endereco e taxa de entrega.
+                    </span>
+                  </label>
+                </div>
+              </label>
+
               {deliveryMethod === "ENTREGA" ? (
                 <div className={styles.stackSm}>
                   {addressAutofillHint ? (
@@ -1400,25 +1687,25 @@ export default function OrderForm({
                       <span className={styles.fieldLabel}>Endereco</span>
                       <input
                         ref={addressTextRef}
-                      type="text"
-                      value={addressText}
-                      onChange={(event) => setAddressText(event.target.value)}
-                      aria-invalid={
-                        showErrors && Boolean(validation.errors.addressText)
-                      }
-                      aria-describedby={
-                        showErrors && validation.errors.addressText
-                          ? "address-error"
-                          : undefined
-                      }
-                      className={styles.control}
-                    />
-                    {showErrors && validation.errors.addressText ? (
-                      <span id="address-error" className={styles.fieldError}>
-                        {validation.errors.addressText}
-                      </span>
-                    ) : null}
-                  </label>
+                        type="text"
+                        value={addressText}
+                        onChange={(event) => setAddressText(event.target.value)}
+                        aria-invalid={
+                          showErrors && Boolean(validation.errors.addressText)
+                        }
+                        aria-describedby={
+                          showErrors && validation.errors.addressText
+                            ? "address-error"
+                            : undefined
+                        }
+                        className={styles.control}
+                      />
+                      {showErrors && validation.errors.addressText ? (
+                        <span id="address-error" className={styles.fieldError}>
+                          {validation.errors.addressText}
+                        </span>
+                      ) : null}
+                    </label>
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>Cidade</span>
                     <input
@@ -1517,237 +1804,96 @@ export default function OrderForm({
 
           <section className={`${styles.panel} ${styles.panelSecondary}`}>
             <div className={styles.panelHeader}>
-              <h2>Itens</h2>
+              <h2>Pagamento combinado</h2>
             </div>
             <div className={styles.panelBody}>
-              <div className={styles.toolbar}>
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Buscar produto</span>
-                  <div className={styles.autocomplete}>
-                    <input
-                      ref={skuInputRef}
-                      type="text"
-                      placeholder="Digite o nome do produto..."
-                      value={skuQuery}
-                      onChange={(event) => {
-                        setSkuQuery(event.target.value);
-                        setSkuOpen(true);
-                      }}
-                      onFocus={() => {
-                        if (skuResults.length > 0) setSkuOpen(true);
-                      }}
-                      onBlur={() => {
-                        setTimeout(() => setSkuOpen(false), 150);
-                      }}
-                      onKeyDown={(event) => {
-                        if (!skuOpen || skuResults.length === 0) return;
-                        if (event.key === "ArrowDown") {
-                          event.preventDefault();
-                          setSkuActiveIndex((prev) =>
-                            Math.min(prev + 1, skuResults.length - 1)
-                          );
-                        }
-                        if (event.key === "ArrowUp") {
-                          event.preventDefault();
-                          setSkuActiveIndex((prev) => Math.max(prev - 1, 0));
-                        }
-                        if (event.key === "Enter") {
-                          event.preventDefault();
-                          const option = skuResults[skuActiveIndex];
-                          if (option) {
-                            addItem(option);
-                            setSkuQuery("");
-                            setSkuResults([]);
-                            setSkuOpen(false);
-                            setSkuActiveIndex(-1);
-                          }
-                        }
-                        if (event.key === "Escape") {
-                          setSkuOpen(false);
-                        }
-                      }}
-                      role="combobox"
-                      aria-expanded={skuOpen}
-                      aria-controls="sku-listbox"
-                      aria-autocomplete="list"
-                      className={styles.control}
-                    />
-                    {skuOpen ? (
-                      <ul
-                        className={styles.autocompleteList}
-                        role="listbox"
-                        id="sku-listbox"
-                      >
-                        {skuStatus === "loading" ? (
-                          <li className={styles.autocompleteEmpty}>
-                            Buscando...
-                          </li>
-                        ) : null}
-                        {skuStatus === "error" ? (
-                          <li className={styles.autocompleteEmpty}>
-                            Nao foi possivel carregar.
-                          </li>
-                        ) : null}
-                        {skuStatus === "idle" && skuResults.length === 0 ? (
-                          <li className={styles.autocompleteEmpty}>
-                            Nenhum produto encontrado.
-                          </li>
-                        ) : null}
-                        {skuResults.map((option, index) => (
-                          <li
-                            key={`${option.skuId}-${index}`}
-                            role="option"
-                            aria-selected={index === skuActiveIndex}
-                            className={`${styles.autocompleteOption} ${
-                              index === skuActiveIndex
-                                ? styles.autocompleteOptionActive
-                                : ""
-                            }`}
-                            onMouseDown={(event) => {
-                              event.preventDefault();
-                              addItem(option);
-                              setSkuQuery("");
-                              setSkuResults([]);
-                              setSkuOpen(false);
-                              setSkuActiveIndex(-1);
-                            }}
-                          >
-                            <div className={styles.autocompleteMain}>
-                              <strong>{option.productName}</strong>
-                              <span className={styles.textMuted}>
-                                {option.categoryName}
-                              </span>
-                            </div>
-                            <div className={styles.autocompleteMeta}>
-                              {option.skuLabel ? `${option.skuLabel} · ` : ""}
-                              {option.unit} · R$ {formatCurrency(option.price)}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : null}
-                  </div>
-                </label>
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Categoria</span>
-                  <div className={styles.clusterSm}>
+              <div className={styles.stackSm}>
+                <span className={styles.textMuted}>
+                  Informativo: nao processamos pagamento.
+                </span>
+                <div className={styles.formGrid}>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Forma de pagamento</span>
                     <select
-                      value={categoryId}
-                      onChange={(event) => setCategoryId(event.target.value)}
+                      ref={paymentMethodRef}
+                      value={paymentMethod}
+                      onChange={(event) => setPaymentMethod(event.target.value)}
                       className={styles.control}
                     >
-                      <option value="">Todas</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.name}
-                        </option>
-                      ))}
+                      <option value="">Selecione</option>
+                      <option value="PIX">Pix</option>
+                      <option value="DINHEIRO">Dinheiro</option>
+                      <option value="CARTAO">Cartao</option>
+                      <option value="TRANSFERENCIA">Transferencia</option>
+                      <option value="A_COMBINAR">A combinar</option>
                     </select>
-                    {categoryId ? (
-                      <button
-                        type="button"
-                        onClick={() => setCategoryId("")}
-                        className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Teve sinal?</span>
+                    <div
+                      className={styles.segmented}
+                      role="radiogroup"
+                      aria-label="Sinal"
+                    >
+                      <label
+                        className={`${styles.segmentedOption} ${
+                          !hasDeposit ? styles.segmentedActive : ""
+                        }`}
                       >
-                        Limpar
-                      </button>
-                    ) : null}
-                  </div>
-                </label>
+                        <input
+                          type="radio"
+                          name="hasDeposit"
+                          value="no"
+                          checked={!hasDeposit}
+                          onChange={() => setHasDeposit(false)}
+                        />
+                        <span className={styles.segmentedTitle}>Nao</span>
+                      </label>
+                      <label
+                        className={`${styles.segmentedOption} ${
+                          hasDeposit ? styles.segmentedActive : ""
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="hasDeposit"
+                          value="yes"
+                          checked={hasDeposit}
+                          onChange={() => setHasDeposit(true)}
+                        />
+                        <span className={styles.segmentedTitle}>Sim</span>
+                      </label>
+                    </div>
+                  </label>
+                  {hasDeposit ? (
+                    <label className={`${styles.field} ${styles.fieldFull}`}>
+                      <span className={styles.fieldLabel}>Valor do sinal</span>
+                      <input
+                        ref={depositAmountRef}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="R$ 0,00"
+                        value={depositAmount}
+                        onChange={(event) => setDepositAmount(event.target.value)}
+                        aria-invalid={
+                          showErrors && Boolean(validation.errors.depositAmount)
+                        }
+                        aria-describedby={
+                          showErrors && validation.errors.depositAmount
+                            ? "deposit-error"
+                            : undefined
+                        }
+                        className={styles.control}
+                      />
+                      {showErrors && validation.errors.depositAmount ? (
+                        <span id="deposit-error" className={styles.fieldError}>
+                          {validation.errors.depositAmount}
+                        </span>
+                      ) : null}
+                    </label>
+                  ) : null}
+                </div>
               </div>
-
-              {showErrors && validation.errors.items ? (
-                <div className={styles.fieldError}>{validation.errors.items}</div>
-              ) : null}
-
-              {items.length === 0 ? (
-                <div className={styles.emptyState}>
-                  <div>Nenhum item adicionado.</div>
-                  <div className={styles.textMuted}>
-                    Busque um produto pelo nome acima.
-                  </div>
-                </div>
-              ) : (
-                <div className={styles.tableWrap}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th>Produto</th>
-                        <th>Quantidade</th>
-                        <th>Unidade</th>
-                        <th className={styles.tableNumeric}>Preco unitario</th>
-                        <th className={styles.tableNumeric}>Total</th>
-                        <th className={styles.tableActions}>Acao</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {itemsWithTotals.map((item) => {
-                        const itemError = validation.itemErrors[item.lineId];
-                        return (
-                          <tr key={item.lineId}>
-                            <td>
-                              <div>
-                                <strong>{item.productName}</strong>
-                              </div>
-                              <div className={styles.textMuted}>
-                                {item.categoryName}
-                                {item.skuLabel ? ` · ${item.skuLabel}` : ""}
-                              </div>
-                            </td>
-                            <td>
-                              <input
-                                ref={(el) => {
-                                  qtyRefs.current[item.lineId] = el;
-                                }}
-                                type="text"
-                                inputMode="decimal"
-                                value={item.quantity}
-                                onChange={(event) =>
-                                  updateItemQuantity(
-                                    item.lineId,
-                                    event.target.value
-                                  )
-                                }
-                                aria-invalid={showErrors && Boolean(itemError)}
-                                aria-describedby={
-                                  showErrors && itemError
-                                    ? `qty-error-${item.lineId}`
-                                    : undefined
-                                }
-                                className={styles.control}
-                              />
-                              {showErrors && itemError ? (
-                                <div
-                                  id={`qty-error-${item.lineId}`}
-                                  className={styles.fieldError}
-                                >
-                                  {itemError}
-                                </div>
-                              ) : null}
-                            </td>
-                            <td>{item.unitLabel}</td>
-                            <td className={styles.tableNumeric}>
-                              R$ {formatCurrency(item.priceAtTime)}
-                            </td>
-                            <td className={styles.tableNumeric}>
-                              R$ {formatCurrency(item.lineTotal)}
-                            </td>
-                            <td className={styles.tableActions}>
-                              <button
-                                type="button"
-                                onClick={() => removeItem(item.lineId)}
-                                className={`${styles.button} ${styles.buttonDanger} ${styles.buttonSm}`}
-                              >
-                                Remover
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
             </div>
           </section>
 
@@ -1818,3 +1964,4 @@ export default function OrderForm({
     </form>
   );
 }
+

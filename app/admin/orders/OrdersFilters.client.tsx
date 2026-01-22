@@ -14,22 +14,130 @@ type OrdersFiltersProps = {
   statusOptions: StatusOption[];
   pageSizes: number[];
   initialView: string;
+  initialPeriod: string;
   initialQuery: string;
   initialStatus: string;
-  initialDir: string;
+  initialSort: string;
   initialPageSize: number;
   initialDeliveryDate: string;
   initialDeliveryRange: string;
+  initialDeliveryStart: string;
+  initialDeliveryEnd: string;
   initialAttention: string;
-  initialAttentionType: string;
+  initialOrderType: string;
+  initialDeliveryMethod: string;
 };
 
-type ViewValue = "upcoming" | "all" | "previous";
+type PeriodValue = "upcoming" | "today" | "range" | "history";
+type SortValue = "delivery_asc" | "delivery_desc" | "created_desc";
+type AttentionValue =
+  | "all"
+  | "with"
+  | "INCOMPLETE"
+  | "ALTERADO_APOS_CONFIRMACAO"
+  | "UNAVAILABLE_ITEMS"
+  | "MISSING_TIME"
+  | "MISSING_ADDRESS";
 
-function normalizeView(view?: string): ViewValue {
+type FiltersState = {
+  period: PeriodValue;
+  deliveryStart: string;
+  deliveryEnd: string;
+  status: string;
+  attention: AttentionValue;
+  orderType: "all" | "ENCOMENDA" | "PRONTA_ENTREGA";
+  deliveryMethod: "all" | "ENTREGA" | "RETIRADA";
+  sort: SortValue;
+  pageSize: number;
+};
+
+type PeriodLabel = {
+  display: string;
+  summary?: string;
+};
+
+const attentionOptions: Array<{ value: AttentionValue; label: string }> = [
+  { value: "all", label: "Todas" },
+  { value: "with", label: "Com pendencias" },
+  { value: "UNAVAILABLE_ITEMS", label: "Itens indisponiveis" },
+  { value: "INCOMPLETE", label: "Pedido incompleto" },
+  { value: "ALTERADO_APOS_CONFIRMACAO", label: "Alterado apos confirmacao" },
+  { value: "MISSING_ADDRESS", label: "Endereco nao informado" },
+  { value: "MISSING_TIME", label: "Horario a confirmar" },
+];
+
+const attentionSummaryLabels: Record<AttentionValue, string> = {
+  all: "Todas",
+  with: "Com pendencias",
+  UNAVAILABLE_ITEMS: "Itens indisponiveis",
+  INCOMPLETE: "Pedido incompleto",
+  ALTERADO_APOS_CONFIRMACAO: "Alterado apos confirmacao",
+  MISSING_ADDRESS: "Endereco nao informado",
+  MISSING_TIME: "Horario a confirmar",
+};
+
+const orderTypeOptions = [
+  { value: "all", label: "Todos" },
+  { value: "ENCOMENDA", label: "Encomenda" },
+  { value: "PRONTA_ENTREGA", label: "Pronta entrega" },
+];
+
+const deliveryMethodOptions = [
+  { value: "all", label: "Todos" },
+  { value: "ENTREGA", label: "Entrega" },
+  { value: "RETIRADA", label: "Retirada" },
+];
+
+const sortOptions = [
+  { value: "delivery_asc", label: "Data mais proxima" },
+  { value: "delivery_desc", label: "Data mais distante" },
+  { value: "created_desc", label: "Criado recentemente" },
+];
+
+const periodOptions = [
+  { value: "upcoming", label: "Proximos pedidos" },
+  { value: "today", label: "Hoje" },
+  { value: "range", label: "Intervalo de datas" },
+  { value: "history", label: "Historico (entregues)" },
+];
+
+function normalizeView(view?: string) {
   if (view === "all") return "all";
   if (view === "previous" || view === "anteriores") return "previous";
   return "upcoming";
+}
+
+function normalizePeriod(value?: string): PeriodValue {
+  if (value === "today") return "today";
+  if (value === "range") return "range";
+  if (value === "history") return "history";
+  return "upcoming";
+}
+
+function normalizeSort(value?: string): SortValue {
+  if (value === "delivery_desc") return "delivery_desc";
+  if (value === "created_desc") return "created_desc";
+  return "delivery_asc";
+}
+
+function normalizeAttention(value?: string): AttentionValue {
+  if (value === "with") return "with";
+  if (attentionSummaryLabels[value as AttentionValue]) {
+    return value as AttentionValue;
+  }
+  return "all";
+}
+
+function normalizeOrderType(value?: string) {
+  if (value === "ENCOMENDA") return "ENCOMENDA";
+  if (value === "PRONTA_ENTREGA") return "PRONTA_ENTREGA";
+  return "all";
+}
+
+function normalizeDeliveryMethod(value?: string) {
+  if (value === "ENTREGA") return "ENTREGA";
+  if (value === "RETIRADA") return "RETIRADA";
+  return "all";
 }
 
 function formatDateLabel(value: string) {
@@ -46,18 +154,79 @@ function formatDateInput(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function startOfDay(date: Date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function endOfDay(date: Date) {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function addDays(date: Date, days: number) {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function buildPeriodLabel(
+  period: PeriodValue,
+  deliveryStart: string,
+  deliveryEnd: string
+): PeriodLabel {
+  if (period === "today") {
+    return { display: "hoje", summary: "Hoje" };
+  }
+  if (period === "history") {
+    return { display: "historico (entregues)", summary: "Historico" };
+  }
+  if (period === "range") {
+    if (deliveryStart && deliveryEnd) {
+      return {
+        display: `de ${formatDateLabel(deliveryStart)} ate ${formatDateLabel(
+          deliveryEnd
+        )}`,
+        summary: `Periodo: ${formatDateLabel(deliveryStart)} - ${formatDateLabel(
+          deliveryEnd
+        )}`,
+      };
+    }
+    if (deliveryStart) {
+      return {
+        display: `a partir de ${formatDateLabel(deliveryStart)}`,
+        summary: `Periodo: ${formatDateLabel(deliveryStart)} +`,
+      };
+    }
+    if (deliveryEnd) {
+      return {
+        display: `ate ${formatDateLabel(deliveryEnd)}`,
+        summary: `Periodo: ate ${formatDateLabel(deliveryEnd)}`,
+      };
+    }
+    return { display: "intervalo aberto", summary: "Periodo: intervalo aberto" };
+  }
+  return { display: "proximos pedidos", summary: "Proximos pedidos" };
+}
+
 export default function OrdersFilters({
   statusOptions,
   pageSizes,
   initialView,
+  initialPeriod,
   initialQuery,
   initialStatus,
-  initialDir,
+  initialSort,
   initialPageSize,
   initialDeliveryDate,
   initialDeliveryRange,
+  initialDeliveryStart,
+  initialDeliveryEnd,
   initialAttention,
-  initialAttentionType,
+  initialOrderType,
+  initialDeliveryMethod,
 }: OrdersFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -69,24 +238,227 @@ export default function OrdersFilters({
   const debounceRef = useRef<number | null>(null);
 
   const viewParam = searchParams.get("view") ?? initialView;
-  const currentView = normalizeView(viewParam);
+  const legacyView = normalizeView(viewParam);
   const currentQuery = searchParams.get("q") ?? initialQuery;
   const currentStatus = searchParams.get("status") ?? initialStatus;
-  const currentDir = searchParams.get("dir") ?? initialDir;
-  const currentPageSize =
-    Number(searchParams.get("pageSize") ?? initialPageSize) || initialPageSize;
+  const currentSort = normalizeSort(searchParams.get("sort") ?? initialSort);
+  const currentPageSize = (() => {
+    const parsed = Number(searchParams.get("pageSize") ?? initialPageSize);
+    return pageSizes.includes(parsed) ? parsed : initialPageSize;
+  })();
+  const attentionTypeParam = searchParams.get("attentionType");
+  const currentAttention = normalizeAttention(
+    searchParams.get("attention") ?? initialAttention ?? attentionTypeParam
+  );
+  const currentOrderType = normalizeOrderType(
+    searchParams.get("orderType") ?? initialOrderType
+  );
+  const currentDeliveryMethod = normalizeDeliveryMethod(
+    searchParams.get("deliveryMethod") ?? initialDeliveryMethod
+  );
 
-  const legacyRange = viewParam === "week" ? "week" : viewParam === "day" ? "day" : "";
-  const currentDeliveryDate =
+  const periodFromParams = searchParams.get("period");
+  const periodParam = normalizePeriod(periodFromParams ?? initialPeriod);
+  const deliveryStartParam = searchParams.get("deliveryStart") ?? initialDeliveryStart;
+  const deliveryEndParam = searchParams.get("deliveryEnd") ?? initialDeliveryEnd;
+  const legacyDeliveryDate =
     searchParams.get("deliveryDate") ?? initialDeliveryDate;
-  const currentDeliveryRange =
-    searchParams.get("deliveryRange") ?? initialDeliveryRange ?? legacyRange;
-  const currentAttention =
-    searchParams.get("attention") ?? initialAttention ?? "all";
-  const currentAttentionType =
-    searchParams.get("attentionType") ?? initialAttentionType ?? "all";
+  const legacyDeliveryRange =
+    searchParams.get("deliveryRange") ?? initialDeliveryRange;
 
-  const todayLabel = useMemo(() => formatDateInput(new Date()), []);
+  const resolvedPeriod = useMemo(() => {
+    const hasNewPeriod =
+      Boolean(periodFromParams) ||
+      Boolean(deliveryStartParam) ||
+      Boolean(deliveryEndParam);
+
+    if (hasNewPeriod) {
+      return {
+        period: periodParam,
+        deliveryStart: deliveryStartParam,
+        deliveryEnd: deliveryEndParam,
+      };
+    }
+
+    if (legacyDeliveryDate) {
+      return {
+        period: "range" as PeriodValue,
+        deliveryStart: legacyDeliveryDate,
+        deliveryEnd: legacyDeliveryDate,
+      };
+    }
+
+    if (legacyDeliveryRange === "day") {
+      return {
+        period: "today" as PeriodValue,
+        deliveryStart: "",
+        deliveryEnd: "",
+      };
+    }
+
+    if (legacyDeliveryRange === "week" || legacyDeliveryRange === "month") {
+      const now = new Date();
+      const startToday = startOfDay(now);
+      const endToday = endOfDay(now);
+      const daysToSunday = (7 - startToday.getDay()) % 7;
+      const endWeek = endOfDay(addDays(startToday, daysToSunday));
+      const startMonth = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
+      return {
+        period: "range" as PeriodValue,
+        deliveryStart: formatDateInput(
+          legacyDeliveryRange === "week" ? startToday : startMonth
+        ),
+        deliveryEnd: formatDateInput(
+          legacyDeliveryRange === "week" ? endWeek : endToday
+        ),
+      };
+    }
+
+    if (legacyView === "previous") {
+      const now = new Date();
+      const startToday = startOfDay(now);
+      const startPrevious = startOfDay(addDays(now, -30));
+      const endYesterday = endOfDay(addDays(startToday, -1));
+      return {
+        period: "range" as PeriodValue,
+        deliveryStart: formatDateInput(startPrevious),
+        deliveryEnd: formatDateInput(endYesterday),
+      };
+    }
+
+    if (legacyView === "all") {
+      return {
+        period: "range" as PeriodValue,
+        deliveryStart: "",
+        deliveryEnd: "",
+      };
+    }
+
+    return {
+      period: "upcoming" as PeriodValue,
+      deliveryStart: "",
+      deliveryEnd: "",
+    };
+  }, [
+    deliveryEndParam,
+    deliveryStartParam,
+    legacyDeliveryDate,
+    legacyDeliveryRange,
+    legacyView,
+    periodParam,
+    periodFromParams,
+  ]);
+
+  const effectiveStatus =
+    resolvedPeriod.period === "history" ? "ENTREGUE" : currentStatus;
+
+  const currentFilters = useMemo<FiltersState>(
+    () => ({
+      period: resolvedPeriod.period,
+      deliveryStart: resolvedPeriod.deliveryStart,
+      deliveryEnd: resolvedPeriod.deliveryEnd,
+      status: effectiveStatus,
+      attention: currentAttention,
+      orderType: currentOrderType,
+      deliveryMethod: currentDeliveryMethod,
+      sort: currentSort,
+      pageSize: currentPageSize,
+    }),
+    [
+      currentAttention,
+      currentDeliveryMethod,
+      currentOrderType,
+      currentPageSize,
+      currentSort,
+      effectiveStatus,
+      resolvedPeriod,
+    ]
+  );
+
+  const [draftFilters, setDraftFilters] = useState<FiltersState>(currentFilters);
+
+  const defaults = useMemo(
+    () => ({
+      period: "upcoming" as PeriodValue,
+      status: "ALL",
+      attention: "all" as AttentionValue,
+      orderType: "all" as const,
+      deliveryMethod: "all" as const,
+      sort: "delivery_asc" as SortValue,
+      pageSize: initialPageSize,
+    }),
+    [initialPageSize]
+  );
+
+  const periodLabel = buildPeriodLabel(
+    currentFilters.period,
+    currentFilters.deliveryStart,
+    currentFilters.deliveryEnd
+  );
+
+  const statusLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    statusOptions.forEach((option) => {
+      map.set(option.value, option.label);
+    });
+    return map;
+  }, [statusOptions]);
+
+  const hasActiveFilters =
+    Boolean(currentQuery.trim()) ||
+    currentFilters.period !== defaults.period ||
+    currentFilters.status !== defaults.status ||
+    currentFilters.attention !== defaults.attention ||
+    currentFilters.orderType !== defaults.orderType ||
+    currentFilters.deliveryMethod !== defaults.deliveryMethod ||
+    currentFilters.sort !== defaults.sort ||
+    currentFilters.pageSize !== defaults.pageSize;
+
+  const activeSummary = useMemo(() => {
+    const labels: string[] = [];
+    const isHistory = currentFilters.period === "history";
+    if (currentFilters.period !== defaults.period) {
+      labels.push(periodLabel.summary || periodLabel.display);
+    }
+    if (
+      currentFilters.status !== defaults.status &&
+      !(isHistory && currentFilters.status === "ENTREGUE")
+    ) {
+      labels.push(statusLabelMap.get(currentFilters.status) || currentFilters.status);
+    }
+    if (currentFilters.attention !== defaults.attention) {
+      labels.push(attentionSummaryLabels[currentFilters.attention]);
+    }
+    if (currentFilters.orderType !== defaults.orderType) {
+      const orderTypeLabel =
+        currentFilters.orderType === "ENCOMENDA" ? "Encomenda" : "Pronta entrega";
+      labels.push(orderTypeLabel);
+    }
+    if (currentFilters.deliveryMethod !== defaults.deliveryMethod) {
+      labels.push(
+        currentFilters.deliveryMethod === "ENTREGA" ? "Entrega" : "Retirada"
+      );
+    }
+    if (currentFilters.sort !== defaults.sort) {
+      const sortLabel =
+        sortOptions.find((option) => option.value === currentFilters.sort)?.label ??
+        currentFilters.sort;
+      labels.push(sortLabel);
+    }
+    if (currentFilters.pageSize !== defaults.pageSize) {
+      labels.push(`${currentFilters.pageSize} por pagina`);
+    }
+    if (currentQuery.trim()) {
+      labels.push(`Busca: ${currentQuery.trim()}`);
+    }
+    return labels.join(" · ");
+  }, [
+    currentFilters,
+    currentQuery,
+    defaults,
+    periodLabel,
+    statusLabelMap,
+  ]);
 
   const applyParams = useCallback(
     (updates: Record<string, string | number | null | undefined>) => {
@@ -106,7 +478,7 @@ export default function OrdersFilters({
         router.push(next ? `${pathname}?${next}` : pathname);
       });
     },
-    [pathname, router, searchParamsString, startTransition],
+    [pathname, router, searchParamsString, startTransition]
   );
 
   useEffect(() => {
@@ -117,38 +489,11 @@ export default function OrdersFilters({
     };
   }, []);
 
-  const dateChip = currentDeliveryDate
-    ? {
-        label: `Entrega: ${formatDateLabel(currentDeliveryDate)}`,
-        onRemove: () =>
-          applyParams({ deliveryDate: "", deliveryRange: "", view: "upcoming" }),
-      }
-    : currentDeliveryRange === "week"
-    ? {
-        label: "Entrega: esta semana",
-        onRemove: () =>
-          applyParams({ deliveryRange: "", deliveryDate: "", view: "upcoming" }),
-      }
-    : currentDeliveryRange === "month"
-    ? {
-        label: "Entrega: este mes",
-        onRemove: () =>
-          applyParams({ deliveryRange: "", deliveryDate: "", view: "upcoming" }),
-      }
-    : currentDeliveryRange === "day"
-    ? {
-        label: "Entrega: hoje",
-        onRemove: () =>
-          applyParams({ deliveryRange: "", deliveryDate: "", view: "upcoming" }),
-      }
-    : null;
-
-  const hasActiveFilters =
-    currentStatus !== "ALL" ||
-    currentAttention !== "all" ||
-    currentAttentionType !== "all" ||
-    currentDir !== "asc" ||
-    currentPageSize !== initialPageSize;
+  useEffect(() => {
+    if (!filtersOpen) {
+      setDraftFilters(currentFilters);
+    }
+  }, [currentFilters, filtersOpen]);
 
   useEffect(() => {
     if (!filtersOpen) return;
@@ -162,39 +507,62 @@ export default function OrdersFilters({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [filtersOpen]);
 
+  const handleApplyFilters = () => {
+    const statusValue =
+      draftFilters.period === "history" ? "ENTREGUE" : draftFilters.status;
+    applyParams({
+      period: draftFilters.period !== defaults.period ? draftFilters.period : "",
+      deliveryStart:
+        draftFilters.period === "range" ? draftFilters.deliveryStart : "",
+      deliveryEnd: draftFilters.period === "range" ? draftFilters.deliveryEnd : "",
+      status: statusValue !== defaults.status ? statusValue : "",
+      attention:
+        draftFilters.attention !== defaults.attention
+          ? draftFilters.attention
+          : "",
+      orderType:
+        draftFilters.orderType !== defaults.orderType ? draftFilters.orderType : "",
+      deliveryMethod:
+        draftFilters.deliveryMethod !== defaults.deliveryMethod
+          ? draftFilters.deliveryMethod
+          : "",
+      sort: draftFilters.sort !== defaults.sort ? draftFilters.sort : "",
+      pageSize:
+        draftFilters.pageSize !== defaults.pageSize ? draftFilters.pageSize : "",
+      view: "",
+      deliveryDate: "",
+      deliveryRange: "",
+      dir: "",
+      attentionType: "",
+    });
+    setFiltersOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    applyParams({
+      q: "",
+      period: "",
+      deliveryStart: "",
+      deliveryEnd: "",
+      status: "",
+      attention: "",
+      orderType: "",
+      deliveryMethod: "",
+      sort: "",
+      pageSize: "",
+      view: "",
+      deliveryDate: "",
+      deliveryRange: "",
+      dir: "",
+      attentionType: "",
+    });
+    setFiltersOpen(false);
+  };
+
   return (
     <div className={layoutStyles.toolbarBlock}>
       <div className={layoutStyles.toolbar}>
         <div className={layoutStyles.toolbarMain}>
-          <div className={`${styles.segmented} ${layoutStyles.segmented}`}>
-            {[
-              { value: "upcoming", label: "Proximas entregas" },
-              { value: "all", label: "Todos" },
-              { value: "previous", label: "Anteriores" },
-            ].map((option) => (
-              <label
-                key={option.value}
-                className={`${styles.segmentedOption} ${
-                  currentView === option.value ? styles.segmentedActive : ""
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="view"
-                  value={option.value}
-                  checked={currentView === option.value}
-                  onChange={() =>
-                    applyParams({
-                      view: option.value,
-                      deliveryDate: "",
-                      deliveryRange: "",
-                    })
-                  }
-                />
-                <span className={styles.segmentedTitle}>{option.label}</span>
-              </label>
-            ))}
-          </div>
           <div className={layoutStyles.searchWrap}>
             <input
               type="text"
@@ -221,90 +589,25 @@ export default function OrdersFilters({
               className={`${styles.control} ${layoutStyles.searchInput}`}
             />
           </div>
-          <div className={layoutStyles.dateGroup}>
-            <input
-              type="date"
-              name="deliveryDate"
-              defaultValue={currentDeliveryDate || ""}
-              key={currentDeliveryDate}
-              aria-label="Entrega em"
-              className={`${styles.control} ${layoutStyles.dateInput}`}
-              onChange={(event) =>
-                applyParams({
-                  deliveryDate: event.target.value,
-                  deliveryRange: "",
-                  view: "upcoming",
-                })
-              }
-            />
-            <div className={layoutStyles.presets}>
-              <button
-                type="button"
-                className={`${styles.button} ${layoutStyles.presetButton} ${
-                  currentDeliveryDate === todayLabel ? layoutStyles.presetButtonActive : ""
-                }`}
-                onClick={() =>
-                  applyParams({
-                    deliveryDate: todayLabel,
-                    deliveryRange: "",
-                    view: "upcoming",
-                  })
-                }
-              >
-                Hoje
-              </button>
-              <button
-                type="button"
-                className={`${styles.button} ${layoutStyles.presetButton} ${
-                  currentDeliveryRange === "week" ? layoutStyles.presetButtonActive : ""
-                }`}
-                onClick={() =>
-                  applyParams({
-                    deliveryRange: "week",
-                    deliveryDate: "",
-                    view: "upcoming",
-                  })
-                }
-              >
-                Esta semana
-              </button>
-              <button
-                type="button"
-                className={`${styles.button} ${layoutStyles.presetButton} ${
-                  currentDeliveryRange === "month" ? layoutStyles.presetButtonActive : ""
-                }`}
-                onClick={() =>
-                  applyParams({
-                    deliveryRange: "month",
-                    deliveryDate: "",
-                    view: "upcoming",
-                  })
-                }
-              >
-                Este mes
-              </button>
-              <button
-                type="button"
-                className={`${styles.button} ${layoutStyles.presetButton}`}
-                onClick={() =>
-                  applyParams({
-                    deliveryRange: "",
-                    deliveryDate: "",
-                    view: "upcoming",
-                  })
-                }
-              >
-                Limpar
-              </button>
-            </div>
-          </div>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              className={`${styles.button} ${layoutStyles.clearButton}`}
+              onClick={handleClearFilters}
+            >
+              Limpar filtros
+            </button>
+          ) : null}
           <div className={layoutStyles.filtersWrap} ref={panelRef}>
             <button
               type="button"
               className={`${styles.button} ${layoutStyles.filtersButton} ${
                 filtersOpen || hasActiveFilters ? layoutStyles.filtersButtonActive : ""
               }`}
-              onClick={() => setFiltersOpen((open) => !open)}
+              onClick={() => {
+                setDraftFilters(currentFilters);
+                setFiltersOpen((open) => !open);
+              }}
               aria-expanded={filtersOpen}
               aria-controls="orders-filters-panel"
             >
@@ -318,15 +621,81 @@ export default function OrdersFilters({
                 aria-label="Filtros de pedidos"
               >
                 <div className={layoutStyles.filtersGrid}>
+                  <label className={`${styles.field} ${styles.fieldFull}`}>
+                    <span className={styles.fieldLabel}>Periodo</span>
+                    <div className={styles.fieldControl}>
+                      <select
+                        name="period"
+                        value={draftFilters.period}
+                        onChange={(event) => {
+                          const value = normalizePeriod(event.target.value);
+                          setDraftFilters((current) => ({
+                            ...current,
+                            period: value,
+                            status: value === "history" ? "ENTREGUE" : current.status,
+                          }));
+                        }}
+                        className={`${styles.control} ${layoutStyles.filterSelect}`}
+                        aria-label="Periodo"
+                        disabled={isPending}
+                      >
+                        {periodOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                      {draftFilters.period === "range" ? (
+                        <div className={layoutStyles.rangeRow}>
+                          <input
+                            type="date"
+                            name="deliveryStart"
+                            value={draftFilters.deliveryStart}
+                            onChange={(event) =>
+                              setDraftFilters((current) => ({
+                                ...current,
+                                deliveryStart: event.target.value,
+                              }))
+                            }
+                            className={`${styles.control} ${layoutStyles.dateInput}`}
+                            aria-label="Data inicial"
+                          />
+                          <input
+                            type="date"
+                            name="deliveryEnd"
+                            value={draftFilters.deliveryEnd}
+                            onChange={(event) =>
+                              setDraftFilters((current) => ({
+                                ...current,
+                                deliveryEnd: event.target.value,
+                              }))
+                            }
+                            className={`${styles.control} ${layoutStyles.dateInput}`}
+                            aria-label="Data final"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                    {draftFilters.period === "history" ? (
+                      <span className={styles.fieldHelp}>
+                        Historico exibe apenas pedidos entregues.
+                      </span>
+                    ) : null}
+                  </label>
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Status</span>
+                    <span className={styles.fieldLabel}>Status do pedido</span>
                     <select
                       name="status"
-                      value={currentStatus}
-                      onChange={(event) => applyParams({ status: event.target.value })}
+                      value={draftFilters.status}
+                      onChange={(event) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          status: event.target.value,
+                        }))
+                      }
                       className={`${styles.control} ${layoutStyles.filterSelect}`}
                       aria-label="Status do pedido"
-                      disabled={isPending}
+                      disabled={isPending || draftFilters.period === "history"}
                     >
                       {statusOptions.map((option) => (
                         <option key={option.value} value={option.value}>
@@ -339,56 +708,101 @@ export default function OrdersFilters({
                     <span className={styles.fieldLabel}>Pendencias</span>
                     <select
                       name="attention"
-                      value={currentAttention}
-                      onChange={(event) => applyParams({ attention: event.target.value })}
+                      value={draftFilters.attention}
+                      onChange={(event) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          attention: normalizeAttention(event.target.value),
+                        }))
+                      }
                       className={`${styles.control} ${layoutStyles.filterSelect}`}
                       aria-label="Pendencias"
                       disabled={isPending}
                     >
-                      <option value="all">Pendencias: todas</option>
-                      <option value="with">Com pendencias</option>
+                      {attentionOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Tipo</span>
+                    <span className={styles.fieldLabel}>Tipo de pedido</span>
                     <select
-                      name="attentionType"
-                      value={currentAttentionType}
+                      name="orderType"
+                      value={draftFilters.orderType}
                       onChange={(event) =>
-                        applyParams({ attentionType: event.target.value })
+                        setDraftFilters((current) => ({
+                          ...current,
+                          orderType: normalizeOrderType(event.target.value),
+                        }))
                       }
                       className={`${styles.control} ${layoutStyles.filterSelect}`}
-                      aria-label="Tipo de pendencia"
+                      aria-label="Tipo de pedido"
                       disabled={isPending}
                     >
-                      <option value="all">Tipo: todos</option>
-                      <option value="INCOMPLETE">Incompleto</option>
-                      <option value="ALTERADO_APOS_CONFIRMACAO">Alterado</option>
-                      <option value="UNAVAILABLE_ITEMS">Itens indisponiveis</option>
-                      <option value="MISSING_TIME">Sem horario</option>
-                      <option value="MISSING_ADDRESS">Sem endereco</option>
+                      {orderTypeOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Entrega</span>
+                    <span className={styles.fieldLabel}>Logistica</span>
                     <select
-                      name="dir"
-                      value={currentDir}
-                      onChange={(event) => applyParams({ dir: event.target.value })}
+                      name="deliveryMethod"
+                      value={draftFilters.deliveryMethod}
+                      onChange={(event) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          deliveryMethod: normalizeDeliveryMethod(event.target.value),
+                        }))
+                      }
                       className={`${styles.control} ${layoutStyles.filterSelect}`}
-                      aria-label="Ordenacao por entrega"
+                      aria-label="Logistica"
                       disabled={isPending}
                     >
-                      <option value="asc">Entrega: mais cedo</option>
-                      <option value="desc">Entrega: mais tarde</option>
+                      {deliveryMethodOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Pagina</span>
+                    <span className={styles.fieldLabel}>Ordenacao</span>
+                    <select
+                      name="sort"
+                      value={draftFilters.sort}
+                      onChange={(event) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          sort: normalizeSort(event.target.value),
+                        }))
+                      }
+                      className={`${styles.control} ${layoutStyles.filterSelect}`}
+                      aria-label="Ordenacao"
+                      disabled={isPending}
+                    >
+                      {sortOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Itens por pagina</span>
                     <select
                       name="pageSize"
-                      value={currentPageSize}
-                      onChange={(event) => applyParams({ pageSize: event.target.value })}
+                      value={draftFilters.pageSize}
+                      onChange={(event) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          pageSize: Number(event.target.value),
+                        }))
+                      }
                       className={`${styles.control} ${layoutStyles.filterSelect}`}
                       aria-label="Itens por pagina"
                       disabled={isPending}
@@ -401,27 +815,27 @@ export default function OrdersFilters({
                     </select>
                   </label>
                 </div>
+                <div className={layoutStyles.filtersFooter}>
+                  <button
+                    type="button"
+                    className={styles.button}
+                    onClick={handleApplyFilters}
+                    disabled={isPending}
+                  >
+                    Aplicar filtros
+                  </button>
+                </div>
               </div>
             ) : null}
           </div>
         </div>
       </div>
-
-      {dateChip ? (
-        <div className={layoutStyles.chipsRow}>
-          <span className={layoutStyles.chip}>
-            {dateChip.label}
-            <button
-              type="button"
-              onClick={dateChip.onRemove}
-              className={layoutStyles.chipButton}
-              aria-label={`Remover filtro ${dateChip.label}`}
-            >
-              x
-            </button>
-          </span>
-        </div>
-      ) : null}
+      <div className={layoutStyles.toolbarMeta}>
+        <span className={styles.textMuted}>Mostrando: {periodLabel.display}</span>
+        {hasActiveFilters ? (
+          <span className={styles.textMuted}>Filtros ativos: {activeSummary}</span>
+        ) : null}
+      </div>
     </div>
   );
 }

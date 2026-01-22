@@ -18,7 +18,7 @@ export async function createCategoryAction(formData: FormData) {
   const description = parseText(formData.get("description"));
   const isActive = parseBool(formData.get("isActive"));
   if (!name) {
-    redirect("/admin/categories?error=nome");
+    redirect("/admin/categories?error=nome&modal=1");
   }
 
   await prisma.category.create({

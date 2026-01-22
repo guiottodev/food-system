@@ -32,6 +32,14 @@ enum DeliveryMethod {
   RETIRADA @map("retirada")
 }
 
+enum PaymentMethod {
+  PIX
+  DINHEIRO
+  CARTAO
+  TRANSFERENCIA
+  A_COMBINAR
+}
+
 enum UnitType {
   UNIDADE
   CENTO
@@ -268,6 +276,9 @@ model Order {
   deliveryFee       Decimal?
   subtotal          Decimal
   total             Decimal
+  paymentMethod     PaymentMethod?
+  hasDeposit        Boolean @default(false)
+  depositAmount     Decimal?
   notes             String?
   cancellationReason String?
   confirmedAt       DateTime?

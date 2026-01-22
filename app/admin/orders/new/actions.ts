@@ -11,6 +11,7 @@ import {
 } from "@/lib/domain/customerDelivery";
 import { createCustomerWithPhone } from "@/lib/domain/customerService";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
+import { parseOrderPayment } from "@/lib/domain/orderPayment";
 import { isSkuSellableInternal } from "@/lib/catalog";
 import { OrderStatus, OrderType, Prisma } from "@prisma/client";
 
@@ -36,6 +37,9 @@ type CreateOrderPayload = {
   saveAddressAsDefault?: boolean;
   orderType?: "PRONTA_ENTREGA" | "ENCOMENDA";
   deliveryFee?: number | string;
+  paymentMethod?: string;
+  hasDeposit?: boolean;
+  depositAmount?: number | string;
   notes?: string;
   items: Array<{
     skuId: string;
@@ -255,6 +259,18 @@ export async function createOrderAction(formData: FormData) {
     deliveryFee = feeResult.value;
   }
 
+  const paymentResult = parseOrderPayment({
+    paymentMethod: payload.paymentMethod,
+    hasDeposit: payload.hasDeposit,
+    depositAmount: payload.depositAmount,
+  });
+  if (!paymentResult.ok) {
+    if (paymentResult.error === "payment_method_invalid") {
+      redirect("/admin/orders/new?error=pagamento-invalido");
+    }
+    redirect("/admin/orders/new?error=sinal-invalido");
+  }
+
   const subtotal = computedItems.reduce(
     (sum, item) => sum + item.lineTotal,
     0
@@ -342,6 +358,12 @@ export async function createOrderAction(formData: FormData) {
         deliveryFee: toDecimal(deliveryFee),
         subtotal: toDecimal(subtotal),
         total: toDecimal(total),
+        paymentMethod: paymentResult.paymentMethod ?? null,
+        hasDeposit: paymentResult.hasDeposit,
+        depositAmount:
+          paymentResult.depositAmount !== null
+            ? toDecimal(paymentResult.depositAmount)
+            : null,
         notes: payload.notes?.trim() || null,
         createdById: actor?.id ?? null,
       },

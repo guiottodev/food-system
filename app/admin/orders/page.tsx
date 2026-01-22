@@ -4,22 +4,28 @@ import { getOrderAttentionSummary } from "@/lib/domain/attention";
 import { computeUnavailableItemsForOrders } from "@/lib/domain/production";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { normalizePhoneDigits } from "@/lib/phone";
-import { OrderStatus, Prisma } from "@prisma/client";
+import { DeliveryMethod, OrderStatus, OrderType, Prisma } from "@prisma/client";
 import OrdersTableClient from "./OrdersTableClient";
 import OrdersFilters from "./OrdersFilters.client";
 import styles from "../_styles/adminPrimitives.module.css";
 
 type OrdersSearchParams = {
+  period?: string;
+  deliveryStart?: string;
+  deliveryEnd?: string;
   view?: string;
   status?: string;
   q?: string;
   dir?: string;
+  sort?: string;
   page?: string;
   pageSize?: string;
   deliveryDate?: string;
   deliveryRange?: string;
   attention?: string;
   attentionType?: string;
+  orderType?: string;
+  deliveryMethod?: string;
 };
 
 const PAGE_SIZES = [15, 30, 50];
@@ -68,8 +74,8 @@ function formatCurrency(value: number) {
 
 const statusOptions = [
   { value: "ALL", label: "Todos" },
-  { value: OrderStatus.RASCUNHO, label: "Rascunho" },
-  { value: OrderStatus.CONFIRMADO, label: "Confirmado" },
+  { value: OrderStatus.RASCUNHO, label: "Rascunho / Anotado" },
+  { value: OrderStatus.CONFIRMADO, label: "Confirmado / Ready" },
   { value: OrderStatus.EM_PRODUCAO, label: "Em producao" },
   { value: OrderStatus.PRONTO, label: "Pronto" },
   { value: OrderStatus.ENTREGUE, label: "Entregue" },
@@ -121,6 +127,36 @@ function normalizeView(view?: string) {
   return "upcoming";
 }
 
+type PeriodValue = "upcoming" | "today" | "range" | "history";
+type SortValue = "delivery_asc" | "delivery_desc" | "created_desc";
+
+function normalizePeriod(value?: string): PeriodValue {
+  if (value === "today") return "today";
+  if (value === "range") return "range";
+  if (value === "history") return "history";
+  return "upcoming";
+}
+
+function parseSort(value: string | undefined, legacyDir: string | undefined): SortValue {
+  if (value === "delivery_desc") return "delivery_desc";
+  if (value === "created_desc") return "created_desc";
+  if (value === "delivery_asc") return "delivery_asc";
+  if (legacyDir === "desc") return "delivery_desc";
+  return "delivery_asc";
+}
+
+function normalizeOrderType(value: string | undefined) {
+  if (value === "ENCOMENDA") return "ENCOMENDA";
+  if (value === "PRONTA_ENTREGA") return "PRONTA_ENTREGA";
+  return "all";
+}
+
+function normalizeDeliveryMethod(value: string | undefined) {
+  if (value === "ENTREGA") return "ENTREGA";
+  if (value === "RETIRADA") return "RETIRADA";
+  return "all";
+}
+
 function parseDeliveryRange(value: string | undefined) {
   if (value === "week") return "week";
   if (value === "month") return "month";
@@ -162,14 +198,6 @@ function parsePageSize(value: string | undefined) {
   return PAGE_SIZES.includes(size) ? size : PAGE_SIZES[0];
 }
 
-function parseDir(value: string | undefined) {
-  return value === "desc" ? "desc" : "asc";
-}
-
-function normalizeAttention(value: string | undefined) {
-  return value === "with" ? "with" : "all";
-}
-
 const attentionTypeOptions = [
   "all",
   "INCOMPLETE",
@@ -179,23 +207,34 @@ const attentionTypeOptions = [
   "MISSING_ADDRESS",
 ] as const;
 
-function normalizeAttentionType(value: string | undefined) {
-  if (attentionTypeOptions.includes(value as typeof attentionTypeOptions[number])) {
-    return value as typeof attentionTypeOptions[number];
+type AttentionFilter =
+  | "all"
+  | "with"
+  | (typeof attentionTypeOptions)[number];
+
+function normalizeAttention(
+  value: string | undefined,
+  legacyType?: string | undefined
+): AttentionFilter {
+  if (value === "with") return "with";
+  if (attentionTypeOptions.includes(value as AttentionFilter)) {
+    return value as AttentionFilter;
+  }
+  if (attentionTypeOptions.includes(legacyType as AttentionFilter)) {
+    return legacyType as AttentionFilter;
   }
   return "all";
 }
 
 function matchesAttentionFilter(
   attention: ReturnType<typeof getOrderAttentionSummary>,
-  attentionFilter: ReturnType<typeof normalizeAttention>,
-  attentionType: ReturnType<typeof normalizeAttentionType>
+  attentionFilter: AttentionFilter
 ) {
-  if (attentionType !== "all") {
-    return attention.reasons.some((reason) => reason.type === attentionType);
-  }
   if (attentionFilter === "with") {
     return attention.hasAttention;
+  }
+  if (attentionFilter !== "all") {
+    return attention.reasons.some((reason) => reason.type === attentionFilter);
   }
   return true;
 }
@@ -209,12 +248,16 @@ export default async function OrdersPage({
   const view = normalizeView(sp?.view);
   const statusParam = sp?.status ?? "ALL";
   const query = (sp?.q ?? "").trim();
-  const dir = parseDir(sp?.dir);
+  const sort = parseSort(sp?.sort, sp?.dir);
   const page = parsePage(sp?.page);
   const pageSize = parsePageSize(sp?.pageSize);
   const deliveryDateParam = sp?.deliveryDate ?? "";
-  const attentionParam = normalizeAttention(sp?.attention);
-  const attentionTypeParam = normalizeAttentionType(sp?.attentionType);
+  const deliveryStartParam = sp?.deliveryStart ?? "";
+  const deliveryEndParam = sp?.deliveryEnd ?? "";
+  const periodParam = normalizePeriod(sp?.period);
+  const attentionParam = normalizeAttention(sp?.attention, sp?.attentionType);
+  const orderTypeParam = normalizeOrderType(sp?.orderType);
+  const deliveryMethodParam = normalizeDeliveryMethod(sp?.deliveryMethod);
   const legacyRange =
     sp?.view === "week" ? "week" : sp?.view === "day" ? "day" : "";
   const deliveryRangeParam = parseDeliveryRange(
@@ -233,7 +276,26 @@ export default async function OrdersPage({
   // Ranges baseadas em data local (inicio/fim do dia) para inclusao correta.
   let dateFilter: { gte?: Date; lte?: Date } = {};
   const parsedDeliveryDate = parseDateParam(deliveryDateParam);
-  if (parsedDeliveryDate) {
+  const parsedDeliveryStart = parseDateParam(deliveryStartParam);
+  const parsedDeliveryEnd = parseDateParam(deliveryEndParam);
+  const hasNewPeriod =
+    Boolean(sp?.period) ||
+    Boolean(deliveryStartParam) ||
+    Boolean(deliveryEndParam);
+  if (hasNewPeriod) {
+    if (periodParam === "today") {
+      dateFilter = { gte: startToday, lte: endToday };
+    } else if (periodParam === "range") {
+      dateFilter = {
+        ...(parsedDeliveryStart ? { gte: startOfDay(parsedDeliveryStart) } : {}),
+        ...(parsedDeliveryEnd ? { lte: endOfDay(parsedDeliveryEnd) } : {}),
+      };
+    } else if (periodParam === "history") {
+      dateFilter = { lte: endToday };
+    } else {
+      dateFilter = { gte: startToday };
+    }
+  } else if (parsedDeliveryDate) {
     dateFilter = {
       gte: startOfDay(parsedDeliveryDate),
       lte: endOfDay(parsedDeliveryDate),
@@ -244,18 +306,34 @@ export default async function OrdersPage({
     dateFilter = { gte: startMonth, lte: endToday };
   } else if (deliveryRangeParam === "day") {
     dateFilter = { gte: startToday, lte: endToday };
-  } else if (view === "upcoming") {
-    dateFilter = { gte: startToday };
   } else if (view === "previous") {
     dateFilter = { gte: startPrevious, lte: endYesterday };
   } else if (view === "all") {
     dateFilter = {};
+  } else {
+    dateFilter = { gte: startToday };
   }
 
+  const effectiveStatusParam =
+    periodParam === "history" && hasNewPeriod ? OrderStatus.ENTREGUE : statusParam;
   const statusFilter =
-    statusParam !== "ALL"
+    effectiveStatusParam !== "ALL"
       ? {
-          status: statusParam as OrderStatus,
+          status: effectiveStatusParam as OrderStatus,
+        }
+      : {};
+
+  const orderTypeFilter =
+    orderTypeParam !== "all"
+      ? {
+          orderType: orderTypeParam as OrderType,
+        }
+      : {};
+
+  const deliveryMethodFilter =
+    deliveryMethodParam !== "all"
+      ? {
+          deliveryMethod: deliveryMethodParam as DeliveryMethod,
         }
       : {};
 
@@ -294,10 +372,16 @@ export default async function OrdersPage({
     deliveryDatetime: dateFilter,
     ...statusFilter,
     ...queryFilter,
+    ...orderTypeFilter,
+    ...deliveryMethodFilter,
   };
 
-  const shouldFilterByAttention =
-    attentionParam !== "all" || attentionTypeParam !== "all";
+  const shouldFilterByAttention = attentionParam !== "all";
+
+  const orderBy =
+    sort === "created_desc"
+      ? { createdAt: "desc" as const }
+      : { deliveryDatetime: sort === "delivery_desc" ? "desc" : "asc" };
 
   let orders: Array<{
     order: OrderWithRelations;
@@ -308,9 +392,7 @@ export default async function OrdersPage({
   if (shouldFilterByAttention) {
     const allOrders = await prisma.order.findMany({
       where,
-      orderBy: {
-        deliveryDatetime: dir,
-      },
+      orderBy,
       include: orderInclude,
     });
     const availabilityMap = await computeUnavailableItemsForOrders(
@@ -330,7 +412,7 @@ export default async function OrdersPage({
       }),
     }));
     const filtered = decorated.filter((entry) =>
-      matchesAttentionFilter(entry.attention, attentionParam, attentionTypeParam)
+      matchesAttentionFilter(entry.attention, attentionParam)
     );
     totalCount = filtered.length;
     const startIndex = (page - 1) * pageSize;
@@ -339,9 +421,7 @@ export default async function OrdersPage({
     const [orderRows, count] = await Promise.all([
       prisma.order.findMany({
         where,
-        orderBy: {
-          deliveryDatetime: dir,
-        },
+        orderBy,
         take: pageSize,
         skip: (page - 1) * pageSize,
         include: orderInclude,
@@ -376,15 +456,20 @@ export default async function OrdersPage({
       : Math.min(clampedPage * pageSize, totalCount);
 
   const baseParams = {
-    q: query,
-    status: statusParam,
-    dir,
-    pageSize,
-    view,
-    deliveryDate: deliveryDateParam,
-    deliveryRange: deliveryRangeParam || undefined,
-    attention: attentionParam,
-    attentionType: attentionTypeParam,
+    q: query || undefined,
+    status: effectiveStatusParam !== "ALL" ? effectiveStatusParam : undefined,
+    sort: sort !== "delivery_asc" ? sort : undefined,
+    pageSize: pageSize !== PAGE_SIZES[0] ? pageSize : undefined,
+    deliveryDate: !hasNewPeriod && deliveryDateParam ? deliveryDateParam : undefined,
+    deliveryRange:
+      !hasNewPeriod && deliveryRangeParam ? deliveryRangeParam : undefined,
+    deliveryStart: deliveryStartParam || undefined,
+    deliveryEnd: deliveryEndParam || undefined,
+    period: hasNewPeriod ? periodParam : undefined,
+    attention: attentionParam !== "all" ? attentionParam : undefined,
+    orderType: orderTypeParam !== "all" ? orderTypeParam : undefined,
+    deliveryMethod: deliveryMethodParam !== "all" ? deliveryMethodParam : undefined,
+    view: hasNewPeriod ? undefined : view,
   };
 
   const pageLink = (nextPage: number) =>
@@ -399,14 +484,18 @@ export default async function OrdersPage({
           statusOptions={statusOptions}
           pageSizes={PAGE_SIZES}
           initialView={view}
+          initialPeriod={periodParam}
           initialQuery={query}
-          initialStatus={statusParam}
-          initialDir={dir}
+          initialStatus={effectiveStatusParam}
+          initialSort={sort}
           initialPageSize={pageSize}
           initialDeliveryDate={deliveryDateParam}
           initialDeliveryRange={deliveryRangeParam}
+          initialDeliveryStart={deliveryStartParam}
+          initialDeliveryEnd={deliveryEndParam}
           initialAttention={attentionParam}
-          initialAttentionType={attentionTypeParam}
+          initialOrderType={orderTypeParam}
+          initialDeliveryMethod={deliveryMethodParam}
         />
 
         <p className={styles.textMuted}>
