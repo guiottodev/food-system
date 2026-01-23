@@ -739,7 +739,6 @@
 
 /* Order number */
 .orderNumber {
-  font-family: "SF Mono", "Fira Code", "Consolas", monospace;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
@@ -748,8 +747,7 @@
 }
 
 .orderNumber:hover {
-  color: var(--text-secondary);
-  text-decoration: underline;
+  color: var(--action-primary);
 }
 
 /* Customer info */
