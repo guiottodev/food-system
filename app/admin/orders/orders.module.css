@@ -32,14 +32,36 @@
   left: var(--space-3);
   color: var(--text-muted);
   pointer-events: none;
+  z-index: 1;
 }
 
 .searchInput {
   width: 100%;
+  height: 38px;
   padding-left: var(--space-10) !important;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  transition: all 150ms ease;
+}
+
+.searchInput:hover {
+  border-color: var(--border-strong);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--action-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .clearButton {
+  height: 38px;
+  padding: 0 var(--space-3);
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-md);
   white-space: nowrap;
 }
 
@@ -48,7 +70,12 @@
 }
 
 .filtersButton {
-  gap: var(--space-2);
+  height: 38px;
+  padding: 0 var(--space-3);
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: var(--radius-md);
 }
 
 .filtersButtonActive {
@@ -72,6 +99,11 @@
 }
 
 .newOrderButton {
+  height: 38px;
+  padding: 0 var(--space-4);
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-md);
   white-space: nowrap;
 }
 
@@ -518,15 +550,16 @@
 .paginationButton {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
+  gap: 6px;
+  height: 36px;
+  padding: 0 var(--space-3);
   border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: var(--fw-medium);
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-secondary);
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  transition: all var(--duration-fast) var(--ease-default);
+  transition: all 150ms ease;
   text-decoration: none;
 }
 
@@ -539,11 +572,12 @@
 .paginationButtonDisabled {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
+  gap: 6px;
+  height: 36px;
+  padding: 0 var(--space-3);
   border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: var(--fw-medium);
+  font-size: 13px;
+  font-weight: 500;
   color: var(--text-muted);
   background: var(--bg-subtle);
   border: 1px solid var(--border-subtle);
@@ -552,17 +586,17 @@
 
 .paginationInfo {
   padding: 0 var(--space-3);
-  font-size: var(--text-sm);
+  font-size: 13px;
   color: var(--text-secondary);
 }
 
 .paginationInfo strong {
   color: var(--text-primary);
-  font-weight: var(--fw-semibold);
+  font-weight: 600;
 }
 
 .paginationMeta {
-  font-size: var(--text-sm);
+  font-size: 13px;
   color: var(--text-muted);
 }
 
