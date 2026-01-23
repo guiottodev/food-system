@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createOrderAction } from "./actions";
 import { normalizePhoneBR, normalizePhoneDigits } from "@/lib/phone";
 import { validateSkuQuantity } from "@/lib/quantity";
+import type { OrderStatus } from "@prisma/client";
 import styles from "../../_styles/adminPrimitives.module.css";
 
 const DRAFT_KEY = "order-new-draft-v1";
@@ -73,6 +74,13 @@ type OrderDraft = {
   notes: string;
   categoryId: string;
   items: OrderItem[];
+};
+
+export type OrderFormMode = "new" | "edit";
+
+export type OrderFormInitialData = Partial<OrderDraft> & {
+  orderId?: string;
+  orderStatus?: OrderStatus;
 };
 
 const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
@@ -256,40 +264,70 @@ export default function OrderForm({
   customers,
   errorCode,
   existingCustomer,
+  mode = "new",
+  initialData,
+  action,
 }: {
   customers: CustomerOption[];
   errorCode?: string;
   existingCustomer?: ExistingCustomerHint;
+  mode?: OrderFormMode;
+  initialData?: OrderFormInitialData;
+  action?: (formData: FormData) => void | Promise<void>;
 }) {
+  const isEdit = mode === "edit";
+  const initial = initialData ?? {};
+  const orderId = initial.orderId ?? "";
+  const orderStatus = initial.orderStatus;
+
   const [customerMode, setCustomerMode] = useState<"existing" | "new">(
-    "existing"
+    initial.customerMode ?? "existing"
   );
-  const [customerId, setCustomerId] = useState("");
-  const [customerSearch, setCustomerSearch] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [customerId, setCustomerId] = useState(initial.customerId ?? "");
+  const [customerSearch, setCustomerSearch] = useState(
+    initial.customerSearch ?? ""
+  );
+  const [customerName, setCustomerName] = useState(
+    initial.customerName ?? ""
+  );
+  const [customerPhone, setCustomerPhone] = useState(
+    initial.customerPhone ?? ""
+  );
   const [deliveryMethod, setDeliveryMethod] = useState<
     "ENTREGA" | "RETIRADA"
-  >(shouldDefaultDelivery(errorCode) ? "ENTREGA" : "RETIRADA");
-  const [orderType, setOrderType] = useState<"ENCOMENDA" | "PRONTA_ENTREGA">(
-    "PRONTA_ENTREGA"
+  >(
+    initial.deliveryMethod ??
+      (shouldDefaultDelivery(errorCode) ? "ENTREGA" : "RETIRADA")
   );
-  const [saveAddressAsDefault, setSaveAddressAsDefault] = useState(false);
+  const [orderType, setOrderType] = useState<"ENCOMENDA" | "PRONTA_ENTREGA">(
+    initial.orderType ?? "PRONTA_ENTREGA"
+  );
+  const [saveAddressAsDefault, setSaveAddressAsDefault] = useState(
+    initial.saveAddressAsDefault ?? false
+  );
   const [addressAutofillHint, setAddressAutofillHint] = useState("");
-  const [scheduleDate, setScheduleDate] = useState("");
-  const [scheduleTime, setScheduleTime] = useState("");
-  const [addressText, setAddressText] = useState("");
-  const [addressBairro, setAddressBairro] = useState("");
-  const [addressReferencia, setAddressReferencia] = useState("");
-  const [addressCity, setAddressCity] = useState("");
-  const [addressCep, setAddressCep] = useState("");
-  const [deliveryFee, setDeliveryFee] = useState("");
-  const [paymentMethod, setPaymentMethod] = useState("");
-  const [hasDeposit, setHasDeposit] = useState(false);
-  const [depositAmount, setDepositAmount] = useState("");
-  const [notes, setNotes] = useState("");
+  const [scheduleDate, setScheduleDate] = useState(initial.scheduleDate ?? "");
+  const [scheduleTime, setScheduleTime] = useState(initial.scheduleTime ?? "");
+  const [addressText, setAddressText] = useState(initial.addressText ?? "");
+  const [addressBairro, setAddressBairro] = useState(
+    initial.addressBairro ?? ""
+  );
+  const [addressReferencia, setAddressReferencia] = useState(
+    initial.addressReferencia ?? ""
+  );
+  const [addressCity, setAddressCity] = useState(initial.addressCity ?? "");
+  const [addressCep, setAddressCep] = useState(initial.addressCep ?? "");
+  const [deliveryFee, setDeliveryFee] = useState(initial.deliveryFee ?? "");
+  const [paymentMethod, setPaymentMethod] = useState(
+    initial.paymentMethod ?? ""
+  );
+  const [hasDeposit, setHasDeposit] = useState(initial.hasDeposit ?? false);
+  const [depositAmount, setDepositAmount] = useState(
+    initial.depositAmount ?? ""
+  );
+  const [notes, setNotes] = useState(initial.notes ?? "");
 
-  const [categoryId, setCategoryId] = useState("");
+  const [categoryId, setCategoryId] = useState(initial.categoryId ?? "");
   const [categories, setCategories] = useState<CategoryOption[]>([]);
 
   const [skuQuery, setSkuQuery] = useState("");
@@ -303,12 +341,13 @@ export default function OrderForm({
   const [customerOpen, setCustomerOpen] = useState(false);
   const [customerActiveIndex, setCustomerActiveIndex] = useState(-1);
 
-  const [items, setItems] = useState<OrderItem[]>([]);
+  const [items, setItems] = useState<OrderItem[]>(initial.items ?? []);
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [formError, setFormError] = useState("");
   const [availabilityWarning, setAvailabilityWarning] = useState(false);
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const availabilityBypassRef = useRef(false);
+  const reconfirmBypassRef = useRef(false);
   const formRef = useRef<HTMLFormElement | null>(null);
 
   const lineIdRef = useRef(0);
@@ -380,6 +419,116 @@ export default function OrderForm({
       : ({ ok: true, value: 0 } as const);
   const total = subtotal + (feeValue.ok ? feeValue.value : 0);
 
+  type CompareSnapshot = {
+    orderType: OrderDraft["orderType"];
+    deliveryMethod: OrderDraft["deliveryMethod"];
+    scheduleDate: string;
+    scheduleTime: string;
+    addressText: string;
+    addressBairro: string;
+    addressReferencia: string;
+    addressCity: string;
+    addressCep: string;
+    deliveryFee: number;
+    subtotal: number;
+    total: number;
+    items: Array<{ skuId: string; quantity: number }>;
+  };
+
+  const initialSnapshotRef = useRef<CompareSnapshot | null>(null);
+
+  function normalizeCompareItems(list: OrderItem[]) {
+    return list
+      .map((item) => ({
+        skuId: item.skuId,
+        quantity: Number(item.quantity) || 0,
+      }))
+      .sort((a, b) => a.skuId.localeCompare(b.skuId));
+  }
+
+  function normalizeText(value: string) {
+    return value.trim();
+  }
+
+  function buildSnapshot(sourceItems: OrderItem[], source: Partial<OrderDraft>) {
+    const deliveryFeeValue = Number(source.deliveryFee ?? 0) || 0;
+    const itemsWithPrices = sourceItems.map((item) => ({
+      quantity: Number(item.quantity) || 0,
+      priceAtTime: Number(item.priceAtTime) || 0,
+    }));
+    const subtotalValue = itemsWithPrices.reduce(
+      (sum, item) => sum + item.quantity * item.priceAtTime,
+      0
+    );
+    const totalValue =
+      subtotalValue + (source.deliveryMethod === "ENTREGA" ? deliveryFeeValue : 0);
+    return {
+      orderType: source.orderType ?? "PRONTA_ENTREGA",
+      deliveryMethod: source.deliveryMethod ?? "RETIRADA",
+      scheduleDate: source.scheduleDate ?? "",
+      scheduleTime: source.scheduleTime ?? "",
+      addressText: source.addressText ?? "",
+      addressBairro: source.addressBairro ?? "",
+      addressReferencia: source.addressReferencia ?? "",
+      addressCity: source.addressCity ?? "",
+      addressCep: source.addressCep ?? "",
+      deliveryFee: deliveryFeeValue,
+      subtotal: subtotalValue,
+      total: totalValue,
+      items: normalizeCompareItems(sourceItems),
+    } satisfies CompareSnapshot;
+  }
+
+  if (!initialSnapshotRef.current) {
+    initialSnapshotRef.current = buildSnapshot(initial.items ?? [], initial);
+  }
+
+  const currentSnapshot = buildSnapshot(items, {
+    orderType,
+    deliveryMethod,
+    scheduleDate,
+    scheduleTime,
+    addressText,
+    addressBairro,
+    addressReferencia,
+    addressCity,
+    addressCep,
+    deliveryFee,
+  });
+
+  const requiresReconfirmation =
+    isEdit &&
+    Boolean(orderStatus && orderStatus !== "RASCUNHO") &&
+    initialSnapshotRef.current !== null &&
+    (initialSnapshotRef.current.orderType !== currentSnapshot.orderType ||
+      initialSnapshotRef.current.deliveryMethod !== currentSnapshot.deliveryMethod ||
+      normalizeText(initialSnapshotRef.current.scheduleDate) !==
+        normalizeText(currentSnapshot.scheduleDate) ||
+      normalizeText(initialSnapshotRef.current.scheduleTime) !==
+        normalizeText(currentSnapshot.scheduleTime) ||
+      normalizeText(initialSnapshotRef.current.addressText) !==
+        normalizeText(currentSnapshot.addressText) ||
+      normalizeText(initialSnapshotRef.current.addressBairro) !==
+        normalizeText(currentSnapshot.addressBairro) ||
+      normalizeText(initialSnapshotRef.current.addressReferencia) !==
+        normalizeText(currentSnapshot.addressReferencia) ||
+      normalizeText(initialSnapshotRef.current.addressCity) !==
+        normalizeText(currentSnapshot.addressCity) ||
+      normalizeText(initialSnapshotRef.current.addressCep) !==
+        normalizeText(currentSnapshot.addressCep) ||
+      Math.abs(initialSnapshotRef.current.deliveryFee - currentSnapshot.deliveryFee) >
+        0.0001 ||
+      Math.abs(initialSnapshotRef.current.subtotal - currentSnapshot.subtotal) >
+        0.0001 ||
+      Math.abs(initialSnapshotRef.current.total - currentSnapshot.total) > 0.0001 ||
+      initialSnapshotRef.current.items.length !== currentSnapshot.items.length ||
+      initialSnapshotRef.current.items.some(
+        (item, index) =>
+          item.skuId !== currentSnapshot.items[index]?.skuId ||
+          Math.abs(item.quantity - (currentSnapshot.items[index]?.quantity ?? 0)) >
+            0.0001
+      ));
+
   const addressHasInput = useMemo(() => {
     return [addressText, addressBairro, addressReferencia, addressCity].some(
       (value) => value.trim() !== ""
@@ -410,9 +559,12 @@ export default function OrderForm({
   }, []);
 
   useEffect(() => {
+    if (isEdit) {
+      setCustomerMode("existing");
+    }
     if (!customerOpen) return;
     setCustomerActiveIndex(filteredCustomers.length > 0 ? 0 : -1);
-  }, [customerOpen, filteredCustomers]);
+  }, [customerOpen, filteredCustomers, isEdit]);
 
   useEffect(() => {
     if (deliveryMethod !== "ENTREGA") {
@@ -563,12 +715,18 @@ export default function OrderForm({
   }, [items]);
 
   useEffect(() => {
+    reconfirmBypassRef.current = false;
+  }, [requiresReconfirmation]);
+
+  useEffect(() => {
+    if (isEdit) return;
     if (errorCode) return;
     if (typeof window === "undefined") return;
     sessionStorage.removeItem(DRAFT_KEY);
-  }, [errorCode]);
+  }, [errorCode, isEdit]);
 
   useEffect(() => {
+    if (isEdit) return;
     if (!errorCode) return;
     if (typeof window === "undefined") return;
     const draft = parseDraft(sessionStorage.getItem(DRAFT_KEY));
@@ -595,9 +753,10 @@ export default function OrderForm({
     setNotes(draft.notes);
     setCategoryId(draft.categoryId);
     setItems(draft.items);
-  }, [errorCode]);
+  }, [errorCode, isEdit]);
 
   useEffect(() => {
+    if (isEdit) return;
     if (typeof window === "undefined") return;
     const draft: OrderDraft = {
       customerMode,
@@ -647,6 +806,7 @@ export default function OrderForm({
     notes,
     categoryId,
     items,
+    isEdit,
   ]);
 
   useEffect(() => {
@@ -667,6 +827,8 @@ export default function OrderForm({
       "pagamento-invalido": () => paymentMethodRef.current?.focus(),
       "sinal-invalido": () => depositAmountRef.current?.focus(),
       "sem-itens": () => skuInputRef.current?.focus(),
+      "sku-invalido": () => skuInputRef.current?.focus(),
+      "quantidade-invalida": () => skuInputRef.current?.focus(),
     };
     const focus = focusMap[errorCode];
     if (focus) {
@@ -859,6 +1021,7 @@ export default function OrderForm({
   }
 
   const payload = JSON.stringify({
+    orderId: isEdit ? orderId : undefined,
     customerMode,
     customerId: customerMode === "existing" ? customerId : undefined,
     newCustomer:
@@ -898,6 +1061,17 @@ export default function OrderForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (validation.isValid) {
+      if (isEdit && requiresReconfirmation && !reconfirmBypassRef.current) {
+        event.preventDefault();
+        const accepted = window.confirm(
+          "Isso exigira reconfirmacao do pedido. Deseja continuar?"
+        );
+        if (!accepted) {
+          return;
+        }
+        reconfirmBypassRef.current = true;
+      }
+
       if (availabilityBypassRef.current) {
         availabilityBypassRef.current = false;
         setAvailabilityWarning(false);
@@ -997,10 +1171,12 @@ export default function OrderForm({
 
   const showErrors = submitAttempted;
 
+  const formAction = action ?? createOrderAction;
+
   return (
     <form
       ref={formRef}
-      action={createOrderAction}
+      action={formAction}
       className={styles.stackMd}
       onSubmit={handleSubmit}
       noValidate
@@ -1010,6 +1186,12 @@ export default function OrderForm({
       {formError ? (
         <div className={`${styles.notice} ${styles.noticeError}`}>
           {formError}
+        </div>
+      ) : null}
+
+      {isEdit && requiresReconfirmation ? (
+        <div className={`${styles.notice} ${styles.noticeWarning}`}>
+          Alteracoes criticas exigirao reconfirmacao do pedido.
         </div>
       ) : null}
 
@@ -1052,6 +1234,16 @@ export default function OrderForm({
               <h2>Cliente</h2>
             </div>
             <div className={styles.panelBody}>
+              {isEdit ? (
+                <div className={styles.stackSm}>
+                  <div className={styles.fieldLabel}>Cliente</div>
+                  <strong>{customerName || "Cliente"}</strong>
+                  <span className={styles.textMuted}>
+                    {customerPhone ? formatPhoneDisplay(customerPhone) : "-"}
+                  </span>
+                </div>
+              ) : (
+                <>
               <div className={styles.tabs}>
                 <div className={styles.tabList} role="tablist" aria-label="Cliente">
                   <button
@@ -1281,10 +1473,15 @@ export default function OrderForm({
                   </label>
                 </div>
               )}
+                </>
+              )}
             </div>
           </section>
 
-          <section className={`${styles.panel} ${styles.panelSecondary}`}>
+          <section
+            id="order-items"
+            className={`${styles.panel} ${styles.panelSecondary}`}
+          >
             <div className={styles.panelHeader}>
               <h2>Itens</h2>
             </div>
@@ -1512,7 +1709,10 @@ export default function OrderForm({
             </div>
           </section>
 
-          <section className={`${styles.panel} ${styles.panelSecondary}`}>
+          <section
+            id="order-delivery"
+            className={`${styles.panel} ${styles.panelSecondary}`}
+          >
             <div className={styles.panelHeader}>
               <h2>Entrega</h2>
             </div>
@@ -1802,7 +2002,10 @@ export default function OrderForm({
             </div>
           </section>
 
-          <section className={`${styles.panel} ${styles.panelSecondary}`}>
+          <section
+            id="order-payment"
+            className={`${styles.panel} ${styles.panelSecondary}`}
+          >
             <div className={styles.panelHeader}>
               <h2>Pagamento combinado</h2>
             </div>
@@ -1897,7 +2100,10 @@ export default function OrderForm({
             </div>
           </section>
 
-          <section className={`${styles.panel} ${styles.panelSecondary}`}>
+          <section
+            id="order-notes"
+            className={`${styles.panel} ${styles.panelSecondary}`}
+          >
             <div className={styles.panelHeader}>
               <h2>Observacoes</h2>
             </div>

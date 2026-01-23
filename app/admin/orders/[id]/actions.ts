@@ -115,13 +115,24 @@ export async function confirmOrderAction(formData: FormData) {
   const actorId = await getActorId();
 
   await prisma.$transaction(async (tx) => {
-    const order = await tx.order.findUnique({ where: { id: orderId } });
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    });
     if (!order) {
       redirect("/admin/orders");
     }
 
     if (order.status !== "RASCUNHO") {
       redirect(`/admin/orders/${orderId}?error=confirmacao`);
+    }
+
+    if (!order.items.length) {
+      redirect(`/admin/orders/${orderId}?error=ready_items&focus=items`);
+    }
+
+    if (!order.deliveryDatetime) {
+      redirect(`/admin/orders/${orderId}?error=ready_date&focus=delivery`);
     }
 
     await tx.order.update({
@@ -196,4 +207,83 @@ export async function reconfirmOrderAction(formData: FormData) {
   });
 
   redirect(`/admin/orders/${orderId}?reconfirmed=1`);
+}
+
+export async function convertToEncomendaAction(formData: FormData) {
+  const orderId = String(formData.get("orderId") ?? "");
+  if (!orderId) {
+    redirect("/admin/orders");
+  }
+
+  const actorId = await getActorId();
+
+  await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      redirect("/admin/orders");
+    }
+
+    if (order.orderType !== "PRONTA_ENTREGA") {
+      redirect(`/admin/orders/${orderId}`);
+    }
+
+    await tx.order.update({
+      where: { id: orderId },
+      data: { orderType: "ENCOMENDA" },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId,
+        entityType: "orders",
+        entityId: orderId,
+        action: "convert_order_type",
+        field: "orderType",
+        beforeValue: order.orderType,
+        afterValue: "ENCOMENDA",
+      },
+    });
+  });
+
+  redirect(`/admin/orders/${orderId}?converted=1`);
+}
+
+export async function markPaidAction(formData: FormData) {
+  const orderId = String(formData.get("orderId") ?? "");
+  if (!orderId) {
+    redirect("/admin/orders");
+  }
+
+  const actorId = await getActorId();
+
+  await prisma.$transaction(async (tx) => {
+    const order = await tx.order.findUnique({ where: { id: orderId } });
+    if (!order) {
+      redirect("/admin/orders");
+    }
+
+    if (order.paidAt) {
+      redirect(`/admin/orders/${orderId}`);
+    }
+
+    const now = new Date();
+    await tx.order.update({
+      where: { id: orderId },
+      data: { paidAt: now },
+    });
+
+    await tx.auditLog.create({
+      data: {
+        actorId,
+        entityType: "orders",
+        entityId: orderId,
+        action: "mark_paid",
+        field: "paidAt",
+        beforeValue: null,
+        afterValue: now.toISOString(),
+      },
+    });
+  });
+
+  redirect(`/admin/orders/${orderId}`);
 }

@@ -173,7 +173,7 @@ READY não significa pedido fechado ou confirmado.
 Definição
 CONFIRMADO significa:
 “O cliente validou esse pedido como ele está agora.”
-Um pedido pode ser CONFIRMADO mesmo incompleto.
+CONFIRMADO exige READY mínimo (itens + data).
 CONFIRMADO não implica pagamento.
 
 5. Alterações Críticas
@@ -238,6 +238,10 @@ Sem endereço → tipo = entrega e endereço vazio
 Forte
 bloqueia PRONTO / ENTREGUE
 ex: alteração crítica, incompleto
+
+5. Alertas (não bloqueiam)
+Alertas são sinais operacionais que não bloqueiam o fluxo.
+Exemplos: itens indisponíveis (precisa produzir), falta de horário, falta de endereço.
 Fraca
 alerta visual
 ex: sem horário próximo

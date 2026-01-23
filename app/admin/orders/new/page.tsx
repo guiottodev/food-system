@@ -76,6 +76,10 @@ export default async function NewOrderPage({
   return (
     <main className={styles.page}>
       <h1 className={styles.pageTitle}>Novo pedido</h1>
+      <p className={styles.textMuted}>
+        Voce pode salvar como rascunho e completar depois. Confirmacao exige itens
+        + data.
+      </p>
       {errorMessage ? (
         <p className={styles.textError}>{errorMessage}</p>
       ) : null}

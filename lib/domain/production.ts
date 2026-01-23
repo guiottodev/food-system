@@ -35,6 +35,14 @@ export type UnavailableItem = {
   shortage: number;
 };
 
+export type OrderAvailabilityDetail = {
+  skuId: string;
+  productId: string;
+  requiredQty: number;
+  availableNow: number;
+  gapQty: number;
+};
+
 type OrderAvailabilityItem = {
   skuId?: string | null;
   quantity?: unknown;
@@ -379,16 +387,25 @@ export async function computeUnavailableItemsForOrders(
 
   const result = new Map<
     string,
-    { hasUnavailableItems: boolean; unavailableItems: UnavailableItem[] }
+    {
+      hasUnavailableItems: boolean;
+      unavailableItems: UnavailableItem[];
+      itemAvailability: OrderAvailabilityDetail[];
+    }
   >();
 
   for (const order of orders) {
     if (order.status === "CANCELADO" || order.status === "ENTREGUE") {
-      result.set(order.id, { hasUnavailableItems: false, unavailableItems: [] });
+      result.set(order.id, {
+        hasUnavailableItems: false,
+        unavailableItems: [],
+        itemAvailability: [],
+      });
       continue;
     }
 
     const unavailableItems: UnavailableItem[] = [];
+    const itemAvailability: OrderAvailabilityDetail[] = [];
     for (const item of order.items ?? []) {
       const skuId = typeof item.skuId === "string" ? item.skuId : "";
       if (!skuId) continue;
@@ -396,6 +413,14 @@ export async function computeUnavailableItemsForOrders(
       if (!productId) continue;
       const requiredQty = asNumber(item.quantity);
       const availableNow = availableMap.get(productId) ?? 0;
+      const gapQty = Math.max(requiredQty - availableNow, 0);
+      itemAvailability.push({
+        skuId,
+        productId,
+        requiredQty,
+        availableNow,
+        gapQty,
+      });
       if (requiredQty > availableNow) {
         unavailableItems.push({
           productId,
@@ -409,6 +434,7 @@ export async function computeUnavailableItemsForOrders(
     result.set(order.id, {
       hasUnavailableItems: unavailableItems.length > 0,
       unavailableItems,
+      itemAvailability,
     });
   }
 
@@ -424,6 +450,7 @@ export async function computeOrderPendingFlags(
     map.get(order.id) ?? {
       hasUnavailableItems: false,
       unavailableItems: [],
+      itemAvailability: [],
     }
   );
 }
@@ -440,6 +467,7 @@ export async function computeUnavailableItemsForDraft(
     map.get("draft") ?? {
       hasUnavailableItems: false,
       unavailableItems: [],
+      itemAvailability: [],
     }
   );
 }

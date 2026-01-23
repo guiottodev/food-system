@@ -110,6 +110,10 @@ export function validateOrderTransition(
     return { ok: false, error: "not_ready" };
   }
 
+  if (nextStatus === "CONFIRMADO" && !pending.ready) {
+    return { ok: false, error: "not_ready" };
+  }
+
   if ((nextStatus === "PRONTO" || nextStatus === "ENTREGUE") && pending.strongPending) {
     return { ok: false, error: "strong_pending" };
   }
@@ -218,6 +222,17 @@ export function shouldRequireReconfirmation(
   after: OrderCriticalSnapshot
 ) {
   if (!order.confirmedAt) {
+    return false;
+  }
+  return hasCriticalChanges(before, after);
+}
+
+export function shouldFlagReconfirmation(
+  status: OrderStatus,
+  before: OrderCriticalSnapshot,
+  after: OrderCriticalSnapshot
+) {
+  if (status === "RASCUNHO") {
     return false;
   }
   return hasCriticalChanges(before, after);

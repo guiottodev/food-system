@@ -1,4 +1,4 @@
-import { DeliveryMethod, OrderStatus } from "@prisma/client";
+import { DeliveryMethod, OrderStatus, OrderType } from "@prisma/client";
 import { DEFAULT_DELIVERY_TIME, OrderItemSnapshot, getOrderPendingSummary } from "./order";
 
 export type AttentionSeverity = "strong" | "weak";
@@ -24,6 +24,7 @@ export type FieldFlag = {
 
 export type OrderAttentionInput = {
   status: OrderStatus;
+  orderType?: OrderType | null;
   deliveryDatetime?: Date | null;
   deliveryTime?: string | null;
   deliveryMethod?: DeliveryMethod | null;
@@ -136,10 +137,15 @@ export function getOrderAttentionSummary(
   }
 
   if (order.hasUnavailableItems) {
+    const orderType = order.orderType ?? "ENCOMENDA";
+    const unavailableLabel =
+      orderType === "PRONTA_ENTREGA"
+        ? "Sem saldo (pronta entrega)"
+        : "Precisa produzir";
     reasons.push({
       type: "UNAVAILABLE_ITEMS",
       severity: "weak",
-      label: "Itens indisponiveis",
+      label: unavailableLabel,
     });
   }
 

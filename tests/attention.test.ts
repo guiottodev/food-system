@@ -3,6 +3,7 @@ import { getOrderAttentionSummary, hasStrongAttention } from "../lib/domain/atte
 
 const baseOrder = {
   status: "RASCUNHO",
+  orderType: "ENCOMENDA",
   deliveryDatetime: new Date("2026-01-20T10:00:00Z"),
   deliveryTime: "10:00",
   deliveryMethod: "RETIRADA",
@@ -47,5 +48,26 @@ describe("attention inbox", () => {
       hasStrongAttention(getOrderAttentionSummary(order))
     ).length;
     expect(strongCount).toBe(2);
+  });
+
+  it("labels unavailable items based on order type", () => {
+    const encomenda = getOrderAttentionSummary({
+      ...baseOrder,
+      hasUnavailableItems: true,
+    });
+    expect(
+      encomenda.weakReasons.some((reason) => reason.label === "Precisa produzir")
+    ).toBe(true);
+
+    const prontaEntrega = getOrderAttentionSummary({
+      ...baseOrder,
+      orderType: "PRONTA_ENTREGA",
+      hasUnavailableItems: true,
+    });
+    expect(
+      prontaEntrega.weakReasons.some(
+        (reason) => reason.label === "Sem saldo (pronta entrega)"
+      )
+    ).toBe(true);
   });
 });

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getOrderPendingSummary,
+  shouldFlagReconfirmation,
   shouldRequireReconfirmation,
   validateOrderTransition,
 } from "../lib/domain/order";
@@ -51,16 +52,13 @@ describe("order core domain", () => {
     }
   });
 
-  it("allows confirming an incomplete order and keeps it incomplete", () => {
+  it("blocks confirming an incomplete order", () => {
     const incomplete = buildOrder({ items: [], deliveryDatetime: null });
     const confirm = validateOrderTransition(incomplete, "CONFIRMADO");
-    expect(confirm.ok).toBe(true);
-
-    const pending = getOrderPendingSummary({
-      ...incomplete,
-      status: "CONFIRMADO",
-    });
-    expect(pending.incomplete).toBe(true);
+    expect(confirm.ok).toBe(false);
+    if (!confirm.ok) {
+      expect(confirm.error).toBe("not_ready");
+    }
   });
 
   it("flags critical changes after confirmation and blocks pronto/entregue", () => {
@@ -96,6 +94,24 @@ describe("order core domain", () => {
     if (!blocked.ok) {
       expect(blocked.error).toBe("strong_pending");
     }
+  });
+
+  it("flags reconfirmation on critical edit when status is confirmed or above", () => {
+    const before = {
+      deliveryDatetime: new Date("2026-01-20T10:00:00Z"),
+      items: [{ skuId: "sku-1", quantity: 1 }],
+      total: 10,
+      subtotal: 10,
+      deliveryFee: 0,
+      notes: "sem cebola",
+    };
+    const after = {
+      ...before,
+      items: [{ skuId: "sku-1", quantity: 2 }],
+    };
+
+    expect(shouldFlagReconfirmation("CONFIRMADO", before, after)).toBe(true);
+    expect(shouldFlagReconfirmation("RASCUNHO", before, after)).toBe(false);
   });
 
   it("allows reconfirmation to remove the block", () => {

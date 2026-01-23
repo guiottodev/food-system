@@ -165,38 +165,58 @@
 - Aviso de disponibilidade:
   - Antes de salvar, faz checagem de itens indisponiveis.
   - Se houver, mostra aviso e permite "Salvar mesmo assim" ou "Revisar itens".
+- Regra de confirmacao:
+  - Rascunho pode ser incompleto.
+  - Confirmacao exige itens + data.
 
 ## /admin/orders/[id] - Pedido (detalhe)
-- O que faz: exibe o pedido e permite atualizar status, confirmar, reconfirmar e cancelar.
-- Dados do pedido:
-  - Cliente (link), Telefone, Status (badge).
-  - Badges: Incompleto, Alterado - requer reconfirmacao, Itens indisponiveis.
-  - Tipo (Encomenda/Pronta entrega).
-  - Entrega/Retirada.
-  - Data/hora.
-  - Endereco (se Entrega): Endereco, Bairro, Referencia, Cidade.
-  - Taxa de entrega, Subtotal, Total, Confirmado em, Pagamento (Pago/Pendente).
-- Pendencias:
-  - Lista pendencias (fortes + fracas).
-  - "Itens indisponiveis" inclui texto explicativo.
-- Flags por campo:
-  - Itens, Data, Horario, Endereco, Pagamento (badge OK/PENDING/OPTIONAL).
+- O que faz: painel operacional do pedido com proxima acao, pendencias e previsao de producao.
+- Topo: Resumo Operacional
+  - Status + timeline (Rascunho → Confirmado → Em producao → Pronto → Entregue).
+  - Proxima acao recomendada (CTA primario).
+  - Lista "Bloqueado porque" quando a acao nao pode ser executada.
+  - Lista "Por que" (contexto rapido).
+- Pendencias (bloqueiam):
+  - Apenas pendencias fortes (Incompleto, Alterado apos confirmacao).
+  - Cada item tem link "Resolver" para /admin/orders/[id]/edit.
+- Alertas (nao bloqueiam):
+  - Ex.: Precisa produzir (encomenda), Sem saldo (pronta entrega), Falta horario, Falta endereco.
+  - Link "Ver" para a secao correspondente.
+- Producao:
+  - Card com gap por item (Pedido / Disponivel / Falta produzir).
+  - Para PRONTA_ENTREGA com gap: CTA "Converter para encomenda".
 - Itens:
-  - Lista de itens com quantidade, preco unitario e total por linha.
-- Atualizar status:
-  - Select de status.
-  - Checkbox "Marcar pagamento ao entregar".
-  - Botao "Atualizar".
-- Confirmar pedido:
-  - Visivel apenas quando status = RASCUNHO.
-  - Campo "Motivo (opcional)" + botao Confirmar pedido.
-- Reconfirmar pedido:
-  - Visivel apenas quando needsReconfirmation = true.
-  - Campo "Motivo (opcional)" + botao Reconfirmar pedido.
-- Cancelar pedido:
-  - Campo "Motivo do cancelamento" + botao Cancelar pedido.
+  - Lista de itens com leitura operacional.
+  - Exibe "Falta produzir" quando houver gap.
+- Combinado:
+  - Linha humana (Entrega/Retirada + endereco + data/hora).
+  - Detalhes: bairro, referencia, cidade, taxa.
+- Pagamento combinado:
+  - Forma combinada, sinal, restante, status (Pago/Pendente).
+  - CTA "Marcar como pago" quando pendente.
+- Mudancas desde a confirmacao (quando needsReconfirmation):
+  - Lista campos alterados com before/after.
+  - CTA "Reconfirmar pedido".
+- Dados do pedido:
+  - Cliente (link), telefone, tipo, entrega/retirada, data/hora, subtotal/total, confirmado em, pagamento.
 - Auditoria:
-  - Lista ultimos 10 logs: data/hora, acao, actor, campo, before/after, motivo.
+  - Lista ultimos logs: data/hora, acao, actor, campo, before/after, motivo.
+- Acoes avancadas:
+  - Atualizar status (select) + opcao "Marcar pagamento ao entregar".
+  - Cancelar pedido com motivo + confirmacao.
+
+## /admin/orders/[id]/edit - Editar pedido
+- O que faz: editar itens, entrega/retirada, pagamento combinado e observacoes.
+- Campos editaveis:
+  - Itens (buscar produto, adicionar/remover, quantidade).
+  - Encomenda/pronta entrega + data/horario.
+  - Entrega/retirada + endereco/taxa.
+  - Pagamento combinado (forma, sinal, valor).
+  - Observacoes.
+- Regras:
+  - Se status >= CONFIRMADO e houver mudanca critica (itens/data/endereco/valores),
+    marca needsReconfirmation e registra audit log.
+  - Mostra aviso "isso exigira reconfirmacao" e confirmacao ao salvar.
 
 ## /admin/pendencias - Pendencias
 - O que faz: lista pedidos com pendencias fortes e/ou itens indisponiveis.

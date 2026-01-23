@@ -127,6 +127,7 @@ export default async function AdminPage({
         deliveryDatetime: true,
         deliveryTime: true,
         deliveryMethod: true,
+        orderType: true,
         addressText: true,
         addressCity: true,
         needsReconfirmation: true,
