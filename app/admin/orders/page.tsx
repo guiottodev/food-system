@@ -391,9 +391,13 @@ export default async function OrdersPage({
   let totalCount = 0;
 
   if (shouldFilterByAttention) {
+    // Otimização: buscar em chunks para evitar carregar todos os pedidos
+    // Buscar até 10x o pageSize para ter margem de segurança no filtro
+    const maxFetch = Math.max(pageSize * 10, 500);
     const allOrders = await prisma.order.findMany({
       where,
       orderBy,
+      take: maxFetch,
       include: orderInclude,
     });
     const availabilityMap = await computeUnavailableItemsForOrders(
@@ -415,7 +419,19 @@ export default async function OrdersPage({
     const filtered = decorated.filter((entry) =>
       matchesAttentionFilter(entry.attention, attentionParam)
     );
-    totalCount = filtered.length;
+    // Se encontrou menos que o necessário e há mais pedidos, buscar total para contagem
+    if (filtered.length < pageSize && allOrders.length === maxFetch) {
+      const totalCountResult = await prisma.order.count({ where });
+      // Se há mais pedidos além dos buscados, estimar total baseado na proporção
+      if (totalCountResult > maxFetch) {
+        const ratio = filtered.length / allOrders.length;
+        totalCount = Math.ceil(totalCountResult * ratio);
+      } else {
+        totalCount = filtered.length;
+      }
+    } else {
+      totalCount = filtered.length;
+    }
     const startIndex = (page - 1) * pageSize;
     orders = filtered.slice(startIndex, startIndex + pageSize);
   } else {

@@ -101,23 +101,23 @@ describe("stock idempotency", () => {
     });
     expect(first.ok).toBe(true);
     if (first.ok) {
-      expect(first.appliedStock).toBe(false);
+      expect(first.appliedStock).toBe(true); // Estoque foi aplicado na primeira vez
     }
 
     const afterFirst = await prisma.sku.findUnique({ where: { id: sku.id } });
-    expect(Number(afterFirst?.stockQuantity)).toBe(10);
+    expect(Number(afterFirst?.stockQuantity)).toBe(8); // 10 - 2 = 8
 
     const second = await transitionOrderStatus(prisma, order.id, "ENTREGUE", null, {
       markPaid: true,
     });
-    expect(second.ok).toBe(false);
+    expect(second.ok).toBe(false); // Não pode transicionar de ENTREGUE para ENTREGUE
 
     const afterSecond = await prisma.sku.findUnique({ where: { id: sku.id } });
-    expect(Number(afterSecond?.stockQuantity)).toBe(10);
+    expect(Number(afterSecond?.stockQuantity)).toBe(8); // Estoque não mudou (idempotência)
 
     const finalOrder = await prisma.order.findUnique({
       where: { id: order.id },
     });
-    expect(finalOrder?.stockDecrementedAt).toBeNull();
+    expect(finalOrder?.stockDecrementedAt).not.toBeNull(); // Deve estar preenchido
   });
 });

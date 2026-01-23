@@ -46,6 +46,8 @@ type UpdateOrderPayload = {
     quantity: number | string;
     priceAtTime: number;
   }>;
+  finalEditConfirmed?: boolean;
+  finalEditReason?: string;
 };
 
 function parsePayload(formData: FormData): UpdateOrderPayload {
@@ -218,9 +220,21 @@ export async function updateOrderAction(formData: FormData) {
     return { ...item, quantity, sku };
   });
 
+  function parseUnitPrice(value: unknown) {
+    const parsed = Number(String(value ?? "").replace(",", "."));
+    if (!Number.isFinite(parsed)) return null;
+    if (parsed < 0) return null;
+    return parsed;
+  }
+
   const computedItems = normalizedItems.map((item) => {
     const quantity = item.quantity;
-    const unitPrice = Number(item.sku.priceCurrent);
+    const payloadPrice = parseUnitPrice(item.priceAtTime);
+    const unitPrice =
+      payloadPrice !== null ? payloadPrice : Number(item.sku.priceCurrent);
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      redirect(`/admin/orders/${orderId}/edit?error=preco-invalido`);
+    }
     const lineTotal = quantity * unitPrice;
     return {
       sku: item.sku,
@@ -282,6 +296,27 @@ export async function updateOrderAction(formData: FormData) {
     });
     if (!order) {
       redirect("/admin/orders");
+    }
+
+    const isFinal = order.status === "ENTREGUE" || order.status === "CANCELADO";
+    if (isFinal) {
+      const confirmed = payload.finalEditConfirmed === true;
+      const reason = String(payload.finalEditReason ?? "").trim();
+      if (!confirmed || !reason) {
+        redirect(`/admin/orders/${orderId}/edit?error=final-edit`);
+      }
+      await tx.auditLog.create({
+        data: {
+          actorId: actor?.id ?? null,
+          entityType: "orders",
+          entityId: orderId,
+          action: "final_order_edit",
+          field: null,
+          beforeValue: order.status,
+          afterValue: order.status,
+          reason,
+        },
+      });
     }
 
     const finalOrderType: OrderType =

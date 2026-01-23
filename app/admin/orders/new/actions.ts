@@ -158,6 +158,7 @@ async function generateOrderNumber(
 export async function createOrderAction(formData: FormData) {
   const payload = parsePayload(formData);
   const items = Array.isArray(payload.items) ? payload.items : [];
+  const availabilityBypass = String(formData.get("availabilityBypass") ?? "0") === "1";
 
   const finalOrderType: OrderType =
     payload.orderType === "PRONTA_ENTREGA" ? "PRONTA_ENTREGA" : "ENCOMENDA";
@@ -214,9 +215,36 @@ export async function createOrderAction(formData: FormData) {
     return { ...item, quantity, sku };
   });
 
+  if (finalOrderType === "PRONTA_ENTREGA" && !availabilityBypass) {
+    const requiredBySku = new Map<string, number>();
+    for (const item of normalizedItems) {
+      const current = requiredBySku.get(item.skuId) ?? 0;
+      requiredBySku.set(item.skuId, current + item.quantity);
+    }
+    for (const [skuId, requiredQty] of requiredBySku.entries()) {
+      const sku = skuMap.get(skuId);
+      const availableQty = sku ? Number(sku.stockQuantity) : 0;
+      if (requiredQty > availableQty) {
+        redirect("/admin/orders/new?error=sem-estoque");
+      }
+    }
+  }
+
+  function parseUnitPrice(value: unknown) {
+    const parsed = Number(String(value ?? "").replace(",", "."));
+    if (!Number.isFinite(parsed)) return null;
+    if (parsed < 0) return null;
+    return parsed;
+  }
+
   const computedItems = normalizedItems.map((item) => {
     const quantity = item.quantity;
-    const unitPrice = Number(item.sku.priceCurrent);
+    const payloadPrice = parseUnitPrice(item.priceAtTime);
+    const unitPrice =
+      payloadPrice !== null ? payloadPrice : Number(item.sku.priceCurrent);
+    if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+      redirect("/admin/orders/new?error=preco-invalido");
+    }
     const lineTotal = quantity * unitPrice;
     return {
       sku: item.sku,

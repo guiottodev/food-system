@@ -117,6 +117,12 @@ export default async function EditOrderPage({
   if (error === "quantidade-invalida") {
     errorMessage = "Quantidade invalida para o SKU.";
   }
+  if (error === "preco-invalido") {
+    errorMessage = "Informe um preco unitario valido.";
+  }
+  if (error === "final-edit") {
+    errorMessage = "Para editar um pedido finalizado, confirme e informe o motivo.";
+  }
   if (error === "data-invalida") {
     errorMessage = "Informe a data.";
   }

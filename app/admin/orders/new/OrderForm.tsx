@@ -279,6 +279,8 @@ export default function OrderForm({
   const initial = initialData ?? {};
   const orderId = initial.orderId ?? "";
   const orderStatus = initial.orderStatus;
+  const isFinalOrder =
+    isEdit && (orderStatus === "ENTREGUE" || orderStatus === "CANCELADO");
 
   const [customerMode, setCustomerMode] = useState<"existing" | "new">(
     initial.customerMode ?? "existing"
@@ -345,10 +347,17 @@ export default function OrderForm({
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [formError, setFormError] = useState("");
   const [availabilityWarning, setAvailabilityWarning] = useState(false);
+  const [availabilityWarningMode, setAvailabilityWarningMode] = useState<
+    "unavailable" | "out_of_stock"
+  >("unavailable");
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const availabilityBypassRef = useRef(false);
   const reconfirmBypassRef = useRef(false);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const availabilityBypassInputRef = useRef<HTMLInputElement | null>(null);
+
+  const [finalEditConfirmed, setFinalEditConfirmed] = useState(false);
+  const [finalEditReason, setFinalEditReason] = useState("");
 
   const lineIdRef = useRef(0);
   const qtyRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -367,6 +376,7 @@ export default function OrderForm({
   const deliveryFeeRef = useRef<HTMLInputElement | null>(null);
   const paymentMethodRef = useRef<HTMLSelectElement | null>(null);
   const depositAmountRef = useRef<HTMLInputElement | null>(null);
+  const finalEditReasonRef = useRef<HTMLTextAreaElement | null>(null);
 
   const filteredCustomers = useMemo(() => {
     const trimmed = customerSearch.trim();
@@ -951,6 +961,14 @@ export default function OrderForm({
       }
     }
 
+    if (isFinalOrder) {
+      if (!finalEditConfirmed) {
+        errors.finalEditReason = "Confirme a edicao de pedido finalizado.";
+      } else if (!finalEditReason.trim()) {
+        errors.finalEditReason = "Informe o motivo da edicao.";
+      }
+    }
+
     return {
       errors,
       itemErrors,
@@ -1057,6 +1075,8 @@ export default function OrderForm({
       quantity: item.quantity,
       priceAtTime: item.priceAtTime,
     })),
+    finalEditConfirmed,
+    finalEditReason,
   });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -1075,6 +1095,7 @@ export default function OrderForm({
       if (availabilityBypassRef.current) {
         availabilityBypassRef.current = false;
         setAvailabilityWarning(false);
+        setAvailabilityWarningMode("unavailable");
         setFormError("");
         return;
       }
@@ -1088,6 +1109,7 @@ export default function OrderForm({
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            orderType,
             items: items.map((item) => ({
               skuId: item.skuId,
               quantity: item.quantity,
@@ -1101,10 +1123,17 @@ export default function OrderForm({
         }
         const data = (await response.json()) as {
           hasUnavailableItems?: boolean;
+          hasOutOfStockSkus?: boolean;
         };
         setAvailabilityLoading(false);
+        if (data.hasOutOfStockSkus) {
+          setAvailabilityWarning(true);
+          setAvailabilityWarningMode("out_of_stock");
+          return;
+        }
         if (data.hasUnavailableItems) {
           setAvailabilityWarning(true);
+          setAvailabilityWarningMode("unavailable");
           return;
         }
       } catch {
@@ -1158,6 +1187,10 @@ export default function OrderForm({
       depositAmountRef.current?.focus();
       return;
     }
+    if (validation.errors.finalEditReason) {
+      finalEditReasonRef.current?.focus();
+      return;
+    }
     if (validation.errors.items) {
       skuInputRef.current?.focus();
       return;
@@ -1182,6 +1215,7 @@ export default function OrderForm({
       noValidate
     >
       <input type="hidden" name="payload" value={payload} />
+      <input ref={availabilityBypassInputRef} type="hidden" name="availabilityBypass" value="0" />
 
       {formError ? (
         <div className={`${styles.notice} ${styles.noticeError}`}>
@@ -1195,12 +1229,63 @@ export default function OrderForm({
         </div>
       ) : null}
 
+      {isFinalOrder ? (
+        <div className={`${styles.notice} ${styles.noticeWarning}`}>
+          <div className={styles.stackSm}>
+            <div>
+              <strong>Atencao:</strong> este pedido esta{" "}
+              {orderStatus === "ENTREGUE" ? "ENTREGUE" : "CANCELADO"}.
+              Voce ainda pode editar, mas precisa confirmar e informar um motivo
+              (sera registrado na auditoria).
+            </div>
+            <label className={styles.choiceRow}>
+              <input
+                type="checkbox"
+                checked={finalEditConfirmed}
+                onChange={(e) => setFinalEditConfirmed(e.target.checked)}
+              />
+              <span className={styles.choiceLabel}>
+                Confirmo que quero editar um pedido finalizado
+              </span>
+            </label>
+            <label className={styles.field}>
+              <span className={styles.fieldLabel}>Motivo da edicao</span>
+              <textarea
+                ref={finalEditReasonRef}
+                value={finalEditReason}
+                onChange={(e) => setFinalEditReason(e.target.value)}
+                className={`${styles.control} ${
+                  showErrors && validation.errors.finalEditReason
+                    ? styles.controlError
+                    : ""
+                }`}
+                rows={3}
+              />
+              {showErrors && validation.errors.finalEditReason ? (
+                <span className={styles.fieldError}>
+                  {validation.errors.finalEditReason}
+                </span>
+              ) : null}
+            </label>
+          </div>
+        </div>
+      ) : null}
+
       {availabilityWarning ? (
         <div className={`${styles.notice} ${styles.noticeWarning}`}>
           <div className={styles.stackSm}>
             <div>
-              <strong>Atencao:</strong> Alguns itens deste pedido nao estao
-              disponiveis no momento. Sera necessario produzir antes de atender.
+              {availabilityWarningMode === "out_of_stock" ? (
+                <>
+                  <strong>Atencao:</strong> Alguns itens deste pedido estao sem
+                  estoque suficiente para pronta entrega.
+                </>
+              ) : (
+                <>
+                  <strong>Atencao:</strong> Alguns itens deste pedido nao estao
+                  disponiveis no momento. Sera necessario produzir antes de atender.
+                </>
+              )}
             </div>
             <div>Voce ainda podera salvar o pedido.</div>
             <div className={styles.clusterSm}>
@@ -1211,6 +1296,10 @@ export default function OrderForm({
                 onClick={() => {
                   availabilityBypassRef.current = true;
                   setAvailabilityWarning(false);
+                  setAvailabilityWarningMode("unavailable");
+                  if (availabilityBypassInputRef.current) {
+                    availabilityBypassInputRef.current.value = "1";
+                  }
                   formRef.current?.requestSubmit();
                 }}
               >

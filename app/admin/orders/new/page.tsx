@@ -42,6 +42,13 @@ export default async function NewOrderPage({
   if (error === "quantidade-invalida") {
     errorMessage = "Quantidade invalida para o SKU.";
   }
+  if (error === "preco-invalido") {
+    errorMessage = "Informe um preco unitario valido.";
+  }
+  if (error === "sem-estoque") {
+    errorMessage =
+      "Alguns itens estao sem estoque suficiente para pronta entrega. Revise os itens ou use 'Salvar mesmo assim'.";
+  }
   if (error === "data-invalida") {
     errorMessage = "Informe a data.";
   }

@@ -26,8 +26,6 @@ export async function transitionOrderStatus(
   actorId: string | null,
   options: TransitionOptions = {}
 ): Promise<TransitionResult> {
-  const STOCK_ENABLED = false;
-
   if (!orderId) {
     return { ok: false, error: "missing_order" };
   }
@@ -70,15 +68,6 @@ export async function transitionOrderStatus(
         },
       });
     } else if (nextStatus === "ENTREGUE") {
-      if (!STOCK_ENABLED) {
-        await tx.order.update({
-          where: { id: orderId },
-          data: {
-            status: nextStatus,
-            paidAt: shouldMarkPaid ? paidAt : order.paidAt,
-          },
-        });
-      } else {
       const now = new Date();
       const marked = await tx.order.updateMany({
         where: {
@@ -113,7 +102,6 @@ export async function transitionOrderStatus(
             paidAt: shouldMarkPaid ? paidAt : order.paidAt,
           },
         });
-      }
       }
     } else {
       await tx.order.update({

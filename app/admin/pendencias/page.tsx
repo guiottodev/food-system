@@ -6,10 +6,13 @@ import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { OrderStatus } from "@prisma/client";
 import OrdersTableClient from "../orders/OrdersTableClient";
 import PendenciasFilters from "./PendenciasFilters.client";
+import layoutStyles from "../orders/orders.module.css";
 import styles from "../_styles/adminPrimitives.module.css";
 
 type SearchParams = {
   type?: string;
+  page?: string;
+  pageSize?: string;
 };
 
 const statusLabel: Record<OrderStatus, string> = {
@@ -25,6 +28,32 @@ const deliveryMethodLabel = {
   ENTREGA: "Entrega",
   RETIRADA: "Retirada",
 };
+
+const PAGE_SIZES = [15, 30, 50];
+
+function parsePage(value: string | undefined) {
+  const page = Number(value ?? "1");
+  if (Number.isNaN(page) || page < 1) return 1;
+  return Math.floor(page);
+}
+
+function parsePageSize(value: string | undefined) {
+  const size = Number(value ?? PAGE_SIZES[0]);
+  return PAGE_SIZES.includes(size) ? size : PAGE_SIZES[0];
+}
+
+function withQuery(
+  base: string,
+  params: Record<string, string | number | undefined | null>
+) {
+  const sp = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    sp.set(key, String(value));
+  });
+  const query = sp.toString();
+  return query ? `${base}?${query}` : base;
+}
 
 function formatDate(value?: Date | null) {
   if (!value) return "-";
@@ -74,8 +103,11 @@ export default async function PendenciasPage({
 }) {
   const sp = await Promise.resolve(searchParams);
   const typeParam = normalizeType(sp?.type);
+  const page = parsePage(sp?.page);
+  const pageSize = parsePageSize(sp?.pageSize);
 
-  const orders = await prisma.order.findMany({
+  // Buscar todos os pedidos ativos (sem paginação ainda, pois precisamos filtrar por atenção)
+  const allOrders = await prisma.order.findMany({
     where: {
       status: {
         notIn: ["ENTREGUE", "CANCELADO"],
@@ -109,14 +141,14 @@ export default async function PendenciasPage({
 
   const availabilityMap = await computeUnavailableItemsForOrders(
     prisma,
-    orders.map((order) => ({
+    allOrders.map((order) => ({
       id: order.id,
       status: order.status,
       items: order.items,
     }))
   );
 
-  const entries = orders.map((order) => {
+  const entries = allOrders.map((order) => {
     const hasUnavailableItems =
       availabilityMap.get(order.id)?.hasUnavailableItems ?? false;
     return {
@@ -140,6 +172,26 @@ export default async function PendenciasPage({
           entry.attention.strongReasons.some((reason) => reason.type === typeParam)
         );
 
+  const totalCount = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const clampedPage = Math.min(page, totalPages);
+  const startIndex = totalCount === 0 ? 0 : (clampedPage - 1) * pageSize + 1;
+  const endIndex =
+    totalCount === 0 ? 0 : Math.min(clampedPage * pageSize, totalCount);
+
+  const paginatedOrders = filtered.slice(
+    (clampedPage - 1) * pageSize,
+    clampedPage * pageSize
+  );
+
+  const baseParams = {
+    type: typeParam !== "all" ? typeParam : undefined,
+    pageSize: pageSize !== PAGE_SIZES[0] ? pageSize : undefined,
+  };
+
+  const pageLink = (nextPage: number) =>
+    withQuery("/admin/pendencias", { ...baseParams, page: nextPage });
+
   return (
     <main className={styles.page}>
       <div className={styles.pageHeader}>
@@ -149,14 +201,17 @@ export default async function PendenciasPage({
 
       <section className={styles.panel}>
         <PendenciasFilters initialType={typeParam} />
-        <p className={styles.textMuted}>{filtered.length} pendencia(s)</p>
+        <p className={styles.textMuted}>
+          Mostrando {startIndex}-{endIndex} de {totalCount} pendencia(s)
+        </p>
 
-        {filtered.length === 0 ? (
+        {paginatedOrders.length === 0 ? (
           <div className={styles.emptyState}>Sem pendencias.</div>
         ) : (
-          <OrdersTableClient
-            columns={7}
-            orders={filtered.map(({ order, attention }) => ({
+          <>
+            <OrdersTableClient
+              columns={7}
+              orders={paginatedOrders.map(({ order, attention }) => ({
               id: order.id,
               orderNumber: order.orderNumber,
               customerName: order.customer.name,
@@ -196,7 +251,23 @@ export default async function PendenciasPage({
               total: Number(order.total),
               attention: attention.reasons.map((reason) => reason.label),
             }))}
-          />
+            />
+            {totalPages > 1 ? (
+              <div className={layoutStyles.paginationRow}>
+                <div className={layoutStyles.paginationControls}>
+                  <Link href={pageLink(Math.max(1, clampedPage - 1))}>
+                    Anterior
+                  </Link>
+                  <span>
+                    Pagina {clampedPage} de {totalPages}
+                  </span>
+                  <Link href={pageLink(Math.min(totalPages, clampedPage + 1))}>
+                    Proxima
+                  </Link>
+                </div>
+              </div>
+            ) : null}
+          </>
         )}
       </section>
     </main>
