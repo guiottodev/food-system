@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search, SlidersHorizontal, X, Calendar, Package, Truck, ArrowUpDown, ListFilter, AlertCircle, ClipboardList } from "lucide-react";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./orders.module.css";
+import FilterSelect from "./FilterSelect.client";
 
 type StatusOption = {
   value: string;
@@ -554,27 +555,20 @@ export default function OrdersFilters({
                       <span>Período</span>
                     </div>
                     <div className={layoutStyles.filtersGroupContent}>
-                      <select
-                        name="period"
+                      <FilterSelect
+                        options={periodOptions}
                         value={draftFilters.period}
-                        onChange={(event) => {
-                          const value = normalizePeriod(event.target.value);
+                        onChange={(value) => {
+                          const normalized = normalizePeriod(value);
                           setDraftFilters((current) => ({
                             ...current,
-                            period: value,
-                            status: value === "history" ? "ENTREGUE" : current.status,
+                            period: normalized,
+                            status: normalized === "history" ? "ENTREGUE" : current.status,
                           }));
                         }}
-                        className={layoutStyles.filterSelectStyled}
-                        aria-label="Periodo"
                         disabled={isPending}
-                      >
-                        {periodOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
+                        aria-label="Periodo"
+                      />
                       {draftFilters.period === "range" && (
                         <div className={layoutStyles.rangeRow}>
                           <input
@@ -623,50 +617,36 @@ export default function OrdersFilters({
                       <span>Status e Pendências</span>
                     </div>
                     <div className={layoutStyles.filtersRow}>
-                      <label className={layoutStyles.filterField}>
+                      <div className={layoutStyles.filterField}>
                         <span className={layoutStyles.filterFieldLabel}>Status</span>
-                        <select
-                          name="status"
+                        <FilterSelect
+                          options={statusOptions}
                           value={draftFilters.status}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setDraftFilters((current) => ({
                               ...current,
-                              status: event.target.value,
+                              status: value,
                             }))
                           }
-                          className={layoutStyles.filterSelectStyled}
-                          aria-label="Status do pedido"
                           disabled={isPending || draftFilters.period === "history"}
-                        >
-                          {statusOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className={layoutStyles.filterField}>
+                          aria-label="Status do pedido"
+                        />
+                      </div>
+                      <div className={layoutStyles.filterField}>
                         <span className={layoutStyles.filterFieldLabel}>Pendências</span>
-                        <select
-                          name="attention"
+                        <FilterSelect
+                          options={attentionOptions}
                           value={draftFilters.attention}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setDraftFilters((current) => ({
                               ...current,
-                              attention: normalizeAttention(event.target.value),
+                              attention: normalizeAttention(value),
                             }))
                           }
-                          className={layoutStyles.filterSelectStyled}
-                          aria-label="Pendencias"
                           disabled={isPending}
-                        >
-                          {attentionOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                          aria-label="Pendencias"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -679,50 +659,36 @@ export default function OrdersFilters({
                       <span>Tipo e Logística</span>
                     </div>
                     <div className={layoutStyles.filtersRow}>
-                      <label className={layoutStyles.filterField}>
+                      <div className={layoutStyles.filterField}>
                         <span className={layoutStyles.filterFieldLabel}>Tipo</span>
-                        <select
-                          name="orderType"
+                        <FilterSelect
+                          options={orderTypeOptions}
                           value={draftFilters.orderType}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setDraftFilters((current) => ({
                               ...current,
-                              orderType: normalizeOrderType(event.target.value),
+                              orderType: normalizeOrderType(value),
                             }))
                           }
-                          className={layoutStyles.filterSelectStyled}
+                          disabled={isPending}
                           aria-label="Tipo de pedido"
-                          disabled={isPending}
-                        >
-                          {orderTypeOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className={layoutStyles.filterField}>
+                        />
+                      </div>
+                      <div className={layoutStyles.filterField}>
                         <span className={layoutStyles.filterFieldLabel}>Logística</span>
-                        <select
-                          name="deliveryMethod"
+                        <FilterSelect
+                          options={deliveryMethodOptions}
                           value={draftFilters.deliveryMethod}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setDraftFilters((current) => ({
                               ...current,
-                              deliveryMethod: normalizeDeliveryMethod(event.target.value),
+                              deliveryMethod: normalizeDeliveryMethod(value),
                             }))
                           }
-                          className={layoutStyles.filterSelectStyled}
-                          aria-label="Logistica"
                           disabled={isPending}
-                        >
-                          {deliveryMethodOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                          aria-label="Logistica"
+                        />
+                      </div>
                     </div>
                   </div>
 
@@ -735,50 +701,39 @@ export default function OrdersFilters({
                       <span>Ordenação</span>
                     </div>
                     <div className={layoutStyles.filtersRow}>
-                      <label className={layoutStyles.filterField}>
+                      <div className={layoutStyles.filterField}>
                         <span className={layoutStyles.filterFieldLabel}>Ordenar por</span>
-                        <select
-                          name="sort"
+                        <FilterSelect
+                          options={sortOptions}
                           value={draftFilters.sort}
-                          onChange={(event) =>
+                          onChange={(value) =>
                             setDraftFilters((current) => ({
                               ...current,
-                              sort: normalizeSort(event.target.value),
+                              sort: normalizeSort(value),
                             }))
                           }
-                          className={layoutStyles.filterSelectStyled}
+                          disabled={isPending}
                           aria-label="Ordenacao"
-                          disabled={isPending}
-                        >
-                          {sortOptions.map((option) => (
-                            <option key={option.value} value={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                      <label className={layoutStyles.filterField}>
+                        />
+                      </div>
+                      <div className={layoutStyles.filterField}>
                         <span className={layoutStyles.filterFieldLabel}>Itens/página</span>
-                        <select
-                          name="pageSize"
-                          value={draftFilters.pageSize}
-                          onChange={(event) =>
+                        <FilterSelect
+                          options={pageSizes.map((size) => ({
+                            value: String(size),
+                            label: `${size} itens`,
+                          }))}
+                          value={String(draftFilters.pageSize)}
+                          onChange={(value) =>
                             setDraftFilters((current) => ({
                               ...current,
-                              pageSize: Number(event.target.value),
+                              pageSize: Number(value),
                             }))
                           }
-                          className={layoutStyles.filterSelectStyled}
-                          aria-label="Itens por pagina"
                           disabled={isPending}
-                        >
-                          {pageSizes.map((size) => (
-                            <option key={size} value={size}>
-                              {size} itens
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                          aria-label="Itens por pagina"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
