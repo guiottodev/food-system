@@ -546,10 +546,16 @@ export default async function OrdersPage({
           <OrdersTableClient
             columns={7}
             orders={orders.map(({ order, attention, stockStatus }) => {
-              const operationalTag = attention.strongReasons.length > 0
+              const hasBlocking = attention.strongReasons.length > 0;
+              const operationalTag = hasBlocking
                 ? "Incompleto"
                 : stockStatus.needsProduction
                 ? "Precisa produzir"
+                : undefined;
+              const operationalTagTone = hasBlocking
+                ? "danger"
+                : stockStatus.needsProduction
+                ? "warning"
                 : undefined;
               return {
                 id: order.id,
@@ -560,6 +566,7 @@ export default async function OrdersPage({
                 status: order.status,
                 statusLabel: statusLabel[order.status],
                 operationalTag,
+                operationalTagTone,
                 deliveryDatetime: formatDeliveryLabel(
                   order.deliveryDatetime,
                   order.deliveryTime

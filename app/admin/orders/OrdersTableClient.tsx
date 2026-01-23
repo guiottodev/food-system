@@ -23,6 +23,7 @@ type OrderRow = {
   status: string;
   statusLabel: string;
   operationalTag?: string;
+  operationalTagTone?: "warning" | "danger";
   deliveryDatetime: string;
   totalLabel: string;
   items: OrderItem[];
@@ -132,7 +133,11 @@ export default function OrdersTableClient({
                       </span>
                       {order.operationalTag ? (
                         <span
-                          className={`${styles.badge} ${styles.badgeWarning}`}
+                          className={`${styles.badge} ${
+                            order.operationalTagTone === "danger"
+                              ? styles.badgeDanger
+                              : styles.badgeWarning
+                          }`}
                           title="Tag operacional do pedido"
                         >
                           {order.operationalTag}
@@ -146,50 +151,51 @@ export default function OrdersTableClient({
                 {expanded ? (
                   <tr className={styles.tableRowExpanded}>
                     <td colSpan={columns}>
-                      <div className={styles.stackSm}>
-                        <strong>Itens</strong>
-                        {order.items.length === 0 ? (
-                          <p className={styles.textMuted}>Sem itens.</p>
-                        ) : (
-                          <ul>
-                            {order.items.map((item) => (
-                              <li key={item.id}>
-                                {item.name} - {item.quantity} {formatUnit(item)} -{" "}
-                                {item.priceAtTime !== null
-                                  ? `${currencyFormatter.format(
-                                      item.priceAtTime
-                                    )}/${formatUnit(item)}`
-                                  : "-"} -{" "}
-                                {item.lineTotal !== null
-                                  ? currencyFormatter.format(item.lineTotal)
-                                  : "-"}
-                              </li>
-                            ))}
-                          </ul>
-                        )}
-                        <div className={styles.stackSm}>
-                          <div>
-                            Subtotal: {currencyFormatter.format(order.subtotal)}
+                      <div className={styles.expandedContent}>
+                        <div className={styles.expandedSection}>
+                          <div className={styles.expandedSectionTitle}>Itens</div>
+                          {order.items.length === 0 ? (
+                            <p className={styles.textMuted}>Sem itens.</p>
+                          ) : (
+                            <div className={styles.expandedItemsList}>
+                              {order.items.map((item) => (
+                                <div key={item.id} className={styles.expandedItem}>
+                                  <div className={styles.expandedItemName}>{item.name}</div>
+                                  <div className={styles.expandedItemDetails}>
+                                    <span>{item.quantity} {formatUnit(item)}</span>
+                                    <span>×</span>
+                                    <span>
+                                      {item.priceAtTime !== null
+                                        ? currencyFormatter.format(item.priceAtTime)
+                                        : "-"}
+                                    </span>
+                                    <span>=</span>
+                                    <strong>
+                                      {item.lineTotal !== null
+                                        ? currencyFormatter.format(item.lineTotal)
+                                        : "-"}
+                                    </strong>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className={styles.expandedSummary}>
+                          <div className={styles.expandedSummaryRow}>
+                            <span>Subtotal</span>
+                            <span>{currencyFormatter.format(order.subtotal)}</span>
                           </div>
                           {order.deliveryFee > 0 ? (
-                            <div>
-                              Taxa de entrega:{" "}
-                              {currencyFormatter.format(order.deliveryFee)}
+                            <div className={styles.expandedSummaryRow}>
+                              <span>Taxa de entrega</span>
+                              <span>{currencyFormatter.format(order.deliveryFee)}</span>
                             </div>
                           ) : null}
-                          <div>
-                            Total: {currencyFormatter.format(order.total)}
+                          <div className={styles.expandedSummaryTotal}>
+                            <span>Total</span>
+                            <strong>{currencyFormatter.format(order.total)}</strong>
                           </div>
-                          {order.attention && order.attention.length > 0 ? (
-                            <div className={styles.stackSm}>
-                              <strong>Pendencias</strong>
-                              <ul>
-                                {order.attention.map((reason, index) => (
-                                  <li key={`${order.id}-att-${index}`}>{reason}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          ) : null}
                         </div>
                       </div>
                     </td>

@@ -59,6 +59,20 @@ function formatDate(value?: Date | null) {
   }).format(value);
 }
 
+type ChecklistStatus = "ok" | "warning" | "danger" | "neutral";
+function getChecklistBadge(status: ChecklistStatus) {
+  if (status === "ok") {
+    return { label: "OK", className: styles.badgeSuccess };
+  }
+  if (status === "danger") {
+    return { label: "Falta", className: styles.badgeDanger };
+  }
+  if (status === "warning") {
+    return { label: "Atencao", className: styles.badgeWarning };
+  }
+  return { label: "Opcional", className: styles.badgeNeutral };
+}
+
 function formatDateTime(value?: Date | null, time?: string | null) {
   if (!value) return "-";
   const dateLabel = formatDate(value);
@@ -185,6 +199,20 @@ export default async function OrderDetailPage({
     items: order.items,
     needsReconfirmation: order.needsReconfirmation,
   });
+  const hasItems = order.items.length > 0;
+  const itemsReady = pendingSummary.hasItems;
+  const scheduleReady =
+    order.orderType === "PRONTA_ENTREGA"
+      ? true
+      : Boolean(order.deliveryDatetime);
+  const timeReady =
+    order.orderType === "PRONTA_ENTREGA"
+      ? true
+      : Boolean(order.deliveryTime && order.deliveryTime !== DEFAULT_DELIVERY_TIME);
+  const addressReady =
+    order.deliveryMethod !== "ENTREGA"
+      ? true
+      : Boolean(order.addressText?.trim()) && Boolean(order.addressCity?.trim());
 
   const auditLogs = await prisma.auditLog.findMany({
     where: {
@@ -506,6 +534,130 @@ export default async function OrderDetailPage({
           </div>
 
           <div>
+            <div className={detailStyles.sectionTitle}>Checklist do pedido</div>
+            <ul className={styles.checklist}>
+              {(() => {
+                const badge = getChecklistBadge("ok");
+                return (
+                  <li className={styles.checklistItem}>
+                    <span className={`${styles.badge} ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                    <div className={styles.checklistContent}>
+                      <span className={styles.checklistLabel}>Cliente</span>
+                      <span className={styles.checklistValue}>
+                        {order.customer.name}
+                      </span>
+                    </div>
+                  </li>
+                );
+              })()}
+
+              {(() => {
+                const status = itemsReady ? "ok" : "danger";
+                const badge = getChecklistBadge(status);
+                const label = hasItems
+                  ? `${order.items.length} item(s)`
+                  : "Nenhum item";
+                return (
+                  <li className={styles.checklistItem}>
+                    <span className={`${styles.badge} ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                    <div className={styles.checklistContent}>
+                      <span className={styles.checklistLabel}>Itens</span>
+                      <span className={styles.checklistValue}>{label}</span>
+                    </div>
+                  </li>
+                );
+              })()}
+
+              {(() => {
+                const status =
+                  order.orderType === "PRONTA_ENTREGA"
+                    ? "ok"
+                    : scheduleReady
+                    ? "ok"
+                    : "danger";
+                const badge = getChecklistBadge(status);
+                const label =
+                  order.orderType === "PRONTA_ENTREGA"
+                    ? "Cadastro agora"
+                    : formatDate(order.deliveryDatetime);
+                return (
+                  <li className={styles.checklistItem}>
+                    <span className={`${styles.badge} ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                    <div className={styles.checklistContent}>
+                      <span className={styles.checklistLabel}>Data</span>
+                      <span className={styles.checklistValue}>{label}</span>
+                    </div>
+                  </li>
+                );
+              })()}
+
+              {(() => {
+                const status =
+                  order.orderType === "PRONTA_ENTREGA"
+                    ? "neutral"
+                    : timeReady
+                    ? "ok"
+                    : "neutral";
+                const badge = getChecklistBadge(status);
+                const label =
+                  order.orderType === "PRONTA_ENTREGA"
+                    ? "Agora"
+                    : order.deliveryTime || "A confirmar";
+                return (
+                  <li className={styles.checklistItem}>
+                    <span className={`${styles.badge} ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                    <div className={styles.checklistContent}>
+                      <span className={styles.checklistLabel}>Horario</span>
+                      <span className={styles.checklistValue}>{label}</span>
+                    </div>
+                  </li>
+                );
+              })()}
+
+              {(() => {
+                if (order.deliveryMethod === "RETIRADA") {
+                  const badge = getChecklistBadge("ok");
+                  return (
+                    <li className={styles.checklistItem}>
+                      <span className={`${styles.badge} ${badge.className}`}>
+                        {badge.label}
+                      </span>
+                      <div className={styles.checklistContent}>
+                        <span className={styles.checklistLabel}>Entrega</span>
+                        <span className={styles.checklistValue}>Retirada</span>
+                      </div>
+                    </li>
+                  );
+                }
+                const status = addressReady ? "ok" : "warning";
+                const badge = getChecklistBadge(status);
+                const label = addressReady
+                  ? "Endereco informado"
+                  : "Endereco pendente";
+                return (
+                  <li className={styles.checklistItem}>
+                    <span className={`${styles.badge} ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                    <div className={styles.checklistContent}>
+                      <span className={styles.checklistLabel}>Entrega</span>
+                      <span className={styles.checklistValue}>{label}</span>
+                    </div>
+                  </li>
+                );
+              })()}
+            </ul>
+          </div>
+
+          <div>
             <div className={detailStyles.sectionTitle}>Por que</div>
             <ul className={detailStyles.summaryList}>
               {whyList.map((item) => (
@@ -690,71 +842,105 @@ export default async function OrderDetailPage({
         </div>
       </section>
 
-      <section id="order-delivery" className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <h2>Combinado</h2>
-        </div>
-        <div className={styles.panelBody}>
-          <div className={styles.stackSm}>
-            <div>
-              <strong>
-                {deliveryMethodLabel[order.deliveryMethod]} —{" "}
-                {order.deliveryMethod === "ENTREGA"
-                  ? order.addressText || "Endereco pendente"
-                  : "Retirada no local"}{" "}
-                — {formatDateTime(order.deliveryDatetime, order.deliveryTime)}
-              </strong>
-            </div>
-            <div className={detailStyles.twoColumn}>
-              <div>
-                <div>Bairro: {order.addressBairro || "-"}</div>
-                <div>Referencia: {order.addressReferencia || "-"}</div>
-              </div>
-              <div>
-                <div>Cidade: {order.addressCity || "-"}</div>
-                <div>Taxa de entrega: {formatMoney(order.deliveryFee || 0)}</div>
-              </div>
-            </div>
+      <div className={detailStyles.infoGrid}>
+        <section id="order-delivery" className={detailStyles.infoCard}>
+          <div className={detailStyles.infoCardHeader}>
+            <div className={detailStyles.infoCardIcon}>📍</div>
+            <span className={detailStyles.infoCardTitle}>
+              {deliveryMethodLabel[order.deliveryMethod]}
+            </span>
           </div>
-        </div>
-      </section>
+          <div className={detailStyles.infoCardBody}>
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Endereco</span>
+              <span className={detailStyles.infoValue}>
+                {order.deliveryMethod === "ENTREGA"
+                  ? order.addressText || "Pendente"
+                  : "Retirada no local"}
+              </span>
+            </div>
+            {order.deliveryMethod === "ENTREGA" && (
+              <>
+                <div className={detailStyles.infoRow}>
+                  <span className={detailStyles.infoLabel}>Bairro</span>
+                  <span className={detailStyles.infoValue}>{order.addressBairro || "-"}</span>
+                </div>
+                <div className={detailStyles.infoRow}>
+                  <span className={detailStyles.infoLabel}>Cidade</span>
+                  <span className={detailStyles.infoValue}>{order.addressCity || "-"}</span>
+                </div>
+                <div className={detailStyles.infoRow}>
+                  <span className={detailStyles.infoLabel}>Referencia</span>
+                  <span className={detailStyles.infoValue}>{order.addressReferencia || "-"}</span>
+                </div>
+              </>
+            )}
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Data/Hora</span>
+              <span className={detailStyles.infoValue}>
+                {formatDateTime(order.deliveryDatetime, order.deliveryTime)}
+              </span>
+            </div>
+            {order.deliveryMethod === "ENTREGA" && (
+              <div className={detailStyles.infoRow}>
+                <span className={detailStyles.infoLabel}>Taxa</span>
+                <span className={detailStyles.infoValue}>{formatMoney(order.deliveryFee || 0)}</span>
+              </div>
+            )}
+          </div>
+        </section>
 
-      <section id="order-payment" className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <h2>Pagamento combinado</h2>
-        </div>
-        <div className={styles.panelBody}>
-          <div className={styles.stackSm}>
-            <div>
-              Forma combinada:{" "}
-              {order.paymentMethod
-                ? paymentMethodLabel[order.paymentMethod] ?? order.paymentMethod
-                : "Nao informado"}
+        <section id="order-payment" className={detailStyles.infoCard}>
+          <div className={detailStyles.infoCardHeader}>
+            <div className={detailStyles.infoCardIcon}>💳</div>
+            <span className={detailStyles.infoCardTitle}>Pagamento</span>
+            <span
+              className={`${styles.badge} ${
+                order.paidAt ? styles.badgeSuccess : styles.badgeWarning
+              }`}
+              style={{ marginLeft: "auto" }}
+            >
+              {order.paidAt ? "Pago" : "Pendente"}
+            </span>
+          </div>
+          <div className={detailStyles.infoCardBody}>
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Forma</span>
+              <span className={detailStyles.infoValue}>
+                {order.paymentMethod
+                  ? paymentMethodLabel[order.paymentMethod] ?? order.paymentMethod
+                  : "Nao informado"}
+              </span>
             </div>
-            <div>
-              Sinal: {order.hasDeposit ? "Sim" : "Nao"}{" "}
-              {order.hasDeposit && order.depositAmount
-                ? `(${formatMoney(order.depositAmount)})`
-                : ""}
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Sinal</span>
+              <span className={detailStyles.infoValue}>
+                {order.hasDeposit
+                  ? `Sim (${formatMoney(order.depositAmount)})`
+                  : "Nao"}
+              </span>
             </div>
-            <div>
-              Restante:{" "}
-              {formatMoney(
-                Number(order.total) - Number(order.depositAmount ?? 0)
-              )}
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Restante</span>
+              <span className={detailStyles.infoValueLarge}>
+                {formatMoney(Number(order.total) - Number(order.depositAmount ?? 0))}
+              </span>
             </div>
-            <div>Status: {order.paidAt ? "Pago" : "Pendente"}</div>
-            {!order.paidAt ? (
-              <form action={markPaidAction} className={styles.clusterSm}>
+            {!order.paidAt && (
+              <form action={markPaidAction} style={{ marginTop: "var(--space-3)" }}>
                 <input type="hidden" name="orderId" value={order.id} />
-                <button type="submit" className={styles.button}>
+                <button
+                  type="submit"
+                  className={`${styles.button} ${styles.buttonPrimary}`}
+                  style={{ width: "100%" }}
+                >
                   Marcar como pago
                 </button>
               </form>
-            ) : null}
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       {order.needsReconfirmation ? (
         <section id="order-changes" className={styles.panel}>
@@ -790,64 +976,85 @@ export default async function OrderDetailPage({
         </section>
       ) : null}
 
-      <section className={styles.panel}>
-        <div className={styles.panelHeader}>
-          <h2>Dados do pedido</h2>
-        </div>
-        <div className={styles.panelBody}>
-          <div className={styles.stackSm}>
-            <div>
-              Cliente:{" "}
-              <Link href={`/admin/clientes/${order.customer.id}`}>
+      <div className={detailStyles.infoGrid}>
+        <section className={detailStyles.infoCard}>
+          <div className={detailStyles.infoCardHeader}>
+            <div className={detailStyles.infoCardIcon}>👤</div>
+            <span className={detailStyles.infoCardTitle}>Cliente</span>
+          </div>
+          <div className={detailStyles.infoCardBody}>
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Nome</span>
+              <Link
+                href={`/admin/clientes/${order.customer.id}`}
+                className={detailStyles.actionLink}
+              >
                 {order.customer.name}
               </Link>
             </div>
-            <div>Telefone: {order.customer.phone || "-"}</div>
-            <div className={styles.clusterSm}>
-              <span>Status: {statusLabel[order.status]}</span>
-              {attention.strongReasons.some(
-                (reason) => reason.type === "INCOMPLETE"
-              ) ? (
-                <span className={`${styles.badge} ${styles.badgeWarning}`}>
-                  Incompleto
-                </span>
-              ) : null}
-              {attention.strongReasons.some(
-                (reason) => reason.type === "ALTERADO_APOS_CONFIRMACAO"
-              ) ? (
-                <span className={`${styles.badge} ${styles.badgeDanger}`}>
-                  Alterado - requer reconfirmacao
-                </span>
-              ) : null}
-              {attention.weakReasons.some(
-                (reason) => reason.type === "UNAVAILABLE_ITEMS"
-              ) ? (
-                <span
-                  className={`${styles.badge} ${styles.badgeWarning}`}
-                  title={
-                    order.orderType === "PRONTA_ENTREGA"
-                      ? "Sem saldo para pronta entrega."
-                      : "Precisa produzir para atender este pedido."
-                  }
-                >
-                  {order.orderType === "PRONTA_ENTREGA"
-                    ? "Sem saldo"
-                    : "Precisa produzir"}
-                </span>
-              ) : null}
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Telefone</span>
+              <span className={detailStyles.infoValue}>{order.customer.phone || "-"}</span>
             </div>
-            <div>Tipo: {orderTypeLabel[order.orderType]}</div>
-            <div>Entrega/Retirada: {deliveryMethodLabel[order.deliveryMethod]}</div>
-            <div>
-              Data/hora: {formatDateTime(order.deliveryDatetime, order.deliveryTime)}
-            </div>
-            <div>Subtotal: {formatMoney(order.subtotal)}</div>
-            <div>Total: {formatMoney(order.total)}</div>
-            <div>Confirmado em: {formatDateTime(order.confirmedAt)}</div>
-            <div>Pagamento: {order.paidAt ? "Pago" : "Pendente"}</div>
           </div>
-        </div>
-      </section>
+        </section>
+
+        <section className={detailStyles.infoCard}>
+          <div className={detailStyles.infoCardHeader}>
+            <div className={detailStyles.infoCardIcon}>📋</div>
+            <span className={detailStyles.infoCardTitle}>Pedido</span>
+            <span
+              className={`${styles.badge} ${
+                order.status === "ENTREGUE"
+                  ? styles.badgeSuccess
+                  : order.status === "CANCELADO"
+                  ? styles.badgeDanger
+                  : styles.badgeNeutral
+              }`}
+              style={{ marginLeft: "auto" }}
+            >
+              {statusLabel[order.status]}
+            </span>
+          </div>
+          <div className={detailStyles.infoCardBody}>
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Tipo</span>
+              <span className={detailStyles.infoValue}>{orderTypeLabel[order.orderType]}</span>
+            </div>
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Metodo</span>
+              <span className={detailStyles.infoValue}>{deliveryMethodLabel[order.deliveryMethod]}</span>
+            </div>
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Confirmado</span>
+              <span className={detailStyles.infoValue}>{formatDateTime(order.confirmedAt)}</span>
+            </div>
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Subtotal</span>
+              <span className={detailStyles.infoValue}>{formatMoney(order.subtotal)}</span>
+            </div>
+            <div className={detailStyles.infoRow}>
+              <span className={detailStyles.infoLabel}>Total</span>
+              <span className={detailStyles.infoValueLarge}>{formatMoney(order.total)}</span>
+            </div>
+            {(attention.strongReasons.length > 0 || attention.weakReasons.some(r => r.type === "UNAVAILABLE_ITEMS")) && (
+              <div className={styles.clusterSm} style={{ marginTop: "var(--space-2)" }}>
+                {attention.strongReasons.some((r) => r.type === "INCOMPLETE") && (
+                  <span className={`${styles.badge} ${styles.badgeDanger}`}>Incompleto</span>
+                )}
+                {attention.strongReasons.some((r) => r.type === "ALTERADO_APOS_CONFIRMACAO") && (
+                  <span className={`${styles.badge} ${styles.badgeDanger}`}>Requer reconfirmacao</span>
+                )}
+                {attention.weakReasons.some((r) => r.type === "UNAVAILABLE_ITEMS") && (
+                  <span className={`${styles.badge} ${styles.badgeWarning}`}>
+                    {order.orderType === "PRONTA_ENTREGA" ? "Sem saldo" : "Precisa produzir"}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
 
       <section className={styles.panel}>
         <div className={styles.panelHeader}>

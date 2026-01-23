@@ -979,6 +979,45 @@ export default function OrderForm({
   }
 
   const validation = validateForm();
+  const hasItemErrors = Object.keys(validation.itemErrors).length > 0;
+  const hasItems = items.length > 0;
+  const itemsReady = hasItems && !hasItemErrors;
+
+  const customerReady =
+    customerMode === "existing"
+      ? Boolean(customerId)
+      : Boolean(customerName.trim()) && Boolean(normalizePhoneBR(customerPhone));
+
+  const scheduleReady =
+    orderType === "PRONTA_ENTREGA" ? true : Boolean(scheduleDate);
+  const addressReady =
+    deliveryMethod !== "ENTREGA"
+      ? true
+      : Boolean(addressText.trim()) && Boolean(addressCity.trim());
+
+  const readyForConfirm = customerReady && itemsReady && scheduleReady;
+
+  function formatScheduleDate(value: string) {
+    const [year, month, day] = value.split("-").map((part) => Number(part));
+    if (!year || !month || !day) return value;
+    const date = new Date(year, month - 1, day);
+    if (Number.isNaN(date.getTime())) return value;
+    return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
+  }
+
+  type ChecklistStatus = "ok" | "warning" | "danger" | "neutral";
+  function getChecklistBadge(status: ChecklistStatus) {
+    if (status === "ok") {
+      return { label: "OK", className: styles.badgeSuccess };
+    }
+    if (status === "danger") {
+      return { label: "Falta", className: styles.badgeDanger };
+    }
+    if (status === "warning") {
+      return { label: "Atenção", className: styles.badgeWarning };
+    }
+    return { label: "Opcional", className: styles.badgeNeutral };
+  }
 
   function applySearchToNewCustomer(value: string) {
     const trimmed = value.trim();
@@ -2219,30 +2258,171 @@ export default function OrderForm({
               <h2>Resumo</h2>
             </div>
             <div className={styles.panelBody}>
-              {items.length === 0 ? (
-                <div className={styles.textMuted}>
-                  Adicione itens para calcular o total.
-                </div>
-              ) : (
+              <div className={styles.stackSm}>
                 <div className={styles.stackSm}>
-                  <div className={styles.summaryRow}>
-                    <span>Subtotal</span>
-                    <strong>R$ {formatCurrency(subtotal)}</strong>
-                  </div>
-                  {deliveryMethod === "ENTREGA" ? (
-                    <div className={styles.summaryRow}>
-                      <span>Taxa de entrega</span>
-                      <strong>
-                        R$ {feeValue.ok ? formatCurrency(feeValue.value) : "--"}
-                      </strong>
-                    </div>
-                  ) : null}
-                  <div className={styles.summaryRow}>
-                    <span>Total</span>
-                    <strong>R$ {formatCurrency(total)}</strong>
+                  <div className={styles.textMuted}>Proxima acao</div>
+                  <div className={styles.nextActionTitle}>
+                    {readyForConfirm
+                      ? "Pronto para confirmar o pedido."
+                      : "Conclua os itens abaixo para confirmar."}
                   </div>
                 </div>
-              )}
+
+                <ul className={styles.checklist}>
+                  {(() => {
+                    const status = customerReady ? "ok" : "danger";
+                    const badge = getChecklistBadge(status);
+                    const label =
+                      customerMode === "existing"
+                        ? customerName.trim()
+                        : customerName.trim()
+                        ? customerName.trim()
+                        : "Nao informado";
+                    return (
+                      <li className={styles.checklistItem}>
+                        <span className={`${styles.badge} ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                        <div className={styles.checklistContent}>
+                          <span className={styles.checklistLabel}>Cliente</span>
+                          <span className={styles.checklistValue}>{label}</span>
+                        </div>
+                      </li>
+                    );
+                  })()}
+
+                  {(() => {
+                    const status = itemsReady ? "ok" : "danger";
+                    const badge = getChecklistBadge(status);
+                    const label = hasItems
+                      ? `${items.length} item(s)`
+                      : "Nenhum item";
+                    return (
+                      <li className={styles.checklistItem}>
+                        <span className={`${styles.badge} ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                        <div className={styles.checklistContent}>
+                          <span className={styles.checklistLabel}>Itens</span>
+                          <span className={styles.checklistValue}>{label}</span>
+                        </div>
+                      </li>
+                    );
+                  })()}
+
+                  {(() => {
+                    const status =
+                      orderType === "PRONTA_ENTREGA"
+                        ? "ok"
+                        : scheduleReady
+                        ? "ok"
+                        : "danger";
+                    const badge = getChecklistBadge(status);
+                    const label =
+                      orderType === "PRONTA_ENTREGA"
+                        ? "Cadastro agora"
+                        : scheduleDate
+                        ? formatScheduleDate(scheduleDate)
+                        : "Nao definida";
+                    return (
+                      <li className={styles.checklistItem}>
+                        <span className={`${styles.badge} ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                        <div className={styles.checklistContent}>
+                          <span className={styles.checklistLabel}>Data</span>
+                          <span className={styles.checklistValue}>{label}</span>
+                        </div>
+                      </li>
+                    );
+                  })()}
+
+                  {(() => {
+                    const status =
+                      orderType === "PRONTA_ENTREGA"
+                        ? "neutral"
+                        : scheduleTime
+                        ? "ok"
+                        : "neutral";
+                    const badge = getChecklistBadge(status);
+                    const label =
+                      orderType === "PRONTA_ENTREGA"
+                        ? "Agora"
+                        : scheduleTime || "A confirmar";
+                    return (
+                      <li className={styles.checklistItem}>
+                        <span className={`${styles.badge} ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                        <div className={styles.checklistContent}>
+                          <span className={styles.checklistLabel}>Horario</span>
+                          <span className={styles.checklistValue}>{label}</span>
+                        </div>
+                      </li>
+                    );
+                  })()}
+
+                  {(() => {
+                    if (deliveryMethod === "RETIRADA") {
+                      const badge = getChecklistBadge("ok");
+                      return (
+                        <li className={styles.checklistItem}>
+                          <span className={`${styles.badge} ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                          <div className={styles.checklistContent}>
+                            <span className={styles.checklistLabel}>Entrega</span>
+                            <span className={styles.checklistValue}>Retirada</span>
+                          </div>
+                        </li>
+                      );
+                    }
+                    const status = addressReady ? "ok" : "warning";
+                    const badge = getChecklistBadge(status);
+                    const label = addressReady
+                      ? "Endereco informado"
+                      : "Endereco pendente";
+                    return (
+                      <li className={styles.checklistItem}>
+                        <span className={`${styles.badge} ${badge.className}`}>
+                          {badge.label}
+                        </span>
+                        <div className={styles.checklistContent}>
+                          <span className={styles.checklistLabel}>Entrega</span>
+                          <span className={styles.checklistValue}>{label}</span>
+                        </div>
+                      </li>
+                    );
+                  })()}
+                </ul>
+
+                <div className={styles.divider} />
+
+                {items.length === 0 ? (
+                  <div className={styles.textMuted}>
+                    Adicione itens para calcular o total.
+                  </div>
+                ) : (
+                  <div className={styles.stackSm}>
+                    <div className={styles.summaryRow}>
+                      <span>Subtotal</span>
+                      <strong>R$ {formatCurrency(subtotal)}</strong>
+                    </div>
+                    {deliveryMethod === "ENTREGA" ? (
+                      <div className={styles.summaryRow}>
+                        <span>Taxa de entrega</span>
+                        <strong>
+                          R$ {feeValue.ok ? formatCurrency(feeValue.value) : "--"}
+                        </strong>
+                      </div>
+                    ) : null}
+                    <div className={styles.summaryRow}>
+                      <span>Total</span>
+                      <strong>R$ {formatCurrency(total)}</strong>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <div className={styles.panelFooter}>
               <button

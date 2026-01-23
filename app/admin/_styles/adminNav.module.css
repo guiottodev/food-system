@@ -6,9 +6,10 @@
 }
 
 .brand {
-  font-size: var(--text-base);
-  font-weight: var(--fw-semibold);
+  font-size: var(--text-lg);
+  font-weight: var(--fw-bold);
   color: var(--text-primary);
+  letter-spacing: var(--tracking-tight);
 }
 
 .brandCompact {
@@ -79,26 +80,28 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  height: 44px;
-  padding: 0 12px;
-  border-radius: 10px;
+  gap: var(--space-3);
+  height: 46px;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-lg);
   color: var(--text-secondary);
   border: 1px solid transparent;
+  font-size: var(--text-sm);
   font-weight: var(--fw-medium);
-  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition: all var(--duration-fast) var(--ease-default);
 }
 
 .navItem::before {
   content: "";
   position: absolute;
   left: 0;
-  top: 8px;
-  bottom: 8px;
+  top: 10px;
+  bottom: 10px;
   width: 3px;
-  border-radius: 999px;
-  background: var(--focus-ring);
+  border-radius: var(--radius-full);
+  background: var(--action-primary);
   opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-default);
 }
 
 .navItem:hover,
@@ -106,12 +109,13 @@
   color: var(--text-primary);
   background: var(--bg-subtle);
   border-color: var(--border);
+  transform: translateX(2px);
 }
 
 .navItemActive {
   color: var(--text-primary);
-  background: var(--bg-subtle);
-  border-color: var(--border-strong);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.02) 100%);
+  border-color: rgba(37, 99, 235, 0.2);
 }
 
 .navItemActive::before {
