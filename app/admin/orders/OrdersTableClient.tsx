@@ -2,7 +2,9 @@
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import styles from "../_styles/adminPrimitives.module.css";
+import layoutStyles from "./orders.module.css";
 
 type OrderItem = {
   id: string;
@@ -83,7 +85,7 @@ export default function OrdersTableClient({
 
   return (
     <div className={styles.tableWrap}>
-      <table className={styles.table}>
+      <table className={`${styles.table} ${layoutStyles.ordersTable}`}>
         <thead>
           <tr>
             <th className={styles.tableIcon}></th>
@@ -107,9 +109,16 @@ export default function OrdersTableClient({
                       onClick={() => toggle(order.id)}
                       aria-expanded={expanded}
                       aria-label="Ver itens"
-                      className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                      className={`${layoutStyles.expandButton} ${
+                        expanded ? layoutStyles.expandButtonActive : ""
+                      }`}
                     >
-                      {expanded ? "▾" : "▸"}
+                      <ChevronRight
+                        size={16}
+                        className={`${layoutStyles.expandIcon} ${
+                          expanded ? layoutStyles.expandIconExpanded : ""
+                        }`}
+                      />
                     </button>
                   </td>
                   <td>
