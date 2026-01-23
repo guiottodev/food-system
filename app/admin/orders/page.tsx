@@ -7,6 +7,7 @@ import { normalizePhoneDigits } from "@/lib/phone";
 import { DeliveryMethod, OrderStatus, OrderType, Prisma } from "@prisma/client";
 import OrdersTableClient from "./OrdersTableClient";
 import OrdersFilters from "./OrdersFilters.client";
+import layoutStyles from "./orders.module.css";
 import styles from "../_styles/adminPrimitives.module.css";
 
 type OrdersSearchParams = {
@@ -217,10 +218,10 @@ function normalizeAttention(
   legacyType?: string | undefined
 ): AttentionFilter {
   if (value === "with") return "with";
-  if (attentionTypeOptions.includes(value as AttentionFilter)) {
+  if (value && attentionTypeOptions.includes(value as (typeof attentionTypeOptions)[number])) {
     return value as AttentionFilter;
   }
-  if (attentionTypeOptions.includes(legacyType as AttentionFilter)) {
+  if (legacyType && attentionTypeOptions.includes(legacyType as (typeof attentionTypeOptions)[number])) {
     return legacyType as AttentionFilter;
   }
   return "all";
@@ -378,9 +379,9 @@ export default async function OrdersPage({
 
   const shouldFilterByAttention = attentionParam !== "all";
 
-  const orderBy =
+  const orderBy: Prisma.OrderOrderByWithRelationInput =
     sort === "created_desc"
-      ? { createdAt: "desc" as const }
+      ? { createdAt: "desc" }
       : { deliveryDatetime: sort === "delivery_desc" ? "desc" : "asc" };
 
   let orders: Array<{
@@ -498,10 +499,6 @@ export default async function OrdersPage({
           initialDeliveryMethod={deliveryMethodParam}
         />
 
-        <p className={styles.textMuted}>
-          Mostrando {startIndex}-{endIndex} de {totalCount}
-        </p>
-
         {orders.length === 0 ? (
           <div className={styles.emptyState}>Nenhum pedido encontrado.</div>
         ) : (
@@ -553,14 +550,19 @@ export default async function OrdersPage({
         )}
       </section>
 
-      <div className={styles.clusterSm}>
-        <Link href={pageLink(Math.max(1, clampedPage - 1))}>Anterior</Link>
-        <span>
-          Pagina {clampedPage} de {totalPages}
+      <div className={layoutStyles.paginationRow}>
+        <div className={layoutStyles.paginationControls}>
+          <Link href={pageLink(Math.max(1, clampedPage - 1))}>Anterior</Link>
+          <span>
+            Pagina {clampedPage} de {totalPages}
+          </span>
+          <Link href={pageLink(Math.min(totalPages, clampedPage + 1))}>
+            Proxima
+          </Link>
+        </div>
+        <span className={styles.textMuted}>
+          Mostrando {startIndex}-{endIndex} de {totalCount}
         </span>
-        <Link href={pageLink(Math.min(totalPages, clampedPage + 1))}>
-          Proxima
-        </Link>
       </div>
     </main>
   );

@@ -2,8 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { logoutAction } from "./actions";
 import { verifySessionValue } from "@/lib/session";
-import styles from "./_styles/adminPrimitives.module.css";
-import AdminTopNav from "./AdminTopNav.client";
+import AdminShell from "./AdminShell";
 
 export default async function AdminLayout({
   children,
@@ -16,19 +15,5 @@ export default async function AdminLayout({
     redirect("/login");
   }
 
-  return (
-    <div className={styles.layoutRoot}>
-      <div className={styles.topBar}>
-        <header className={styles.pageHeader}>
-          <AdminTopNav />
-          <form className={styles.topNavRight} action={logoutAction}>
-            <button type="submit" className={styles.button}>
-              Sair
-            </button>
-          </form>
-        </header>
-      </div>
-      {children}
-    </div>
-  );
+  return <AdminShell logoutAction={logoutAction}>{children}</AdminShell>;
 }

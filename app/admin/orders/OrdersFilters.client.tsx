@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import styles from "../_styles/adminPrimitives.module.css";
@@ -51,10 +52,6 @@ type FiltersState = {
   pageSize: number;
 };
 
-type PeriodLabel = {
-  display: string;
-  summary?: string;
-};
 
 const attentionOptions: Array<{ value: AttentionValue; label: string }> = [
   { value: "all", label: "Todas" },
@@ -140,13 +137,6 @@ function normalizeDeliveryMethod(value?: string) {
   return "all";
 }
 
-function formatDateLabel(value: string) {
-  const parts = value.split("-");
-  if (parts.length !== 3) return value;
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
-}
-
 function formatDateInput(date: Date) {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -172,44 +162,6 @@ function addDays(date: Date, days: number) {
   return d;
 }
 
-function buildPeriodLabel(
-  period: PeriodValue,
-  deliveryStart: string,
-  deliveryEnd: string
-): PeriodLabel {
-  if (period === "today") {
-    return { display: "hoje", summary: "Hoje" };
-  }
-  if (period === "history") {
-    return { display: "historico (entregues)", summary: "Historico" };
-  }
-  if (period === "range") {
-    if (deliveryStart && deliveryEnd) {
-      return {
-        display: `de ${formatDateLabel(deliveryStart)} ate ${formatDateLabel(
-          deliveryEnd
-        )}`,
-        summary: `Periodo: ${formatDateLabel(deliveryStart)} - ${formatDateLabel(
-          deliveryEnd
-        )}`,
-      };
-    }
-    if (deliveryStart) {
-      return {
-        display: `a partir de ${formatDateLabel(deliveryStart)}`,
-        summary: `Periodo: ${formatDateLabel(deliveryStart)} +`,
-      };
-    }
-    if (deliveryEnd) {
-      return {
-        display: `ate ${formatDateLabel(deliveryEnd)}`,
-        summary: `Periodo: ate ${formatDateLabel(deliveryEnd)}`,
-      };
-    }
-    return { display: "intervalo aberto", summary: "Periodo: intervalo aberto" };
-  }
-  return { display: "proximos pedidos", summary: "Proximos pedidos" };
-}
 
 export default function OrdersFilters({
   statusOptions,
@@ -390,20 +342,6 @@ export default function OrdersFilters({
     [initialPageSize]
   );
 
-  const periodLabel = buildPeriodLabel(
-    currentFilters.period,
-    currentFilters.deliveryStart,
-    currentFilters.deliveryEnd
-  );
-
-  const statusLabelMap = useMemo(() => {
-    const map = new Map<string, string>();
-    statusOptions.forEach((option) => {
-      map.set(option.value, option.label);
-    });
-    return map;
-  }, [statusOptions]);
-
   const hasActiveFilters =
     Boolean(currentQuery.trim()) ||
     currentFilters.period !== defaults.period ||
@@ -413,52 +351,6 @@ export default function OrdersFilters({
     currentFilters.deliveryMethod !== defaults.deliveryMethod ||
     currentFilters.sort !== defaults.sort ||
     currentFilters.pageSize !== defaults.pageSize;
-
-  const activeSummary = useMemo(() => {
-    const labels: string[] = [];
-    const isHistory = currentFilters.period === "history";
-    if (currentFilters.period !== defaults.period) {
-      labels.push(periodLabel.summary || periodLabel.display);
-    }
-    if (
-      currentFilters.status !== defaults.status &&
-      !(isHistory && currentFilters.status === "ENTREGUE")
-    ) {
-      labels.push(statusLabelMap.get(currentFilters.status) || currentFilters.status);
-    }
-    if (currentFilters.attention !== defaults.attention) {
-      labels.push(attentionSummaryLabels[currentFilters.attention]);
-    }
-    if (currentFilters.orderType !== defaults.orderType) {
-      const orderTypeLabel =
-        currentFilters.orderType === "ENCOMENDA" ? "Encomenda" : "Pronta entrega";
-      labels.push(orderTypeLabel);
-    }
-    if (currentFilters.deliveryMethod !== defaults.deliveryMethod) {
-      labels.push(
-        currentFilters.deliveryMethod === "ENTREGA" ? "Entrega" : "Retirada"
-      );
-    }
-    if (currentFilters.sort !== defaults.sort) {
-      const sortLabel =
-        sortOptions.find((option) => option.value === currentFilters.sort)?.label ??
-        currentFilters.sort;
-      labels.push(sortLabel);
-    }
-    if (currentFilters.pageSize !== defaults.pageSize) {
-      labels.push(`${currentFilters.pageSize} por pagina`);
-    }
-    if (currentQuery.trim()) {
-      labels.push(`Busca: ${currentQuery.trim()}`);
-    }
-    return labels.join(" · ");
-  }, [
-    currentFilters,
-    currentQuery,
-    defaults,
-    periodLabel,
-    statusLabelMap,
-  ]);
 
   const applyParams = useCallback(
     (updates: Record<string, string | number | null | undefined>) => {
@@ -828,14 +720,15 @@ export default function OrdersFilters({
               </div>
             ) : null}
           </div>
+          <Link
+            href="/admin/orders/new"
+            className={`${styles.button} ${styles.buttonPrimary} ${layoutStyles.newOrderButton}`}
+          >
+            Novo pedido
+          </Link>
         </div>
-      </div>
-      <div className={layoutStyles.toolbarMeta}>
-        <span className={styles.textMuted}>Mostrando: {periodLabel.display}</span>
-        {hasActiveFilters ? (
-          <span className={styles.textMuted}>Filtros ativos: {activeSummary}</span>
-        ) : null}
       </div>
     </div>
   );
 }
+

@@ -45,6 +45,10 @@
   background: var(--bg-subtle);
 }
 
+.newOrderButton {
+  white-space: nowrap;
+}
+
 .filtersPanel {
   position: absolute;
   top: calc(100% + var(--space-2));
@@ -88,6 +92,21 @@
 .toolbarMeta {
   display: grid;
   gap: var(--space-1);
+}
+
+.paginationRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.paginationControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 @media (max-width: 720px) {

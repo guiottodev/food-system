@@ -53,7 +53,7 @@ export default async function CapacidadePage({
             href="/admin/producao"
             className={`${styles.button} ${styles.buttonGhost}`}
           >
-            Registrar producao
+            Ver producao
           </Link>
           <Link
             href="/admin/consumo"
