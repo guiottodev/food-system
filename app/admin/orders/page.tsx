@@ -395,6 +395,7 @@ export default async function OrdersPage({
   let orders: Array<{
     order: OrderWithRelations;
     attention: ReturnType<typeof getOrderAttentionSummary>;
+    stockStatus: { needsProduction: boolean; deliveredShortage: boolean };
   }> = [];
   let totalCount = 0;
 

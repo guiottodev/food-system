@@ -135,7 +135,7 @@ describe("production capacity", () => {
         producedAt: new Date(2026, 0, 1),
         items: {
           create: {
-            productId: product.id,
+            skuId: sku.id,
             quantity: new Prisma.Decimal(10),
           },
         },
@@ -144,7 +144,7 @@ describe("production capacity", () => {
 
     await prisma.productionConsumption.create({
       data: {
-        productId: product.id,
+        skuId: sku.id,
         quantity: new Prisma.Decimal(3),
         consumedAt: new Date(2026, 0, 1, 9, 0),
         sourceType: "IMMEDIATE",
@@ -207,7 +207,7 @@ describe("production capacity", () => {
   });
 
   it("filters capacity rows by gap", async () => {
-    const { product: productA } = await createProductWithSku("Produto A");
+    const { product: productA, sku: skuA } = await createProductWithSku("Produto A");
     const { product: productB, sku: skuB } = await createProductWithSku("Produto B");
     const customer = await prisma.customer.create({
       data: { name: "Cliente 2", phone: "11988887777" },
@@ -220,8 +220,8 @@ describe("production capacity", () => {
         producedAt: baseDate,
         items: {
           create: [
-            { productId: productA.id, quantity: new Prisma.Decimal(2) },
-            { productId: productB.id, quantity: new Prisma.Decimal(5) },
+            { skuId: skuA.id, quantity: new Prisma.Decimal(2) },
+            { skuId: skuB.id, quantity: new Prisma.Decimal(5) },
           ],
         },
       },
@@ -265,7 +265,7 @@ describe("production capacity", () => {
         producedAt: new Date(),
         items: {
           create: {
-            productId: product.id,
+            skuId: sku.id,
             quantity: new Prisma.Decimal(10),
           },
         },
@@ -302,7 +302,7 @@ describe("production capacity", () => {
         producedAt: new Date(),
         items: {
           create: {
-            productId: product.id,
+            skuId: sku.id,
             quantity: new Prisma.Decimal(2),
           },
         },
@@ -329,7 +329,7 @@ describe("production capacity", () => {
         producedAt: new Date(),
         items: {
           create: {
-            productId: product.id,
+            skuId: sku.id,
             quantity: new Prisma.Decimal(5),
           },
         },
@@ -338,7 +338,7 @@ describe("production capacity", () => {
 
     await prisma.productionConsumption.create({
       data: {
-        productId: product.id,
+        skuId: sku.id,
         quantity: new Prisma.Decimal(8),
         consumedAt: new Date(),
         sourceType: "IMMEDIATE",
