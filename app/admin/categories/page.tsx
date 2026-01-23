@@ -1,7 +1,6 @@
-import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { updateCategoryAction } from "./actions";
 import CategoriesFilters from "./CategoriesFilters.client";
+import CategoriesTreeClient from "./CategoriesTree.client";
 import layoutStyles from "./categories.module.css";
 import styles from "../_styles/adminPrimitives.module.css";
 
@@ -10,7 +9,10 @@ type CategoriesSearchParams = {
   error?: string;
   modal?: string;
   parentId?: string;
-  edit?: string;
+  notice?: string;
+  active?: string; // all | active | inactive
+  kind?: string; // all | root | leaf
+  has?: string; // all | direct | any
 };
 
 export default async function CategoriesPage({
@@ -23,7 +25,10 @@ export default async function CategoriesPage({
   const error = sp?.error;
   const openModal = sp?.modal === "1";
   const parentIdParam = (sp?.parentId ?? "").trim();
-  const editId = (sp?.edit ?? "").trim();
+  const notice = (sp?.notice ?? "").trim();
+  const activeParam = (sp?.active ?? "all").trim();
+  const kindParam = (sp?.kind ?? "all").trim();
+  const hasParam = (sp?.has ?? "all").trim();
 
   const [categories, productCounts] = await Promise.all([
     prisma.category.findMany({
@@ -70,6 +75,18 @@ export default async function CategoriesPage({
     return total;
   };
 
+  const descendantCountMemo = new Map<string, number>();
+  const descendantCountFor = (id: string): number => {
+    const cached = descendantCountMemo.get(id);
+    if (cached !== undefined) return cached;
+    const children = childrenByParent.get(id) ?? [];
+    const total =
+      children.length +
+      children.reduce((sum, childId) => sum + descendantCountFor(childId), 0);
+    descendantCountMemo.set(id, total);
+    return total;
+  };
+
   const buildPathLabel = (id: string) => {
     const names: string[] = [];
     let cur: string | null | undefined = id;
@@ -83,15 +100,51 @@ export default async function CategoriesPage({
   };
 
   const queryLower = query.toLowerCase();
+  const hasFiltersActive =
+    Boolean(queryLower) ||
+    activeParam !== "all" ||
+    kindParam !== "all" ||
+    hasParam !== "all";
   const visible = new Set<string>();
-  if (queryLower) {
+  if (hasFiltersActive) {
+    const matches = (c: (typeof categories)[number]) => {
+      const queryOk = queryLower ? c.name.toLowerCase().includes(queryLower) : true;
+      const activeOk =
+        activeParam === "all"
+          ? true
+          : activeParam === "active"
+          ? c.isActive
+          : activeParam === "inactive"
+          ? !c.isActive
+          : true;
+      const childCount = (childrenByParent.get(c.id) ?? []).length;
+      const kindOk =
+        kindParam === "all"
+          ? true
+          : kindParam === "root"
+          ? !c.parentId
+          : kindParam === "leaf"
+          ? childCount === 0
+          : true;
+      const direct = directCountMap.get(c.id) ?? 0;
+      const total = totalCountFor(c.id);
+      const hasOk =
+        hasParam === "all"
+          ? true
+          : hasParam === "direct"
+          ? direct > 0
+          : hasParam === "any"
+          ? total > 0
+          : true;
+      return queryOk && activeOk && kindOk && hasOk;
+    };
+
     for (const c of categories) {
-      if (c.name.toLowerCase().includes(queryLower)) {
-        let cur: string | null | undefined = c.id;
-        while (cur) {
-          visible.add(cur);
-          cur = byId.get(cur)?.parentId;
-        }
+      if (!matches(c)) continue;
+      let cur: string | null | undefined = c.id;
+      while (cur) {
+        visible.add(cur);
+        cur = byId.get(cur)?.parentId;
       }
     }
   }
@@ -107,12 +160,13 @@ export default async function CategoriesPage({
     directCount: number;
     totalCount: number;
     childrenCount: number;
+    descendantCount: number;
   }> = [];
 
   const walk = (parentKey: string, depth: number) => {
     const childIds = childrenByParent.get(parentKey) ?? [];
     for (const id of childIds) {
-      if (queryLower && !visible.has(id)) continue;
+      if (hasFiltersActive && !visible.has(id)) continue;
       const c = byId.get(id);
       if (!c) continue;
       rows.push({
@@ -126,6 +180,7 @@ export default async function CategoriesPage({
         directCount: directCountMap.get(c.id) ?? 0,
         totalCount: totalCountFor(c.id),
         childrenCount: (childrenByParent.get(c.id) ?? []).length,
+        descendantCount: descendantCountFor(c.id),
       });
       walk(c.id, depth + 1);
     }
@@ -141,24 +196,6 @@ export default async function CategoriesPage({
     .filter((c) => c.isActive)
     .map((c) => ({ id: c.id, label: buildPathLabel(c.id) }))
     .sort((a, b) => a.label.localeCompare(b.label));
-
-  const withParams = (params: Record<string, string | undefined>) => {
-    const sp = new URLSearchParams();
-    if (query) sp.set("q", query);
-    Object.entries(params).forEach(([k, v]) => {
-      if (!v) return;
-      sp.set(k, v);
-    });
-    const qs = sp.toString();
-    return qs ? `/admin/categories?${qs}` : "/admin/categories";
-  };
-
-  const editCategory = editId
-    ? await prisma.category.findUnique({
-        where: { id: editId },
-        select: { id: true, name: true, description: true, isActive: true },
-      })
-    : null;
 
   return (
     <main className={styles.page}>
@@ -194,7 +231,21 @@ export default async function CategoriesPage({
           openModalOnLoad={openModal}
           initialParentId={parentIdParam}
           parentOptions={parentOptions}
+          initialActive={activeParam}
+          initialKind={kindParam}
+          initialHas={hasParam}
         />
+
+        {notice === "created" ? (
+          <div className={`${styles.notice} ${styles.noticeSuccess}`}>
+            Categoria criada com sucesso.
+          </div>
+        ) : notice === "updated" ? (
+          <div className={`${styles.notice} ${styles.noticeSuccess}`}>
+            Categoria atualizada com sucesso.
+          </div>
+        ) : null}
+
         {error === "nome" && !openModal ? (
           <p className={styles.textError}>Informe o nome da categoria.</p>
         ) : error === "duplicado" && !openModal ? (
@@ -218,126 +269,9 @@ export default async function CategoriesPage({
             </div>
           </div>
         ) : (
-          <div className={layoutStyles.tableWrap}>
-            <table className={layoutStyles.table}>
-              <thead>
-                <tr>
-                  <th>Categoria</th>
-                  <th>Descrição</th>
-                  <th>Ativo</th>
-                  <th className={layoutStyles.colNumeric}>Produtos (direto)</th>
-                  <th className={layoutStyles.colNumeric}>Produtos (total)</th>
-                  <th className={layoutStyles.colActions}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td className={layoutStyles.categoryCell} style={{ ["--depth" as any]: row.depth }}>
-                      <span className={layoutStyles.categoryName}>{row.name}</span>
-                      {row.depth > 0 ? (
-                        <span className={layoutStyles.categoryPath}>{row.pathLabel}</span>
-                      ) : null}
-                    </td>
-                    <td>{row.description || "—"}</td>
-                    <td>
-                      <span
-                        className={`${styles.badge} ${
-                          row.isActive ? styles.badgeSuccess : styles.badgeNeutral
-                        }`}
-                      >
-                        {row.isActive ? "Ativa" : "Inativa"}
-                      </span>
-                    </td>
-                    <td className={layoutStyles.colNumeric}>
-                      <span className={`${layoutStyles.countBadge} ${row.directCount === 0 ? layoutStyles.countBadgeMuted : ""}`}>
-                        {row.directCount}
-                      </span>
-                    </td>
-                    <td className={layoutStyles.colNumeric}>
-                      <span className={`${layoutStyles.countBadge} ${row.totalCount === 0 ? layoutStyles.countBadgeMuted : ""}`}>
-                        {row.totalCount}
-                      </span>
-                    </td>
-                    <td className={layoutStyles.colActions}>
-                      <div className={layoutStyles.inlineActions}>
-                        <Link
-                          href={withParams({ modal: "1", parentId: row.id })}
-                          className={layoutStyles.subAction}
-                        >
-                          + Subcategoria
-                        </Link>
-                        <Link
-                          href={withParams({ edit: row.id })}
-                          className={layoutStyles.actionLink}
-                        >
-                          Editar
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <CategoriesTreeClient rows={rows} />
         )}
       </section>
-
-      {editCategory ? (
-        <div className={layoutStyles.modalOverlay}>
-          <div className={layoutStyles.modalCard}>
-            <div className={layoutStyles.modalHeader}>
-              <h2 className={layoutStyles.modalTitle}>Editar categoria</h2>
-              <Link
-                href={withParams({})}
-                className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-              >
-                Fechar
-              </Link>
-            </div>
-            <div className={styles.panelBody}>
-              <form action={updateCategoryAction} className={styles.formSection}>
-                <input type="hidden" name="id" value={editCategory.id} />
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Nome</span>
-                  <input
-                    name="name"
-                    defaultValue={editCategory.name}
-                    required
-                    className={styles.control}
-                  />
-                </label>
-                <label className={styles.field}>
-                  <span className={styles.fieldLabel}>Descrição</span>
-                  <textarea
-                    name="description"
-                    defaultValue={editCategory.description || ""}
-                    placeholder="Descrição (opcional)"
-                    className={`${styles.control} ${styles.controlTextarea}`}
-                  ></textarea>
-                </label>
-                <label className={styles.choiceRow}>
-                  <input type="checkbox" name="isActive" defaultChecked={editCategory.isActive} />
-                  <span className={styles.choiceLabel}>
-                    Ativa (alterar aqui afeta também as subcategorias)
-                  </span>
-                </label>
-                <div className={layoutStyles.modalFooter}>
-                  <Link
-                    href={withParams({})}
-                    className={`${styles.button} ${styles.buttonGhost}`}
-                  >
-                    Cancelar
-                  </Link>
-                  <button type="submit" className={`${styles.button} ${styles.buttonPrimary}`}>
-                    Salvar
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </main>
   );
 }

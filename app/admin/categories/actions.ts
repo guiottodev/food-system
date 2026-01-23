@@ -68,7 +68,7 @@ export async function createCategoryAction(formData: FormData) {
     redirect("/admin/categories?error=duplicado&modal=1");
   }
 
-  redirect("/admin/categories");
+  redirect("/admin/categories?notice=created");
 }
 
 export async function updateCategoryAction(formData: FormData) {
@@ -124,5 +124,5 @@ export async function updateCategoryAction(formData: FormData) {
     redirect("/admin/categories?error=duplicado");
   }
 
-  redirect("/admin/categories");
+  redirect("/admin/categories?notice=updated");
 }

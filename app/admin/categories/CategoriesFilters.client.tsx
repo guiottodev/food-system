@@ -13,6 +13,9 @@ type CategoriesFiltersProps = {
   error?: string;
   openModalOnLoad?: boolean;
   initialParentId?: string;
+  initialActive?: string;
+  initialKind?: string;
+  initialHas?: string;
 };
 
 export default function CategoriesFilters({
@@ -21,6 +24,9 @@ export default function CategoriesFilters({
   error,
   openModalOnLoad,
   initialParentId,
+  initialActive,
+  initialKind,
+  initialHas,
 }: CategoriesFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -38,7 +44,15 @@ export default function CategoriesFilters({
   const currentQuery = searchParams.get("q") ?? initialQuery;
   const currentParentId =
     searchParams.get("parentId") ?? initialParentId ?? "";
-  const hasActiveFilters = Boolean(currentQuery.trim());
+  const currentActive = searchParams.get("active") ?? initialActive ?? "all";
+  const currentKind = searchParams.get("kind") ?? initialKind ?? "all";
+  const currentHas = searchParams.get("has") ?? initialHas ?? "all";
+  const activeFilterCount =
+    (currentQuery.trim() ? 1 : 0) +
+    (currentActive !== "all" ? 1 : 0) +
+    (currentKind !== "all" ? 1 : 0) +
+    (currentHas !== "all" ? 1 : 0);
+  const hasActiveFilters = activeFilterCount > 0;
 
   const applyParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -144,6 +158,11 @@ export default function CategoriesFilters({
               aria-controls="categories-filters-panel"
             >
               Filtros
+              {activeFilterCount > 0 ? (
+                <span className={layoutStyles.filtersCountBadge}>
+                  {activeFilterCount}
+                </span>
+              ) : null}
             </button>
             {filtersOpen ? (
               <div
@@ -152,8 +171,80 @@ export default function CategoriesFilters({
                 role="dialog"
                 aria-label="Filtros de categorias"
               >
-                <div className={layoutStyles.filtersEmpty}>
-                  Nenhum filtro adicional disponivel.
+                <div className={layoutStyles.filtersHeader}>
+                  <div className={layoutStyles.filtersHeaderTitle}>Filtros</div>
+                  <button
+                    type="button"
+                    className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                    onClick={() => setFiltersOpen(false)}
+                  >
+                    Fechar
+                  </button>
+                </div>
+
+                <div className={layoutStyles.filtersGrid}>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Status</span>
+                    <select
+                      name="active"
+                      value={currentActive}
+                      onChange={(e) => applyParams({ active: e.target.value })}
+                      className={styles.control}
+                      disabled={isPending}
+                    >
+                      <option value="all">Ativas e inativas</option>
+                      <option value="active">Somente ativas</option>
+                      <option value="inactive">Somente inativas</option>
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Tipo</span>
+                    <select
+                      name="kind"
+                      value={currentKind}
+                      onChange={(e) => applyParams({ kind: e.target.value })}
+                      className={styles.control}
+                      disabled={isPending}
+                    >
+                      <option value="all">Todas</option>
+                      <option value="root">Somente raiz</option>
+                      <option value="leaf">Somente folhas</option>
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Produtos</span>
+                    <select
+                      name="has"
+                      value={currentHas}
+                      onChange={(e) => applyParams({ has: e.target.value })}
+                      className={styles.control}
+                      disabled={isPending}
+                    >
+                      <option value="all">Todas</option>
+                      <option value="direct">Com produtos diretos</option>
+                      <option value="any">Com produtos (total)</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div className={layoutStyles.filtersFooter}>
+                  <button
+                    type="button"
+                    className={`${styles.button} ${styles.buttonGhost}`}
+                    onClick={() =>
+                      applyParams({ q: "", active: "all", kind: "all", has: "all" })
+                    }
+                    disabled={!hasActiveFilters || isPending}
+                  >
+                    Limpar
+                  </button>
+                  <button
+                    type="button"
+                    className={`${styles.button} ${styles.buttonSecondary}`}
+                    onClick={() => setFiltersOpen(false)}
+                  >
+                    Aplicar
+                  </button>
                 </div>
               </div>
             ) : null}
@@ -253,6 +344,63 @@ export default function CategoriesFilters({
               </div>
             </form>
           </div>
+        </div>
+      ) : null}
+
+      {hasActiveFilters ? (
+        <div className={layoutStyles.chipsRow}>
+          {currentQuery.trim() ? (
+            <span className={layoutStyles.chip}>
+              Busca: {currentQuery}
+              <button
+                type="button"
+                className={layoutStyles.chipButton}
+                onClick={() => applyParams({ q: "" })}
+                aria-label="Remover filtro de busca"
+              >
+                x
+              </button>
+            </span>
+          ) : null}
+          {currentActive !== "all" ? (
+            <span className={layoutStyles.chip}>
+              Status: {currentActive === "active" ? "Ativas" : "Inativas"}
+              <button
+                type="button"
+                className={layoutStyles.chipButton}
+                onClick={() => applyParams({ active: "all" })}
+                aria-label="Remover filtro de status"
+              >
+                x
+              </button>
+            </span>
+          ) : null}
+          {currentKind !== "all" ? (
+            <span className={layoutStyles.chip}>
+              Tipo: {currentKind === "root" ? "Raiz" : "Folhas"}
+              <button
+                type="button"
+                className={layoutStyles.chipButton}
+                onClick={() => applyParams({ kind: "all" })}
+                aria-label="Remover filtro de tipo"
+              >
+                x
+              </button>
+            </span>
+          ) : null}
+          {currentHas !== "all" ? (
+            <span className={layoutStyles.chip}>
+              Produtos: {currentHas === "direct" ? "Direto" : "Total"}
+              <button
+                type="button"
+                className={layoutStyles.chipButton}
+                onClick={() => applyParams({ has: "all" })}
+                aria-label="Remover filtro de produtos"
+              >
+                x
+              </button>
+            </span>
+          ) : null}
         </div>
       ) : null}
     </div>
