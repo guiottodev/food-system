@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Search, SlidersHorizontal } from "lucide-react";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./orders.module.css";
 
@@ -451,11 +452,23 @@ export default function OrdersFilters({
     setFiltersOpen(false);
   };
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (currentFilters.period !== defaults.period) count++;
+    if (currentFilters.status !== defaults.status) count++;
+    if (currentFilters.attention !== defaults.attention) count++;
+    if (currentFilters.orderType !== defaults.orderType) count++;
+    if (currentFilters.deliveryMethod !== defaults.deliveryMethod) count++;
+    if (currentFilters.sort !== defaults.sort) count++;
+    return count;
+  }, [currentFilters, defaults]);
+
   return (
     <div className={layoutStyles.toolbarBlock}>
       <div className={layoutStyles.toolbar}>
         <div className={layoutStyles.toolbarMain}>
           <div className={layoutStyles.searchWrap}>
+            <Search size={18} className={layoutStyles.searchIcon} />
             <input
               type="text"
               name="q"
@@ -487,7 +500,7 @@ export default function OrdersFilters({
               className={`${styles.button} ${layoutStyles.clearButton}`}
               onClick={handleClearFilters}
             >
-              Limpar filtros
+              Limpar
             </button>
           ) : null}
           <div className={layoutStyles.filtersWrap} ref={panelRef}>
@@ -503,7 +516,11 @@ export default function OrdersFilters({
               aria-expanded={filtersOpen}
               aria-controls="orders-filters-panel"
             >
-              Filtros
+              <SlidersHorizontal size={16} />
+              <span>Filtros</span>
+              {activeFilterCount > 0 && (
+                <span className={layoutStyles.filtersBadge}>{activeFilterCount}</span>
+              )}
             </button>
             {filtersOpen ? (
               <div

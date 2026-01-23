@@ -20,12 +20,23 @@
 }
 
 .searchWrap {
-  flex: 1 1 240px;
+  flex: 1 1 280px;
   min-width: 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--space-3);
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
 .searchInput {
   width: 100%;
+  padding-left: var(--space-10) !important;
 }
 
 .clearButton {
@@ -37,12 +48,27 @@
 }
 
 .filtersButton {
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 .filtersButtonActive {
-  border-color: var(--border-strong);
-  background: var(--bg-subtle);
+  border-color: var(--action-primary);
+  background: rgba(37, 99, 235, 0.05);
+  color: var(--action-primary);
+}
+
+.filtersBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--action-primary);
+  color: var(--text-inverse);
+  font-size: 11px;
+  font-weight: var(--fw-bold);
 }
 
 .newOrderButton {
@@ -99,7 +125,8 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
 }
 
 .paginationControls {
@@ -107,6 +134,85 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
+}
+
+.paginationButton {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  transition: all var(--duration-fast) var(--ease-default);
+  text-decoration: none;
+}
+
+.paginationButton:hover {
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+  background: var(--bg-subtle);
+}
+
+.paginationButtonDisabled {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  cursor: not-allowed;
+}
+
+.paginationInfo {
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.paginationInfo strong {
+  color: var(--text-primary);
+  font-weight: var(--fw-semibold);
+}
+
+.paginationMeta {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* Empty state */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
+}
+
+.emptyStateIcon {
+  font-size: 48px;
+  opacity: 0.5;
+}
+
+.emptyStateTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.emptyStateText {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  max-width: 280px;
 }
 
 .ordersTable {
@@ -142,42 +248,50 @@
 }
 
 .expandButton {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
   border: none;
   background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-default);
+  transition: background var(--duration-fast) var(--ease-default);
+  outline: none;
 }
 
 .expandButton:hover {
-  background: var(--bg-subtle);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.expandButton:focus-visible {
+  background: rgba(0, 0, 0, 0.04);
 }
 
 .expandButtonActive {
-  background: var(--action-primary);
+  background: transparent;
 }
 
 .expandIcon {
   color: var(--text-muted);
-  transition: transform var(--duration-normal) var(--ease-default), 
-              color var(--duration-fast) var(--ease-default);
+  transition: transform var(--duration-normal) var(--ease-default);
 }
 
 .expandButton:hover .expandIcon {
-  color: var(--text-primary);
-}
-
-.expandButtonActive .expandIcon {
-  color: var(--text-inverse);
+  color: var(--text-secondary);
 }
 
 .expandIconExpanded {
   transform: rotate(90deg);
+  color: var(--text-primary);
+}
+
+@media (max-width: 900px) {
+  .ordersTable thead th:nth-child(4),
+  .ordersTable tbody td:nth-child(4) {
+    display: none;
+  }
 }
 
 @media (max-width: 720px) {
@@ -192,5 +306,43 @@
 
   .filtersGrid {
     grid-template-columns: 1fr;
+  }
+
+  .toolbar {
+    gap: var(--space-3);
+  }
+
+  .searchWrap {
+    flex: 1 1 100%;
+  }
+
+  .ordersTable thead th:nth-child(3),
+  .ordersTable tbody td:nth-child(3),
+  .ordersTable thead th:nth-child(6),
+  .ordersTable tbody td:nth-child(6) {
+    display: none;
+  }
+
+  .ordersTable thead th,
+  .ordersTable tbody td {
+    padding: var(--space-3) var(--space-2);
+    font-size: var(--text-sm);
+  }
+
+  .paginationRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .paginationControls {
+    justify-content: center;
+  }
+
+  .paginationMeta {
+    text-align: center;
+  }
+
+  .emptyState {
+    padding: var(--space-8) var(--space-4);
   }
 }

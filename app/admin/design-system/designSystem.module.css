@@ -1,0 +1,230 @@
+.page {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, #eef2ff 0%, #f0f9ff 45%, #ecfeff 100%);
+  border: 1px solid var(--border);
+}
+
+.heroTitle {
+  margin: 0;
+  font-size: 28px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.heroKicker {
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+}
+
+.heroSub {
+  color: var(--text-secondary);
+  max-width: 520px;
+}
+
+.heroCard {
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+  backdrop-filter: blur(10px);
+}
+
+.heroCardRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.heroStat {
+  font-size: 22px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.subSection {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.foundationsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.swatchGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.swatchCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.swatchColor {
+  height: 48px;
+}
+
+.swatchMeta {
+  padding: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  display: grid;
+  gap: 2px;
+}
+
+.typeScale {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.typeSample {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-1);
+  border-bottom: 1px dashed var(--border);
+}
+
+.typeLabel {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.metricCard {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  background: var(--bg-surface);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.metricValue {
+  font-size: 20px;
+  font-weight: var(--fw-semibold);
+}
+
+.componentGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+
+.inlineRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.inputIconRow {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.cardPreview {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  display: grid;
+  gap: var(--space-2);
+  background: var(--bg-surface);
+}
+
+.divider {
+  border-top: 1px solid var(--border);
+}
+
+.statusRow {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.noticeRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.emptyRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.spacingRow {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.spacingBlock {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--focus-ring);
+  opacity: 0.2;
+}
+
+.spaced {
+  display: grid;
+  gap: var(--space-2);
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .foundationsGrid,
+  .metricsGrid,
+  .componentGrid,
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .spacingRow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

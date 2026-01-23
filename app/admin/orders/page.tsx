@@ -1,4 +1,5 @@
 ﻿import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
 import {
@@ -541,7 +542,19 @@ export default async function OrdersPage({
         />
 
         {orders.length === 0 ? (
-          <div className={styles.emptyState}>Nenhum pedido encontrado.</div>
+          <div className={layoutStyles.emptyState}>
+            <div className={layoutStyles.emptyStateIcon}>📋</div>
+            <div className={layoutStyles.emptyStateTitle}>Nenhum pedido encontrado</div>
+            <div className={layoutStyles.emptyStateText}>
+              Tente ajustar os filtros ou criar um novo pedido.
+            </div>
+            <Link
+              href="/admin/orders/new"
+              className={`${styles.button} ${styles.buttonPrimary}`}
+            >
+              Criar pedido
+            </Link>
+          </div>
         ) : (
           <OrdersTableClient
             columns={7}
@@ -603,15 +616,39 @@ export default async function OrdersPage({
 
       <div className={layoutStyles.paginationRow}>
         <div className={layoutStyles.paginationControls}>
-          <Link href={pageLink(Math.max(1, clampedPage - 1))}>Anterior</Link>
-          <span>
-            Pagina {clampedPage} de {totalPages}
+          {clampedPage > 1 ? (
+            <Link
+              href={pageLink(clampedPage - 1)}
+              className={layoutStyles.paginationButton}
+            >
+              <ChevronLeft size={18} />
+              <span>Anterior</span>
+            </Link>
+          ) : (
+            <span className={layoutStyles.paginationButtonDisabled}>
+              <ChevronLeft size={18} />
+              <span>Anterior</span>
+            </span>
+          )}
+          <span className={layoutStyles.paginationInfo}>
+            Pagina <strong>{clampedPage}</strong> de <strong>{totalPages}</strong>
           </span>
-          <Link href={pageLink(Math.min(totalPages, clampedPage + 1))}>
-            Proxima
-          </Link>
+          {clampedPage < totalPages ? (
+            <Link
+              href={pageLink(clampedPage + 1)}
+              className={layoutStyles.paginationButton}
+            >
+              <span>Proxima</span>
+              <ChevronRight size={18} />
+            </Link>
+          ) : (
+            <span className={layoutStyles.paginationButtonDisabled}>
+              <span>Proxima</span>
+              <ChevronRight size={18} />
+            </span>
+          )}
         </div>
-        <span className={styles.textMuted}>
+        <span className={layoutStyles.paginationMeta}>
           Mostrando {startIndex}-{endIndex} de {totalCount}
         </span>
       </div>
