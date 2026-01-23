@@ -35,6 +35,9 @@ export default function CategoriesFilters({
   const [isPending, startTransition] = useTransition();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(Boolean(openModalOnLoad));
+  const [modalParentId, setModalParentId] = useState<string>(
+    () => initialParentId ?? ""
+  );
   const [modalError, setModalError] = useState(
     error === "nome" && openModalOnLoad ? "Informe o nome da categoria." : ""
   );
@@ -42,8 +45,7 @@ export default function CategoriesFilters({
   const debounceRef = useRef<number | null>(null);
 
   const currentQuery = searchParams.get("q") ?? initialQuery;
-  const currentParentId =
-    searchParams.get("parentId") ?? initialParentId ?? "";
+  const currentParentId = searchParams.get("parentId") ?? initialParentId ?? "";
   const currentActive = searchParams.get("active") ?? initialActive ?? "all";
   const currentKind = searchParams.get("kind") ?? initialKind ?? "all";
   const currentHas = searchParams.get("has") ?? initialHas ?? "all";
@@ -72,6 +74,13 @@ export default function CategoriesFilters({
     [pathname, router, searchParamsString, startTransition]
   );
 
+  const closeModal = useCallback(() => {
+    setModalOpen(false);
+    setModalError("");
+    // Se o modal foi aberto via URL (?modal=1&parentId=...), limpe a URL ao fechar.
+    applyParams({ modal: "", parentId: "", error: "" });
+  }, [applyParams]);
+
   useEffect(() => {
     return () => {
       if (debounceRef.current) {
@@ -96,16 +105,18 @@ export default function CategoriesFilters({
     if (!modalOpen) return;
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setModalOpen(false);
+        closeModal();
       }
     };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
-  }, [modalOpen]);
+  }, [closeModal, modalOpen]);
 
   useEffect(() => {
     if (openModalOnLoad) {
       setModalOpen(true);
+      // Se o modal abriu via URL (ex.: + Subcategoria), pré-selecionar o pai.
+      setModalParentId(currentParentId);
       if (error === "nome") setModalError("Informe o nome da categoria.");
       if (error === "duplicado")
         setModalError("Já existe uma categoria com esse nome nesse nível.");
@@ -114,7 +125,7 @@ export default function CategoriesFilters({
       if (error === "pai_inativo")
         setModalError("Não é possível ativar: a categoria pai está inativa.");
     }
-  }, [error, openModalOnLoad]);
+  }, [currentParentId, error, openModalOnLoad]);
 
   return (
     <div className={layoutStyles.toolbarBlock}>
@@ -255,7 +266,11 @@ export default function CategoriesFilters({
           className={`${styles.button} ${styles.buttonPrimary}`}
           onClick={() => {
             setModalError("");
+            // Ao abrir pelo botão "Nova categoria", começar como categoria raiz.
+            setModalParentId("");
             setModalOpen(true);
+            // Também garante que a URL não ficou presa em parentId/modal anteriores.
+            applyParams({ modal: "", parentId: "", error: "" });
           }}
         >
           Nova categoria
@@ -265,7 +280,7 @@ export default function CategoriesFilters({
       {modalOpen ? (
         <div
           className={layoutStyles.modalOverlay}
-          onClick={() => setModalOpen(false)}
+          onClick={closeModal}
         >
           <div
             className={layoutStyles.modalCard}
@@ -276,7 +291,7 @@ export default function CategoriesFilters({
               <button
                 type="button"
                 className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-                onClick={() => setModalOpen(false)}
+                onClick={closeModal}
                 aria-label="Fechar modal"
               >
                 Fechar
@@ -300,7 +315,8 @@ export default function CategoriesFilters({
                 <span className={styles.fieldLabel}>Categoria pai (opcional)</span>
                 <select
                   name="parentId"
-                  defaultValue={currentParentId}
+                  value={modalParentId}
+                  onChange={(e) => setModalParentId(e.target.value)}
                   className={styles.control}
                 >
                   <option value="">(Sem pai) — categoria raiz</option>
@@ -319,7 +335,7 @@ export default function CategoriesFilters({
               />
               <textarea
                 name="description"
-                placeholder="Descricao (opcional)"
+                placeholder="Descrição (opcional)"
                 className={`${styles.control} ${styles.controlTextarea}`}
               ></textarea>
               <label className={styles.choiceRow}>
@@ -330,7 +346,7 @@ export default function CategoriesFilters({
                 <button
                   type="button"
                   className={`${styles.button} ${styles.buttonGhost}`}
-                  onClick={() => setModalOpen(false)}
+                  onClick={closeModal}
                 >
                   Cancelar
                 </button>
