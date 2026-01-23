@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
 import { DEFAULT_DELIVERY_TIME, getOrderPendingSummary } from "@/lib/domain/order";
-import { computeOrderPendingFlags, computeStockShortageForOrders } from "@/lib/domain/production";
+import { computeOrderPendingFlags, computeOrderStockStatus } from "@/lib/domain/production";
 import { OrderStatus } from "@prisma/client";
 import {
   confirmOrderAction,
@@ -151,10 +151,13 @@ export default async function OrderDetailPage({
     status: order.status,
     items: order.items,
   });
-  const stockShortageMap = await computeStockShortageForOrders(prisma, [
+  const stockStatusMap = await computeOrderStockStatus(prisma, [
     { id: order.id, status: order.status, items: order.items },
   ]);
-  const hasStockShortage = stockShortageMap.get(order.id) ?? false;
+  const stockStatus = stockStatusMap.get(order.id) ?? {
+    needsProduction: false,
+    deliveredShortage: false,
+  };
 
   const availabilityBySku = new Map(
     availability.itemAvailability.map((item) => [item.skuId, item])
@@ -174,7 +177,7 @@ export default async function OrderDetailPage({
     needsReconfirmation: order.needsReconfirmation,
     paidAt: order.paidAt,
     hasUnavailableItems: availability.hasUnavailableItems,
-    hasStockShortage,
+    hasStockShortage: stockStatus.deliveredShortage,
   });
 
   const pendingSummary = getOrderPendingSummary({
@@ -375,10 +378,22 @@ export default async function OrderDetailPage({
         </p>
       ) : null}
 
-      {resolvedSearch?.error === "pagamento" ? (
-        <p className={styles.textError}>
-          Pagamento pendente. Marque o pagamento para entregar.
-        </p>
+      {order.status === "ENTREGUE" && stockStatus.deliveredShortage ? (
+        <div className={`${styles.notice} ${styles.noticeWarning}`}>
+          <div className={styles.stackSm}>
+            <div>
+              Ajustar saldo: este pedido foi entregue sem saldo suficiente.
+            </div>
+            <div className={styles.clusterSm}>
+              <Link href="/admin/producao" className={styles.button}>
+                Registrar producao
+              </Link>
+              <Link href="/admin/consumo" className={styles.button}>
+                Ajustar saldo (admin)
+              </Link>
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {resolvedSearch?.error === "confirmacao" ? (

@@ -439,7 +439,12 @@ export async function computeUnavailableItemsForOrders(
   return result;
 }
 
-export async function computeStockShortageForOrders(
+export type OrderStockStatus = {
+  needsProduction: boolean;
+  deliveredShortage: boolean;
+};
+
+export async function computeOrderStockStatus(
   prisma: PrismaClient,
   orders: OrderAvailabilityInput[]
 ) {
@@ -473,25 +478,43 @@ export async function computeStockShortageForOrders(
     ])
   );
 
-  const result = new Map<string, boolean>();
+  const result = new Map<string, OrderStockStatus>();
   for (const order of orders) {
-    if (order.status === "ENTREGUE") {
-      const hasPending = (order.items ?? []).some((item) => {
-        const skuId = typeof item.skuId === "string" ? item.skuId : "";
-        if (!skuId) return false;
-        return (skuMap.get(skuId)?.pending ?? 0) > 0;
-      });
-      result.set(order.id, hasPending);
-      continue;
-    }
-    const hasInsufficient = (order.items ?? []).some((item) => {
+    const items = order.items ?? [];
+    const totalsBySku = new Map<string, number>();
+    for (const item of items) {
       const skuId = typeof item.skuId === "string" ? item.skuId : "";
-      if (!skuId) return false;
-      const available = skuMap.get(skuId)?.stock ?? 0;
-      const required = asNumber(item.quantity);
-      return required > available;
-    });
-    result.set(order.id, hasInsufficient);
+      if (!skuId) continue;
+      totalsBySku.set(skuId, (totalsBySku.get(skuId) ?? 0) + asNumber(item.quantity));
+    }
+
+    const isOperationalStatus =
+      order.status === "CONFIRMADO" ||
+      order.status === "EM_PRODUCAO" ||
+      order.status === "PRONTO";
+
+    let needsProduction = false;
+    if (isOperationalStatus) {
+      for (const [skuId, required] of totalsBySku.entries()) {
+        const available = skuMap.get(skuId)?.stock ?? 0;
+        if (required > available) {
+          needsProduction = true;
+          break;
+        }
+      }
+    }
+
+    let deliveredShortage = false;
+    if (order.status === "ENTREGUE") {
+      for (const skuId of totalsBySku.keys()) {
+        if ((skuMap.get(skuId)?.pending ?? 0) > 0) {
+          deliveredShortage = true;
+          break;
+        }
+      }
+    }
+
+    result.set(order.id, { needsProduction, deliveredShortage });
   }
 
   return result;

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { getOrderAttentionSummary, hasStrongAttention } from "@/lib/domain/attention";
+import { getOrderAttentionSummary } from "@/lib/domain/attention";
 import {
-  computeStockShortageForOrders,
+  computeOrderStockStatus,
   computeUnavailableItemsForOrders,
 } from "@/lib/domain/production";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
@@ -86,13 +86,13 @@ type PendingType =
   | "all"
   | "INCOMPLETE"
   | "ALTERADO_APOS_CONFIRMACAO"
-  | "UNAVAILABLE_ITEMS";
+  | "PRECISA_PRODUZIR";
 
 function normalizeType(value: string | undefined): PendingType {
   if (
     value === "INCOMPLETE" ||
     value === "ALTERADO_APOS_CONFIRMACAO" ||
-    value === "UNAVAILABLE_ITEMS"
+    value === "PRECISA_PRODUZIR"
   ) {
     return value;
   }
@@ -147,9 +147,9 @@ export default async function PendenciasPage({
     status: order.status,
     items: order.items,
   }));
-  const [availabilityMap, shortageMap] = await Promise.all([
+  const [availabilityMap, stockStatusMap] = await Promise.all([
     computeUnavailableItemsForOrders(prisma, orderInputs),
-    computeStockShortageForOrders(prisma, orderInputs),
+    computeOrderStockStatus(prisma, orderInputs),
   ]);
 
   const entries = allOrders.map((order) => {
@@ -160,23 +160,23 @@ export default async function PendenciasPage({
       attention: getOrderAttentionSummary({
         ...order,
         hasUnavailableItems,
-        hasStockShortage: shortageMap.get(order.id) ?? false,
+        hasStockShortage:
+          stockStatusMap.get(order.id)?.deliveredShortage ?? false,
       }),
-      hasUnavailableItems,
+      stockStatus: stockStatusMap.get(order.id) ?? {
+        needsProduction: false,
+        deliveredShortage: false,
+      },
     };
   });
 
   const filtered =
     typeParam === "all"
-      ? entries.filter((entry) => entry.attention.hasAttention)
-      : typeParam === "UNAVAILABLE_ITEMS"
-      ? entries.filter((entry) =>
-          entry.attention.reasons.some((reason) => reason.type === "UNAVAILABLE_ITEMS")
+      ? entries.filter(
+          (entry) => entry.attention.hasAttention || entry.stockStatus.needsProduction
         )
-      : typeParam === "SALDO_INSUFICIENTE"
-      ? entries.filter((entry) =>
-          entry.attention.reasons.some((reason) => reason.type === "SALDO_INSUFICIENTE")
-        )
+      : typeParam === "PRECISA_PRODUZIR"
+      ? entries.filter((entry) => entry.stockStatus.needsProduction)
       : entries.filter((entry) =>
           entry.attention.strongReasons.some((reason) => reason.type === typeParam)
         );
@@ -220,49 +220,51 @@ export default async function PendenciasPage({
           <>
             <OrdersTableClient
               columns={7}
-              orders={paginatedOrders.map(({ order, attention }) => ({
-              id: order.id,
-              orderNumber: order.orderNumber,
-              customerName: order.customer.name,
-              customerPhone: order.customer.phone,
-              deliveryMethodLabel: deliveryMethodLabel[order.deliveryMethod],
-              status: order.status,
-              statusLabel: statusLabel[order.status],
-              incomplete: attention.strongReasons.some(
-                (reason) => reason.type === "INCOMPLETE"
-              ),
-              altered: attention.strongReasons.some(
-                (reason) => reason.type === "ALTERADO_APOS_CONFIRMACAO"
-              ),
-              unavailableItems: attention.reasons.some(
-                (reason) => reason.type === "UNAVAILABLE_ITEMS"
-              ),
-              stockShortage: attention.reasons.some(
-                (reason) => reason.type === "SALDO_INSUFICIENTE"
-              ),
-              deliveryDatetime: formatDeliveryLabel(
-                order.deliveryDatetime,
-                order.deliveryTime
-              ),
-              totalLabel: formatCurrency(Number(order.total)),
-              items: order.items.map((item) => ({
-                id: item.id,
-                name: item.snapshotProductName
-                  ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
-                  : item.snapshotSkuName,
-                quantity: Number(item.quantity),
-                unitLabel: item.snapshotUnitLabel,
-                unitType: item.snapshotUnitType,
-                priceAtTime: item.snapshotUnitPrice
-                  ? Number(item.snapshotUnitPrice)
-                  : null,
-                lineTotal: item.lineTotal ? Number(item.lineTotal) : null,
-              })),
-              subtotal: Number(order.subtotal),
-              deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : 0,
-              total: Number(order.total),
-              attention: attention.reasons.map((reason) => reason.label),
-            }))}
+              orders={paginatedOrders.map(({ order, attention, stockStatus }) => {
+                const operationalTag = attention.strongReasons.length > 0
+                  ? "Incompleto"
+                  : stockStatus.needsProduction
+                  ? "Precisa produzir"
+                  : undefined;
+                return {
+                  id: order.id,
+                  orderNumber: order.orderNumber,
+                  customerName: order.customer.name,
+                  customerPhone: order.customer.phone,
+                  deliveryMethodLabel: deliveryMethodLabel[order.deliveryMethod],
+                  status: order.status,
+                  statusLabel: statusLabel[order.status],
+                  operationalTag,
+                  deliveryDatetime: formatDeliveryLabel(
+                    order.deliveryDatetime,
+                    order.deliveryTime
+                  ),
+                  totalLabel: formatCurrency(Number(order.total)),
+                  items: order.items.map((item) => ({
+                    id: item.id,
+                    name: item.snapshotProductName
+                      ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
+                      : item.snapshotSkuName,
+                    quantity: Number(item.quantity),
+                    unitLabel: item.snapshotUnitLabel,
+                    unitType: item.snapshotUnitType,
+                    priceAtTime: item.snapshotUnitPrice
+                      ? Number(item.snapshotUnitPrice)
+                      : null,
+                    lineTotal: item.lineTotal ? Number(item.lineTotal) : null,
+                  })),
+                  subtotal: Number(order.subtotal),
+                  deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : 0,
+                  total: Number(order.total),
+                  attention: attention.reasons
+                    .filter(
+                      (reason) =>
+                        reason.type !== "UNAVAILABLE_ITEMS" &&
+                        reason.type !== "SALDO_INSUFICIENTE"
+                    )
+                    .map((reason) => reason.label),
+                };
+              })}
             />
             {totalPages > 1 ? (
               <div className={layoutStyles.paginationRow}>

@@ -22,10 +22,7 @@ type OrderRow = {
   deliveryMethodLabel: string;
   status: string;
   statusLabel: string;
-  incomplete: boolean;
-  altered: boolean;
-  unavailableItems?: boolean;
-  stockShortage?: boolean;
+  operationalTag?: string;
   deliveryDatetime: string;
   totalLabel: string;
   items: OrderItem[];
@@ -133,30 +130,12 @@ export default function OrdersTableClient({
                       >
                         {order.statusLabel}
                       </span>
-                      {order.incomplete ? (
-                        <span className={`${styles.badge} ${styles.badgeWarning}`}>
-                          Incompleto
-                        </span>
-                      ) : null}
-                      {order.altered ? (
-                        <span className={`${styles.badge} ${styles.badgeDanger}`}>
-                          Alterado
-                        </span>
-                      ) : null}
-                      {order.unavailableItems ? (
+                      {order.operationalTag ? (
                         <span
                           className={`${styles.badge} ${styles.badgeWarning}`}
-                          title="Alguns itens deste pedido nao estao disponiveis no momento. Sera necessario produzir antes de atender."
+                          title="Tag operacional do pedido"
                         >
-                          Itens indisponiveis
-                        </span>
-                      ) : null}
-                      {order.stockShortage ? (
-                        <span
-                          className={`${styles.badge} ${styles.badgeWarning}`}
-                          title="Entrega registrada sem saldo suficiente. Ha producao pendente."
-                        >
-                          Saldo insuficiente
+                          {order.operationalTag}
                         </span>
                       ) : null}
                     </div>

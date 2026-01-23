@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
 import {
-  computeStockShortageForOrders,
+  computeOrderStockStatus,
   computeUnavailableItemsForOrders,
 } from "@/lib/domain/production";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
@@ -206,8 +206,7 @@ const attentionTypeOptions = [
   "all",
   "INCOMPLETE",
   "ALTERADO_APOS_CONFIRMACAO",
-  "UNAVAILABLE_ITEMS",
-  "SALDO_INSUFICIENTE",
+  "PRECISA_PRODUZIR",
   "MISSING_TIME",
   "MISSING_ADDRESS",
 ] as const;
@@ -233,10 +232,14 @@ function normalizeAttention(
 
 function matchesAttentionFilter(
   attention: ReturnType<typeof getOrderAttentionSummary>,
-  attentionFilter: AttentionFilter
+  attentionFilter: AttentionFilter,
+  needsProduction: boolean
 ) {
   if (attentionFilter === "with") {
-    return attention.hasAttention;
+    return attention.hasAttention || needsProduction;
+  }
+  if (attentionFilter === "PRECISA_PRODUZIR") {
+    return needsProduction;
   }
   if (attentionFilter !== "all") {
     return attention.reasons.some((reason) => reason.type === attentionFilter);
@@ -409,9 +412,9 @@ export default async function OrdersPage({
       status: order.status,
       items: order.items,
     }));
-    const [availabilityMap, shortageMap] = await Promise.all([
+    const [availabilityMap, stockStatusMap] = await Promise.all([
       computeUnavailableItemsForOrders(prisma, orderInputs),
-      computeStockShortageForOrders(prisma, orderInputs),
+      computeOrderStockStatus(prisma, orderInputs),
     ]);
     const decorated = allOrders.map((order) => ({
       order,
@@ -419,11 +422,20 @@ export default async function OrdersPage({
         ...order,
         hasUnavailableItems:
           availabilityMap.get(order.id)?.hasUnavailableItems ?? false,
-        hasStockShortage: shortageMap.get(order.id) ?? false,
+        hasStockShortage:
+          stockStatusMap.get(order.id)?.deliveredShortage ?? false,
       }),
+      stockStatus: stockStatusMap.get(order.id) ?? {
+        needsProduction: false,
+        deliveredShortage: false,
+      },
     }));
     const filtered = decorated.filter((entry) =>
-      matchesAttentionFilter(entry.attention, attentionParam)
+      matchesAttentionFilter(
+        entry.attention,
+        attentionParam,
+        entry.stockStatus.needsProduction
+      )
     );
     // Se encontrou menos que o necessário e há mais pedidos, buscar total para contagem
     if (filtered.length < pageSize && allOrders.length === maxFetch) {
@@ -457,9 +469,9 @@ export default async function OrdersPage({
       status: order.status,
       items: order.items,
     }));
-    const [availabilityMap, shortageMap] = await Promise.all([
+    const [availabilityMap, stockStatusMap] = await Promise.all([
       computeUnavailableItemsForOrders(prisma, orderInputs),
-      computeStockShortageForOrders(prisma, orderInputs),
+      computeOrderStockStatus(prisma, orderInputs),
     ]);
     orders = orderRows.map((order) => ({
       order,
@@ -467,8 +479,13 @@ export default async function OrdersPage({
         ...order,
         hasUnavailableItems:
           availabilityMap.get(order.id)?.hasUnavailableItems ?? false,
-        hasStockShortage: shortageMap.get(order.id) ?? false,
+        hasStockShortage:
+          stockStatusMap.get(order.id)?.deliveredShortage ?? false,
       }),
+      stockStatus: stockStatusMap.get(order.id) ?? {
+        needsProduction: false,
+        deliveredShortage: false,
+      },
     }));
   }
 
@@ -528,7 +545,12 @@ export default async function OrdersPage({
         ) : (
           <OrdersTableClient
             columns={7}
-            orders={orders.map(({ order, attention }) => {
+            orders={orders.map(({ order, attention, stockStatus }) => {
+              const operationalTag = attention.strongReasons.length > 0
+                ? "Incompleto"
+                : stockStatus.needsProduction
+                ? "Precisa produzir"
+                : undefined;
               return {
                 id: order.id,
                 orderNumber: order.orderNumber,
@@ -537,18 +559,7 @@ export default async function OrdersPage({
                 deliveryMethodLabel: deliveryMethodLabel[order.deliveryMethod],
                 status: order.status,
                 statusLabel: statusLabel[order.status],
-                incomplete: attention.reasons.some(
-                  (reason) => reason.type === "INCOMPLETE"
-                ),
-                altered: attention.reasons.some(
-                  (reason) => reason.type === "ALTERADO_APOS_CONFIRMACAO"
-                ),
-                unavailableItems: attention.reasons.some(
-                  (reason) => reason.type === "UNAVAILABLE_ITEMS"
-                ),
-                stockShortage: attention.reasons.some(
-                  (reason) => reason.type === "SALDO_INSUFICIENTE"
-                ),
+                operationalTag,
                 deliveryDatetime: formatDeliveryLabel(
                   order.deliveryDatetime,
                   order.deliveryTime
@@ -570,7 +581,13 @@ export default async function OrdersPage({
                 subtotal: Number(order.subtotal),
                 deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : 0,
                 total: Number(order.total),
-                attention: attention.reasons.map((reason) => reason.label),
+                attention: attention.reasons
+                  .filter(
+                    (reason) =>
+                      reason.type !== "UNAVAILABLE_ITEMS" &&
+                      reason.type !== "SALDO_INSUFICIENTE"
+                  )
+                  .map((reason) => reason.label),
               };
             })}
           />
