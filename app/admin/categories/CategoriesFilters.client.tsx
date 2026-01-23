@@ -2,20 +2,25 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Search } from "lucide-react";
 import { createCategoryAction } from "./actions";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./categories.module.css";
 
 type CategoriesFiltersProps = {
   initialQuery: string;
+  parentOptions: Array<{ id: string; label: string }>;
   error?: string;
   openModalOnLoad?: boolean;
+  initialParentId?: string;
 };
 
 export default function CategoriesFilters({
   initialQuery,
+  parentOptions,
   error,
   openModalOnLoad,
+  initialParentId,
 }: CategoriesFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -31,6 +36,8 @@ export default function CategoriesFilters({
   const debounceRef = useRef<number | null>(null);
 
   const currentQuery = searchParams.get("q") ?? initialQuery;
+  const currentParentId =
+    searchParams.get("parentId") ?? initialParentId ?? "";
   const hasActiveFilters = Boolean(currentQuery.trim());
 
   const applyParams = useCallback(
@@ -85,9 +92,13 @@ export default function CategoriesFilters({
   useEffect(() => {
     if (openModalOnLoad) {
       setModalOpen(true);
-      if (error === "nome") {
-        setModalError("Informe o nome da categoria.");
-      }
+      if (error === "nome") setModalError("Informe o nome da categoria.");
+      if (error === "duplicado")
+        setModalError("Já existe uma categoria com esse nome nesse nível.");
+      if (error === "pai_invalido")
+        setModalError("Categoria pai inválida (ou inativa).");
+      if (error === "pai_inativo")
+        setModalError("Não é possível ativar: a categoria pai está inativa.");
     }
   }, [error, openModalOnLoad]);
 
@@ -96,6 +107,7 @@ export default function CategoriesFilters({
       <div className={layoutStyles.toolbar}>
         <div className={layoutStyles.toolbarMain}>
           <div className={layoutStyles.searchWrap}>
+            <Search size={18} className={layoutStyles.searchIcon} />
             <input
               type="text"
               name="q"
@@ -118,7 +130,7 @@ export default function CategoriesFilters({
                 }
               }}
               aria-label="Buscar por nome"
-              className={`${styles.control} ${layoutStyles.searchInput}`}
+              className={layoutStyles.searchInput}
             />
           </div>
           <div className={layoutStyles.filtersWrap} ref={panelRef}>
@@ -182,11 +194,32 @@ export default function CategoriesFilters({
             {modalError ? (
               <div className={styles.textError}>{modalError}</div>
             ) : null}
+            <div className={styles.textMuted} style={{ padding: "0 var(--space-4)" }}>
+              <span className={layoutStyles.modalHint}>
+                Dica: selecione uma <strong>categoria pai</strong> para criar uma subcategoria
+                (ex.: Salgados → Fritos).
+              </span>
+            </div>
             <form
               action={createCategoryAction}
               className={styles.formSection}
               onSubmit={() => setModalError("")}
             >
+              <label className={styles.field}>
+                <span className={styles.fieldLabel}>Categoria pai (opcional)</span>
+                <select
+                  name="parentId"
+                  defaultValue={currentParentId}
+                  className={styles.control}
+                >
+                  <option value="">(Sem pai) — categoria raiz</option>
+                  {parentOptions.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <input
                 name="name"
                 placeholder="Nome"

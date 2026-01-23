@@ -29,6 +29,37 @@ function parseLines(value: FormDataEntryValue | null) {
     .filter(Boolean);
 }
 
+async function assertLeafCategoryOrRedirect(categoryId: string) {
+  const category = await prisma.category.findUnique({
+    where: { id: categoryId },
+    select: { id: true, isActive: true, parentId: true },
+  });
+  if (!category || !category.isActive) {
+    redirect("/admin/products/new?error=campos");
+  }
+
+  // Checar se é folha (sem filhos)
+  const childCount = await prisma.category.count({
+    where: { parentId: categoryId },
+  });
+  if (childCount > 0) {
+    redirect("/admin/products/new?error=campos");
+  }
+
+  // Checar se todos os ancestrais estão ativos
+  let currentParentId = category.parentId;
+  while (currentParentId) {
+    const parent = await prisma.category.findUnique({
+      where: { id: currentParentId },
+      select: { id: true, isActive: true, parentId: true },
+    });
+    if (!parent || !parent.isActive) {
+      redirect("/admin/products/new?error=campos");
+    }
+    currentParentId = parent.parentId;
+  }
+}
+
 export async function createProductAction(formData: FormData) {
   await requireAdminSession();
   const name = parseText(formData.get("name"));
@@ -46,6 +77,9 @@ export async function createProductAction(formData: FormData) {
   if (!name || !categoryId) {
     redirect("/admin/products/new?error=campos");
   }
+
+  await assertLeafCategoryOrRedirect(categoryId);
+
   if (!skuDisplayName || !skuUnitTypeRaw || skuPriceCurrent === null) {
     redirect("/admin/products/new?error=sku_campos");
   }

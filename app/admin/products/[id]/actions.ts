@@ -40,6 +40,35 @@ function parseLines(value: FormDataEntryValue | null) {
     .filter(Boolean);
 }
 
+async function assertLeafCategoryOrRedirect(categoryId: string, productId: string) {
+  const category = await prisma.category.findUnique({
+    where: { id: categoryId },
+    select: { id: true, isActive: true, parentId: true },
+  });
+  if (!category || !category.isActive) {
+    redirect(`/admin/products/${productId}?tab=details&error=campos`);
+  }
+
+  const childCount = await prisma.category.count({
+    where: { parentId: categoryId },
+  });
+  if (childCount > 0) {
+    redirect(`/admin/products/${productId}?tab=details&error=campos`);
+  }
+
+  let currentParentId = category.parentId;
+  while (currentParentId) {
+    const parent = await prisma.category.findUnique({
+      where: { id: currentParentId },
+      select: { id: true, isActive: true, parentId: true },
+    });
+    if (!parent || !parent.isActive) {
+      redirect(`/admin/products/${productId}?tab=details&error=campos`);
+    }
+    currentParentId = parent.parentId;
+  }
+}
+
 function parseAttributesJson(
   value: FormDataEntryValue | null
 ): SkuAttributeInput[] | null {
@@ -78,6 +107,8 @@ export async function updateProductAction(formData: FormData) {
   if (!id || !name || !categoryId) {
     redirect(`/admin/products/${id}?tab=details&error=campos`);
   }
+
+  await assertLeafCategoryOrRedirect(categoryId, id);
 
   await prisma.$transaction(async (tx) => {
     await tx.product.update({

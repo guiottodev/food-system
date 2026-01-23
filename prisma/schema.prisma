@@ -120,16 +120,21 @@ model CustomerAddress {
 
 model Category {
   id                   String  @id @default(cuid())
-  name                 String  @unique
+  name                 String
   description          String?
+  parentId             String?
   isActive             Boolean @default(true) @map("active")
   createdAt            DateTime @default(now())
   updatedAt            DateTime @default(now()) @updatedAt
 
+  parent        Category? @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Cascade)
+  children      Category[] @relation("CategoryHierarchy")
   products      Product[]
   capacityRules CapacityRule[]
 
   @@map("categories")
+  @@index([parentId])
+  @@unique([parentId, name])
 }
 
 model Product {

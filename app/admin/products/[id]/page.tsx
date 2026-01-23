@@ -11,6 +11,7 @@ import ProductImagesForm from "./ProductImagesForm";
 import ProductSkusSection from "./ProductSkusSection.client";
 import styles from "../../_styles/adminPrimitives.module.css";
 import type { SkuAttributeInput } from "@/lib/validation/skuAttributes";
+import { buildCategoryOptions, buildCategoryPathLabel, buildCategoryIndex } from "@/lib/domain/categoryHierarchy";
 
 type ProductSearchParams = {
   error?: string;
@@ -78,8 +79,16 @@ export default async function ProductDetailPage({
   }
 
   const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
+    orderBy: [{ parentId: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, parentId: true, isActive: true },
   });
+  const leafCategoryOptions = buildCategoryOptions({
+    categories,
+    includeInactive: false,
+    leavesOnly: true,
+  }).map((c) => ({ id: c.id, label: c.label }));
+  const { byId } = buildCategoryIndex(categories);
+  const categoryLabel = buildCategoryPathLabel(byId, product.categoryId);
 
   const imageExtraUrls = product.images
     .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -138,6 +147,9 @@ export default async function ProductDetailPage({
         >
           {product.isActive ? "Ativo" : "Inativo"}
         </span>
+        <span className={`${styles.badge} ${styles.badgeNeutral}`}>
+          {categoryLabel}
+        </span>
       </div>
 
       <ProductTabs activeTab={initialTab} productId={product.id} />
@@ -150,7 +162,7 @@ export default async function ProductDetailPage({
             descriptionLong: product.descriptionLong,
             isActive: product.isActive,
           }}
-          categories={categories}
+          categories={leafCategoryOptions}
           errorMessage={productErrorMessage}
         />
       ) : null}

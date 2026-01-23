@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createProductAction } from "../actions";
+import { buildCategoryOptions } from "@/lib/domain/categoryHierarchy";
 import styles from "../../_styles/adminPrimitives.module.css";
 
 type ProductsNewSearchParams = {
@@ -14,7 +15,13 @@ export default async function ProductsNewPage({
 }) {
   const sp = await Promise.resolve(searchParams);
   const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
+    orderBy: [{ parentId: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, parentId: true, isActive: true },
+  });
+  const leafOptions = buildCategoryOptions({
+    categories,
+    includeInactive: false,
+    leavesOnly: true,
   });
 
   return (
@@ -62,9 +69,9 @@ export default async function ProductsNewPage({
                 <span className={styles.fieldLabel}>Categoria</span>
                 <select name="categoryId" required className={styles.control}>
                   <option value="">Selecione a categoria</option>
-                  {categories.map((category) => (
+                  {leafOptions.map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.name}
+                      {category.label}
                     </option>
                   ))}
                 </select>

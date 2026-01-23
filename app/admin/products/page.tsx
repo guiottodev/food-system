@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { buildCategoryIndex, buildCategoryOptions, getDescendantCategoryIds, buildCategoryPathLabel } from "@/lib/domain/categoryHierarchy";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./products.module.css";
 import ProductsFilters from "./ProductsFilters.client";
@@ -40,8 +41,18 @@ export default async function ProductsPage({
   const activeFilter = parseFilter(sp?.active, "all");
 
   const categories = await prisma.category.findMany({
-    orderBy: { name: "asc" },
+    orderBy: [{ parentId: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, parentId: true, isActive: true },
   });
+
+  const { byId, childrenByParent } = buildCategoryIndex(categories);
+  const categoryFilterIds = categoryId
+    ? [categoryId, ...getDescendantCategoryIds(childrenByParent, categoryId)]
+    : [];
+  const categoryOptions = buildCategoryOptions({
+    categories,
+    includeInactive: true,
+  }).map((c) => ({ id: c.id, label: c.label }));
 
   const where = {
     ...(query
@@ -51,7 +62,7 @@ export default async function ProductsPage({
           },
         }
       : {}),
-    ...(categoryId ? { categoryId } : {}),
+    ...(categoryFilterIds.length ? { categoryId: { in: categoryFilterIds } } : {}),
     ...(activeFilter === "active"
       ? { isActive: true }
       : activeFilter === "inactive"
@@ -102,7 +113,7 @@ export default async function ProductsPage({
 
       <section className={styles.panel}>
         <ProductsFilters
-          categories={categories}
+          categories={categoryOptions}
           initialQuery={query}
           initialCategoryId={categoryId}
           initialActive={activeFilter}
@@ -134,6 +145,7 @@ export default async function ProductsPage({
                 {products.map((product) => {
                   const activeSkus = product.skus.filter((sku) => sku.isActive).length;
                   const totalSkusProduct = product.skus.length;
+                  const categoryLabel = buildCategoryPathLabel(byId, product.categoryId);
                   return (
                     <tr key={product.id} className={layoutStyles.tableRow}>
                       <td>
@@ -151,7 +163,7 @@ export default async function ProductsPage({
                         </div>
                       </td>
                       <td>
-                        <span className={layoutStyles.categoryName}>{product.category.name}</span>
+                        <span className={layoutStyles.categoryName}>{categoryLabel}</span>
                       </td>
                       <td className={layoutStyles.colNumeric}>
                         <div className={layoutStyles.skuInfo}>

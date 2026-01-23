@@ -410,9 +410,9 @@ export default async function OrdersPage({
       include: orderInclude,
     });
     const orderInputs = allOrders.map((order) => ({
-      id: order.id,
-      status: order.status,
-      items: order.items,
+        id: order.id,
+        status: order.status,
+        items: order.items,
     }));
     const [availabilityMap, stockStatusMap] = await Promise.all([
       computeUnavailableItemsForOrders(prisma, orderInputs),
@@ -450,7 +450,7 @@ export default async function OrdersPage({
         totalCount = filtered.length;
       }
     } else {
-      totalCount = filtered.length;
+    totalCount = filtered.length;
     }
     const startIndex = (page - 1) * pageSize;
     orders = filtered.slice(startIndex, startIndex + pageSize);
@@ -467,9 +467,9 @@ export default async function OrdersPage({
     ]);
     totalCount = count;
     const orderInputs = orderRows.map((order) => ({
-      id: order.id,
-      status: order.status,
-      items: order.items,
+        id: order.id,
+        status: order.status,
+        items: order.items,
     }));
     const [availabilityMap, stockStatusMap] = await Promise.all([
       computeUnavailableItemsForOrders(prisma, orderInputs),
@@ -528,7 +528,7 @@ export default async function OrdersPage({
   return (
     <main className={styles.page}>
       <div className={layoutStyles.pageHeader}>
-        <h1 className={styles.pageTitle}>Pedidos</h1>
+      <h1 className={styles.pageTitle}>Pedidos</h1>
         <div className={layoutStyles.kpiBar}>
           <div className={layoutStyles.kpiItem}>
             <span className={layoutStyles.kpiValue}>{totalCount}</span>
@@ -680,7 +680,7 @@ export default async function OrdersPage({
             >
               <span>Proxima</span>
               <ChevronRight size={18} />
-            </Link>
+          </Link>
           ) : (
             <span className={layoutStyles.paginationButtonDisabled}>
               <span>Proxima</span>

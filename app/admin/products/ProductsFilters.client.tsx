@@ -8,7 +8,7 @@ import layoutStyles from "./products.module.css";
 
 type CategoryOption = {
   id: string;
-  name: string;
+  label: string;
 };
 
 type ProductsFiltersProps = {
@@ -39,7 +39,7 @@ export default function ProductsFilters({
   const debounceRef = useRef<number | null>(null);
 
   const categoryLookup = useMemo(() => {
-    return new Map(categories.map((category) => [category.id, category.name]));
+    return new Map(categories.map((category) => [category.id, category.label]));
   }, [categories]);
 
   const currentQuery = searchParams.get("q") ?? initialQuery;
@@ -180,7 +180,7 @@ export default function ProductsFilters({
                       <option value="">Todas categorias</option>
                       {categories.map((category) => (
                         <option key={category.id} value={category.id}>
-                          {category.name}
+                          {category.label}
                         </option>
                       ))}
                     </select>

@@ -1,4 +1,5 @@
 import { OrderStatus, PrismaClient } from "@prisma/client";
+import { buildCategoryIndex, buildCategoryPathLabel } from "@/lib/domain/categoryHierarchy";
 
 export type CapacityWindowKey = "today" | "7" | "14" | "30";
 
@@ -161,7 +162,7 @@ export async function getCapacityRows(
       name: productQuery ? { contains: productQuery } : undefined,
     },
     include: {
-      category: { select: { name: true } },
+      category: { select: { id: true, name: true, parentId: true } },
       skus: {
         where: { isActive: true },
         orderBy: { createdAt: "asc" },
@@ -179,6 +180,11 @@ export async function getCapacityRows(
   if (productIds.length === 0) {
     return [] as CapacityRow[];
   }
+
+  const categoryList = await prisma.category.findMany({
+    select: { id: true, name: true, parentId: true },
+  });
+  const { byId } = buildCategoryIndex(categoryList);
 
   const [producedItems, consumedItems, demandItems] = await Promise.all([
     prisma.productionSessionItem.findMany({
@@ -237,7 +243,7 @@ export async function getCapacityRows(
     return {
       productId: product.id,
       productName: product.name,
-      categoryName: product.category.name,
+      categoryName: buildCategoryPathLabel(byId, product.categoryId),
       unitLabel: sku?.unitLabel ?? null,
       unitType: sku?.unitType ?? null,
       produced,

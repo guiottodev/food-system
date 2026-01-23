@@ -3,7 +3,7 @@ import styles from "../../_styles/adminPrimitives.module.css";
 
 type CategoryOption = {
   id: string;
-  name: string;
+  label: string;
 };
 
 type ProductDetailsFormProps = {
@@ -48,7 +48,7 @@ export default function ProductDetailsForm({
           >
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
-                {category.name}
+                {category.label}
               </option>
             ))}
           </select>
