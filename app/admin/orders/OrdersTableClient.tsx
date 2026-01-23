@@ -2,7 +2,7 @@
 
 import { Fragment, useState } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronDown, Truck, Package, ExternalLink } from "lucide-react";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./orders.module.css";
 
@@ -83,133 +83,177 @@ export default function OrdersTableClient({
     });
   }
 
+  // Separar data e hora
+  function parseDeliveryDateTime(datetime: string) {
+    const parts = datetime.split(" ");
+    if (parts.length >= 2) {
+      return { date: parts[0], time: parts.slice(1).join(" ") };
+    }
+    return { date: datetime, time: "" };
+  }
+
   return (
-    <div className={styles.tableWrap}>
-      <table className={`${styles.table} ${layoutStyles.ordersTable}`}>
+    <div className={layoutStyles.tableContainer}>
+      <table className={layoutStyles.ordersTable}>
         <thead>
           <tr>
-            <th className={styles.tableIcon}></th>
-            <th>N do pedido</th>
-            <th>Cliente</th>
-            <th>Metodo</th>
-            <th>Status</th>
-            <th>Entrega</th>
-            <th className={styles.tableNumeric}>Total</th>
+            <th className={layoutStyles.colExpand}></th>
+            <th className={layoutStyles.colOrder}>Pedido</th>
+            <th className={layoutStyles.colCustomer}>Cliente</th>
+            <th className={layoutStyles.colMethod}>Método</th>
+            <th className={layoutStyles.colStatus}>Status</th>
+            <th className={layoutStyles.colDate}>Entrega</th>
+            <th className={layoutStyles.colTotal}>Total</th>
           </tr>
         </thead>
         <tbody>
-          {orders.map((order) => {
+          {orders.map((order, index) => {
             const expanded = expandedIds.has(order.id);
+            const { date, time } = parseDeliveryDateTime(order.deliveryDatetime);
+            const isEntrega = order.deliveryMethodLabel === "Entrega";
+            
             return (
               <Fragment key={order.id}>
-                <tr className={expanded ? styles.tableRowExpanded : undefined}>
-                  <td className={styles.tableIcon}>
+                <tr 
+                  className={`${layoutStyles.orderRow} ${
+                    expanded ? layoutStyles.orderRowExpanded : ""
+                  } ${index % 2 === 1 ? layoutStyles.orderRowAlt : ""}`}
+                >
+                  <td className={layoutStyles.cellExpand}>
                     <button
                       type="button"
                       onClick={() => toggle(order.id)}
                       aria-expanded={expanded}
                       aria-label="Ver itens"
-                      className={`${layoutStyles.expandButton} ${
-                        expanded ? layoutStyles.expandButtonActive : ""
-                      }`}
+                      className={layoutStyles.expandButton}
                     >
-                      <ChevronRight
-                        size={16}
+                      <ChevronDown
+                        size={18}
                         className={`${layoutStyles.expandIcon} ${
                           expanded ? layoutStyles.expandIconExpanded : ""
                         }`}
                       />
                     </button>
                   </td>
-                  <td>
-                    <Link href={`/admin/orders/${order.id}`}>
+                  <td className={layoutStyles.cellOrder}>
+                    <Link 
+                      href={`/admin/orders/${order.id}`}
+                      className={layoutStyles.orderNumber}
+                    >
                       {order.orderNumber}
                     </Link>
                   </td>
-                  <td>
-                    {order.customerName}
-                    {order.customerPhone ? ` (${order.customerPhone})` : ""}
+                  <td className={layoutStyles.cellCustomer}>
+                    <div className={layoutStyles.customerInfo}>
+                      <span className={layoutStyles.customerName}>{order.customerName}</span>
+                      {order.customerPhone && (
+                        <span className={layoutStyles.customerPhone}>{order.customerPhone}</span>
+                      )}
+                    </div>
                   </td>
-                  <td>{order.deliveryMethodLabel}</td>
-                  <td>
-                    <div className={styles.clusterSm}>
-                      <span
-                        className={`${styles.badge} ${statusBadgeClass(
-                          order.status
-                        )}`}
-                      >
+                  <td className={layoutStyles.cellMethod}>
+                    <div className={layoutStyles.methodBadge} title={order.deliveryMethodLabel}>
+                      {isEntrega ? <Truck size={16} /> : <Package size={16} />}
+                      <span className={layoutStyles.methodLabel}>{isEntrega ? "Entrega" : "Retirada"}</span>
+                    </div>
+                  </td>
+                  <td className={layoutStyles.cellStatus}>
+                    <div className={layoutStyles.statusGroup}>
+                      <span className={`${layoutStyles.statusBadge} ${layoutStyles[`status${order.status}`]}`}>
                         {order.statusLabel}
                       </span>
-                      {order.operationalTag ? (
+                      {order.operationalTag && (
                         <span
-                          className={`${styles.badge} ${
+                          className={`${layoutStyles.operationalBadge} ${
                             order.operationalTagTone === "danger"
-                              ? styles.badgeDanger
-                              : styles.badgeWarning
+                              ? layoutStyles.operationalDanger
+                              : layoutStyles.operationalWarning
                           }`}
-                          title="Tag operacional do pedido"
                         >
                           {order.operationalTag}
                         </span>
-                      ) : null}
+                      )}
                     </div>
                   </td>
-                  <td>{order.deliveryDatetime}</td>
-                  <td className={styles.tableNumeric}>{order.totalLabel}</td>
+                  <td className={layoutStyles.cellDate}>
+                    <div className={layoutStyles.dateInfo}>
+                      <span className={layoutStyles.dateMain}>{date}</span>
+                      {time && <span className={layoutStyles.dateTime}>{time}</span>}
+                    </div>
+                  </td>
+                  <td className={layoutStyles.cellTotal}>
+                    <span className={layoutStyles.totalValue}>{order.totalLabel}</span>
+                  </td>
                 </tr>
-                {expanded ? (
-                  <tr className={styles.tableRowExpanded}>
+                {expanded && (
+                  <tr className={layoutStyles.expandedRow}>
                     <td colSpan={columns}>
-                      <div className={styles.expandedContent}>
-                        <div className={styles.expandedSection}>
-                          <div className={styles.expandedSectionTitle}>Itens</div>
-                          {order.items.length === 0 ? (
-                            <p className={styles.textMuted}>Sem itens.</p>
-                          ) : (
-                            <div className={styles.expandedItemsList}>
-                              {order.items.map((item) => (
-                                <div key={item.id} className={styles.expandedItem}>
-                                  <div className={styles.expandedItemName}>{item.name}</div>
-                                  <div className={styles.expandedItemDetails}>
-                                    <span>{item.quantity} {formatUnit(item)}</span>
-                                    <span>×</span>
-                                    <span>
-                                      {item.priceAtTime !== null
-                                        ? currencyFormatter.format(item.priceAtTime)
-                                        : "-"}
-                                    </span>
-                                    <span>=</span>
-                                    <strong>
-                                      {item.lineTotal !== null
-                                        ? currencyFormatter.format(item.lineTotal)
-                                        : "-"}
-                                    </strong>
+                      <div className={layoutStyles.expandedWrapper}>
+                        <div className={layoutStyles.expandedCard}>
+                          <div className={layoutStyles.expandedMain}>
+                            <div className={layoutStyles.expandedHeader}>
+                              <h4 className={layoutStyles.expandedTitle}>Itens do Pedido</h4>
+                              <span className={layoutStyles.itemCount}>{order.items.length} {order.items.length === 1 ? "item" : "itens"}</span>
+                            </div>
+                            {order.items.length === 0 ? (
+                              <p className={layoutStyles.noItems}>Nenhum item adicionado.</p>
+                            ) : (
+                              <div className={layoutStyles.itemsList}>
+                                {order.items.map((item) => (
+                                  <div key={item.id} className={layoutStyles.itemRow}>
+                                    <div className={layoutStyles.itemInfo}>
+                                      <span className={layoutStyles.itemName}>{item.name}</span>
+                                      <span className={layoutStyles.itemQty}>
+                                        {item.quantity} {formatUnit(item)}
+                                      </span>
+                                    </div>
+                                    <div className={layoutStyles.itemPrice}>
+                                      <span className={layoutStyles.itemUnitPrice}>
+                                        {item.priceAtTime !== null
+                                          ? currencyFormatter.format(item.priceAtTime)
+                                          : "-"}
+                                      </span>
+                                      <span className={layoutStyles.itemTotal}>
+                                        {item.lineTotal !== null
+                                          ? currencyFormatter.format(item.lineTotal)
+                                          : "-"}
+                                      </span>
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <div className={styles.expandedSummary}>
-                          <div className={styles.expandedSummaryRow}>
-                            <span>Subtotal</span>
-                            <span>{currencyFormatter.format(order.subtotal)}</span>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                          {order.deliveryFee > 0 ? (
-                            <div className={styles.expandedSummaryRow}>
-                              <span>Taxa de entrega</span>
-                              <span>{currencyFormatter.format(order.deliveryFee)}</span>
+                          <div className={layoutStyles.expandedSidebar}>
+                            <div className={layoutStyles.summaryCard}>
+                              <div className={layoutStyles.summaryRow}>
+                                <span>Subtotal</span>
+                                <span>{currencyFormatter.format(order.subtotal)}</span>
+                              </div>
+                              {order.deliveryFee > 0 && (
+                                <div className={layoutStyles.summaryRow}>
+                                  <span>Taxa de entrega</span>
+                                  <span>{currencyFormatter.format(order.deliveryFee)}</span>
+                                </div>
+                              )}
+                              <div className={layoutStyles.summaryTotal}>
+                                <span>Total</span>
+                                <strong>{currencyFormatter.format(order.total)}</strong>
+                              </div>
                             </div>
-                          ) : null}
-                          <div className={styles.expandedSummaryTotal}>
-                            <span>Total</span>
-                            <strong>{currencyFormatter.format(order.total)}</strong>
+                            <Link 
+                              href={`/admin/orders/${order.id}`}
+                              className={layoutStyles.detailsLink}
+                            >
+                              <span>Ver detalhes</span>
+                              <ExternalLink size={14} />
+                            </Link>
                           </div>
                         </div>
                       </div>
                     </td>
                   </tr>
-                ) : null}
+                )}
               </Fragment>
             );
           })}
