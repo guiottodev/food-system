@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ConsumptionForm from "./ConsumptionForm.client";
 import styles from "../_styles/adminPrimitives.module.css";
+import layoutStyles from "./consumo.module.css";
 
 type SearchParams = {
   error?: string;
@@ -32,9 +33,11 @@ export default async function ConsumoPage({
 
   return (
     <main className={styles.page}>
-      <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Consumo</h1>
-        <Link href="/admin/capacidade">Ver capacidade</Link>
+      <div className={layoutStyles.pageHeader}>
+        <h1 className={styles.pageTitle}>Registrar Consumo</h1>
+        <Link href="/admin/capacidade" className={layoutStyles.linkButton}>
+          Ver capacidade
+        </Link>
       </div>
 
       <section className={styles.panel}>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import ProductionSessionForm from "./ProductionSessionForm.client";
 import styles from "../_styles/adminPrimitives.module.css";
+import layoutStyles from "./producao.module.css";
 
 type SearchParams = {
   error?: string;
@@ -18,9 +19,11 @@ export default async function ProducaoPage({
 
   return (
     <main className={styles.page}>
-      <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Producao</h1>
-        <Link href="/admin/capacidade">Ver capacidade</Link>
+      <div className={layoutStyles.pageHeader}>
+        <h1 className={styles.pageTitle}>Registrar Produção</h1>
+        <Link href="/admin/capacidade" className={layoutStyles.linkButton}>
+          Ver capacidade
+        </Link>
       </div>
 
       <section className={styles.panel}>

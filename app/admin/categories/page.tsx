@@ -31,9 +31,26 @@ export default async function CategoriesPage({
     orderBy: { name: "asc" },
   });
 
+  // KPIs
+  const activeCategories = categories.filter((c) => c.isActive).length;
+
   return (
     <main className={styles.page}>
-      <h1 className={styles.pageTitle}>Categorias</h1>
+      <div className={layoutStyles.pageHeader}>
+        <h1 className={styles.pageTitle}>Categorias</h1>
+        <div className={layoutStyles.kpiBar}>
+          <div className={layoutStyles.kpiItem}>
+            <span className={layoutStyles.kpiValue}>{categories.length}</span>
+            <span className={layoutStyles.kpiLabel}>categorias</span>
+          </div>
+          <div className={layoutStyles.kpiDivider} />
+          <div className={`${layoutStyles.kpiItem} ${layoutStyles.kpiSuccess}`}>
+            <span className={layoutStyles.kpiValue}>{activeCategories}</span>
+            <span className={layoutStyles.kpiLabel}>ativas</span>
+          </div>
+        </div>
+      </div>
+
       <section className={styles.panel}>
         <CategoriesFilters
           initialQuery={query}
@@ -44,8 +61,12 @@ export default async function CategoriesPage({
           <p className={styles.textError}>Informe o nome da categoria.</p>
         ) : null}
         {categories.length === 0 ? (
-          <div className={styles.emptyState}>
-            Nenhuma categoria cadastrada.
+          <div className={layoutStyles.emptyState}>
+            <div className={layoutStyles.emptyStateIcon}>🏷️</div>
+            <div className={layoutStyles.emptyStateTitle}>Nenhuma categoria cadastrada</div>
+            <div className={layoutStyles.emptyStateText}>
+              Cadastre uma categoria para organizar seus produtos.
+            </div>
           </div>
         ) : (
           <div className={layoutStyles.tableWrap}>
@@ -53,9 +74,9 @@ export default async function CategoriesPage({
               <thead>
                 <tr>
                   <th>Nome</th>
-                  <th>Descricao</th>
+                  <th>Descrição</th>
                   <th>Ativo</th>
-                  <th className={styles.tableActions}>Acoes</th>
+                  <th className={styles.tableActions}>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -75,7 +96,7 @@ export default async function CategoriesPage({
                         form={`category-form-${category.id}`}
                         name="description"
                         defaultValue={category.description || ""}
-                        placeholder="Descricao"
+                        placeholder="Descrição"
                         className={`${styles.control} ${styles.controlTextarea}`}
                       ></textarea>
                     </td>

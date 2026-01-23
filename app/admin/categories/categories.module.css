@@ -1,142 +1,145 @@
-.toolbarBlock {
-  display: grid;
-  gap: var(--space-3);
-}
-
-.toolbar {
+/* ===== PAGE HEADER WITH KPIs ===== */
+.pageHeader {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
+  align-items: baseline;
+  gap: var(--space-4);
+  margin-bottom: var(--space-2);
 }
 
-.toolbarMain {
+.kpiBar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-  flex: 1 1 360px;
-  min-width: 240px;
-}
-
-.searchWrap {
-  flex: 1 1 260px;
-  min-width: 200px;
-}
-
-.searchInput {
-  width: 100%;
-}
-
-.filtersWrap {
-  position: relative;
-}
-
-.filtersButton {
-  gap: var(--space-1);
-}
-
-.filtersButtonActive {
-  border-color: var(--border-strong);
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
   background: var(--bg-subtle);
+  border-radius: var(--radius-full);
 }
 
-.filtersPanel {
-  position: absolute;
-  top: calc(100% + var(--space-2));
-  right: 0;
-  width: min(420px, 92vw);
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  padding: var(--space-3);
-  z-index: 20;
+.kpiItem {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
 }
 
-.filtersEmpty {
+.kpiValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.kpiLabel {
+  font-size: 12px;
+  font-weight: 500;
   color: var(--text-muted);
-  font-size: var(--text-sm);
 }
 
+.kpiDivider {
+  width: 1px;
+  height: 16px;
+  background: var(--border);
+}
+
+.kpiSuccess .kpiValue,
+.kpiSuccess .kpiLabel {
+  color: #047857;
+}
+
+/* ===== TABLE ===== */
 .tableWrap {
-  border: 0;
-  padding: 0;
-  overflow-x: auto;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .table {
   width: 100%;
   border-collapse: collapse;
+  font-size: var(--text-sm);
 }
 
-.table th,
-.table td {
-  padding: var(--space-2) var(--space-3);
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
+.table thead {
+  background: linear-gradient(180deg, #fafbfc 0%, #f4f6f8 100%);
 }
 
 .table thead th {
-  background: var(--bg-subtle);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--fw-medium);
+  padding: var(--space-4);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
   text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.table tbody td {
+  padding: var(--space-4);
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-subtle);
 }
 
 .table tbody tr:last-child td {
-  border-bottom: 0;
+  border-bottom: none;
 }
 
-.modalOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+.table tbody tr {
+  transition: all 150ms ease;
+}
+
+.table tbody tr:hover {
+  background: rgba(37, 99, 235, 0.04);
+  box-shadow: inset 3px 0 0 var(--action-primary);
+}
+
+/* ===== EMPTY STATE ===== */
+.emptyState {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: var(--space-4);
-  z-index: 50;
-}
-
-.modalCard {
-  width: min(520px, 100%);
-  max-height: 90vh;
-  overflow: auto;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: var(--space-4);
-  display: grid;
   gap: var(--space-3);
+  padding: var(--space-12) var(--space-4);
+  text-align: center;
 }
 
-.modalHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-2);
+.emptyStateIcon {
+  font-size: 48px;
+  opacity: 0.5;
 }
 
-.modalTitle {
-  margin: 0;
+.emptyStateTitle {
   font-size: var(--text-lg);
-  font-weight: var(--fw-semibold);
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
-.modalFooter {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  justify-content: flex-end;
-  border-top: 1px solid var(--border);
-  padding-top: var(--space-3);
+.emptyStateText {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  max-width: 280px;
 }
 
-@media (max-width: 720px) {
-  .filtersPanel {
-    position: static;
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .pageHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  
+  .kpiBar {
     width: 100%;
+    justify-content: space-between;
+    padding: var(--space-3);
+    border-radius: var(--radius-md);
+  }
+  
+  .table thead th:nth-child(2),
+  .table tbody td:nth-child(2) {
+    display: none;
   }
 }

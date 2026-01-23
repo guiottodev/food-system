@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
 import {
@@ -201,21 +202,58 @@ export default async function PendenciasPage({
   const pageLink = (nextPage: number) =>
     withQuery("/admin/pendencias", { ...baseParams, page: nextPage });
 
+  // KPIs
+  const incompleteCount = filtered.filter(
+    (e) => e.attention.strongReasons.length > 0
+  ).length;
+  const needsProductionCount = filtered.filter(
+    (e) => e.stockStatus.needsProduction
+  ).length;
+
   return (
     <main className={styles.page}>
-      <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Pendencias</h1>
-        <Link href="/admin/orders">Ver pedidos</Link>
+      <div className={layoutStyles.pageHeader}>
+        <h1 className={styles.pageTitle}>Pendências</h1>
+        <div className={layoutStyles.kpiBar}>
+          <div className={layoutStyles.kpiItem}>
+            <span className={layoutStyles.kpiValue}>{totalCount}</span>
+            <span className={layoutStyles.kpiLabel}>pendências</span>
+          </div>
+          {incompleteCount > 0 && (
+            <>
+              <div className={layoutStyles.kpiDivider} />
+              <div className={`${layoutStyles.kpiItem} ${layoutStyles.kpiWarning}`}>
+                <span className={layoutStyles.kpiValue}>{incompleteCount}</span>
+                <span className={layoutStyles.kpiLabel}>incompletos</span>
+              </div>
+            </>
+          )}
+          {needsProductionCount > 0 && (
+            <>
+              <div className={layoutStyles.kpiDivider} />
+              <div className={layoutStyles.kpiItem}>
+                <span className={layoutStyles.kpiValue}>{needsProductionCount}</span>
+                <span className={layoutStyles.kpiLabel}>precisam produzir</span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       <section className={styles.panel}>
         <PendenciasFilters initialType={typeParam} />
-        <p className={styles.textMuted}>
-          Mostrando {startIndex}-{endIndex} de {totalCount} pendencia(s)
-        </p>
 
         {paginatedOrders.length === 0 ? (
-          <div className={styles.emptyState}>Sem pendencias.</div>
+          <div className={layoutStyles.emptyState}>
+            <div className={layoutStyles.emptyStateIcon}>✅</div>
+            <div className={layoutStyles.emptyStateTitle}>Sem pendências</div>
+            <div className={layoutStyles.emptyStateText}>
+              Todos os pedidos estão em dia!
+            </div>
+            <Link href="/admin/orders" className={layoutStyles.primaryButton}>
+              Ver pedidos
+            </Link>
+          </div>
         ) : (
           <>
             <OrdersTableClient
@@ -273,21 +311,44 @@ export default async function PendenciasPage({
                 };
               })}
             />
-            {totalPages > 1 ? (
-              <div className={layoutStyles.paginationRow}>
-                <div className={layoutStyles.paginationControls}>
-                  <Link href={pageLink(Math.max(1, clampedPage - 1))}>
-                    Anterior
+            <div className={layoutStyles.paginationRow}>
+              <div className={layoutStyles.paginationControls}>
+                {clampedPage > 1 ? (
+                  <Link
+                    href={pageLink(clampedPage - 1)}
+                    className={layoutStyles.paginationButton}
+                  >
+                    <ChevronLeft size={18} />
+                    <span>Anterior</span>
                   </Link>
-                  <span>
-                    Pagina {clampedPage} de {totalPages}
+                ) : (
+                  <span className={layoutStyles.paginationButtonDisabled}>
+                    <ChevronLeft size={18} />
+                    <span>Anterior</span>
                   </span>
-                  <Link href={pageLink(Math.min(totalPages, clampedPage + 1))}>
-                    Proxima
+                )}
+                <span className={layoutStyles.paginationInfo}>
+                  Página <strong>{clampedPage}</strong> de <strong>{totalPages}</strong>
+                </span>
+                {clampedPage < totalPages ? (
+                  <Link
+                    href={pageLink(clampedPage + 1)}
+                    className={layoutStyles.paginationButton}
+                  >
+                    <span>Próxima</span>
+                    <ChevronRight size={18} />
                   </Link>
-                </div>
+                ) : (
+                  <span className={layoutStyles.paginationButtonDisabled}>
+                    <span>Próxima</span>
+                    <ChevronRight size={18} />
+                  </span>
+                )}
               </div>
-            ) : null}
+              <span className={layoutStyles.paginationMeta}>
+                Mostrando {startIndex}-{endIndex} de {totalCount}
+              </span>
+            </div>
           </>
         )}
       </section>

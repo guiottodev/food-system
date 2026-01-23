@@ -5,6 +5,11 @@ import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./products.module.css";
 import ProductsFilters from "./ProductsFilters.client";
 
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
 type ProductsSearchParams = {
   q?: string;
   categoryId?: string;
@@ -65,9 +70,36 @@ export default async function ProductsPage({
     },
   });
 
+  // KPIs
+  const activeProducts = products.filter((p) => p.isActive).length;
+  const totalSkus = products.reduce((sum, p) => sum + p.skus.length, 0);
+  const activeSkusTotal = products.reduce(
+    (sum, p) => sum + p.skus.filter((s) => s.isActive).length,
+    0
+  );
+
   return (
     <main className={styles.page}>
-      <h1 className={styles.pageTitle}>Produtos</h1>
+      <div className={layoutStyles.pageHeader}>
+        <h1 className={styles.pageTitle}>Produtos</h1>
+        <div className={layoutStyles.kpiBar}>
+          <div className={layoutStyles.kpiItem}>
+            <span className={layoutStyles.kpiValue}>{products.length}</span>
+            <span className={layoutStyles.kpiLabel}>produtos</span>
+          </div>
+          <div className={layoutStyles.kpiDivider} />
+          <div className={`${layoutStyles.kpiItem} ${layoutStyles.kpiSuccess}`}>
+            <span className={layoutStyles.kpiValue}>{activeProducts}</span>
+            <span className={layoutStyles.kpiLabel}>ativos</span>
+          </div>
+          <div className={layoutStyles.kpiDivider} />
+          <div className={layoutStyles.kpiItem}>
+            <span className={layoutStyles.kpiValue}>{activeSkusTotal}/{totalSkus}</span>
+            <span className={layoutStyles.kpiLabel}>SKUs ativos</span>
+          </div>
+        </div>
+      </div>
+
       <section className={styles.panel}>
         <ProductsFilters
           categories={categories}
@@ -77,60 +109,69 @@ export default async function ProductsPage({
         />
 
         {products.length === 0 ? (
-          <div className={styles.emptyState}>Nenhum produto encontrado.</div>
+          <div className={layoutStyles.emptyState}>
+            <div className={layoutStyles.emptyStateIcon}>📦</div>
+            <div className={layoutStyles.emptyStateTitle}>Nenhum produto encontrado</div>
+            <div className={layoutStyles.emptyStateText}>
+              Tente ajustar os filtros ou cadastre um novo produto.
+            </div>
+            <Link href="/admin/products/new" className={layoutStyles.primaryButton}>
+              Novo produto
+            </Link>
+          </div>
         ) : (
-          <div className={layoutStyles.tableWrap}>
-            <table className={layoutStyles.table}>
+          <div className={layoutStyles.tableContainer}>
+            <table className={layoutStyles.productsTable}>
               <thead>
                 <tr>
                   <th>Produto</th>
                   <th>Categoria</th>
-                  <th className={styles.tableNumeric}>SKUs</th>
-                  <th className={styles.tableActions}>Acoes</th>
+                  <th className={layoutStyles.colNumeric}>SKUs</th>
+                  <th className={layoutStyles.colActions}>Ações</th>
                 </tr>
               </thead>
               <tbody>
                 {products.map((product) => {
                   const activeSkus = product.skus.filter((sku) => sku.isActive).length;
-                  const totalSkus = product.skus.length;
+                  const totalSkusProduct = product.skus.length;
                   return (
-                  <tr key={product.id}>
-                    <td>
-                      <div className={layoutStyles.productCell}>
-                        <strong>{product.name}</strong>
-                        <div className={layoutStyles.productMeta}>
+                    <tr key={product.id} className={layoutStyles.tableRow}>
+                      <td>
+                        <div className={layoutStyles.productCell}>
+                          <span className={layoutStyles.productName}>{product.name}</span>
                           <span
-                            className={`${styles.badge} ${
+                            className={`${layoutStyles.statusBadge} ${
                               product.isActive
-                                ? styles.badgeSuccess
-                                : styles.badgeNeutral
+                                ? layoutStyles.statusActive
+                                : layoutStyles.statusInactive
                             }`}
                           >
                             {product.isActive ? "Ativo" : "Inativo"}
                           </span>
                         </div>
-                      </div>
-                    </td>
-                    <td>{product.category.name}</td>
-                    <td className={styles.tableNumeric}>
-                      <div className={layoutStyles.skuCount}>
-                        {activeSkus} ativos / {totalSkus} total
-                        {activeSkus === 0 ? (
-                          <span className={`${styles.badge} ${styles.badgeWarning}`}>
-                            Sem SKU
+                      </td>
+                      <td>
+                        <span className={layoutStyles.categoryName}>{product.category.name}</span>
+                      </td>
+                      <td className={layoutStyles.colNumeric}>
+                        <div className={layoutStyles.skuInfo}>
+                          <span className={layoutStyles.skuCount}>
+                            {activeSkus} / {totalSkusProduct}
                           </span>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className={styles.tableActions}>
-                      <Link
-                        href={`/admin/products/${product.id}`}
-                        className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-                      >
-                        Ver detalhes
-                      </Link>
-                    </td>
-                  </tr>
+                          {activeSkus === 0 && (
+                            <span className={layoutStyles.skuWarning}>Sem SKU ativo</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className={layoutStyles.colActions}>
+                        <Link
+                          href={`/admin/products/${product.id}`}
+                          className={layoutStyles.actionLink}
+                        >
+                          Ver detalhes
+                        </Link>
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>

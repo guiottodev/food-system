@@ -6,6 +6,7 @@ import {
   type CapacityWindowKey,
 } from "@/lib/domain/production";
 import styles from "../_styles/adminPrimitives.module.css";
+import layoutStyles from "./capacidade.module.css";
 
 type SearchParams = {
   q?: string;
@@ -44,35 +45,50 @@ export default async function CapacidadePage({
     gapOnly,
   });
 
+  // KPIs
+  const productsWithGap = rows.filter((r) => r.gap > 0).length;
+  const totalDemand = rows.reduce((sum, r) => sum + r.demand, 0);
+
   return (
     <main className={styles.page}>
-      <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Capacidade</h1>
-        <div className={styles.clusterSm}>
-          <Link
-            href="/admin/producao"
-            className={`${styles.button} ${styles.buttonGhost}`}
-          >
-            Ver producao
+      <div className={layoutStyles.pageHeader}>
+        <div>
+          <h1 className={styles.pageTitle}>Capacidade</h1>
+          <div className={layoutStyles.kpiBar}>
+            <div className={layoutStyles.kpiItem}>
+              <span className={layoutStyles.kpiValue}>{rows.length}</span>
+              <span className={layoutStyles.kpiLabel}>produtos</span>
+            </div>
+            {productsWithGap > 0 && (
+              <>
+                <div className={layoutStyles.kpiDivider} />
+                <div className={`${layoutStyles.kpiItem} ${layoutStyles.kpiWarning}`}>
+                  <span className={layoutStyles.kpiValue}>{productsWithGap}</span>
+                  <span className={layoutStyles.kpiLabel}>com gap</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+        <div className={layoutStyles.headerActions}>
+          <Link href="/admin/producao" className={layoutStyles.linkButton}>
+            Registrar produção
           </Link>
-          <Link
-            href="/admin/consumo"
-            className={`${styles.button} ${styles.buttonGhost}`}
-          >
+          <Link href="/admin/consumo" className={layoutStyles.linkButton}>
             Registrar consumo
           </Link>
         </div>
       </div>
 
       <section className={styles.panel}>
-        <form method="get" className={styles.toolbar}>
-          <div className={styles.toolbarGroup}>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Janela</span>
+        <form method="get" className={layoutStyles.toolbar}>
+          <div className={layoutStyles.toolbarFields}>
+            <label className={layoutStyles.field}>
+              <span className={layoutStyles.fieldLabel}>Janela</span>
               <select
                 name="window"
                 defaultValue={windowKey}
-                className={styles.control}
+                className={layoutStyles.fieldControl}
               >
                 {windowOptions.map((option) => (
                   <option key={option.key} value={option.key}>
@@ -81,58 +97,72 @@ export default async function CapacidadePage({
                 ))}
               </select>
             </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Produto</span>
+            <label className={layoutStyles.field}>
+              <span className={layoutStyles.fieldLabel}>Produto</span>
               <input
                 type="text"
                 name="q"
                 placeholder="Buscar produto"
                 defaultValue={query}
-                className={styles.control}
+                className={layoutStyles.fieldControl}
               />
             </label>
-            <label className={styles.field}>
-              <span className={styles.fieldLabel}>Gap</span>
-              <select name="gap" defaultValue={gapOnly ? "1" : "0"} className={styles.control}>
-                <option value="0">Todos</option>
+            <label className={layoutStyles.field}>
+              <span className={layoutStyles.fieldLabel}>Filtro</span>
+              <select name="gap" defaultValue={gapOnly ? "1" : "0"} className={layoutStyles.fieldControl}>
+                <option value="0">Todos os produtos</option>
                 <option value="1">Somente com gap</option>
               </select>
             </label>
           </div>
-          <div className={styles.toolbarActions}>
-            <button type="submit" className={styles.button}>
-              Filtrar
-            </button>
-          </div>
+          <button type="submit" className={layoutStyles.filterButton}>
+            Filtrar
+          </button>
         </form>
 
         {rows.length === 0 ? (
-          <div className={styles.emptyState}>Nenhum produto encontrado.</div>
+          <div className={layoutStyles.emptyState}>
+            <div className={layoutStyles.emptyStateIcon}>📊</div>
+            <div className={layoutStyles.emptyStateTitle}>Nenhum produto encontrado</div>
+            <div className={layoutStyles.emptyStateText}>
+              Tente ajustar os filtros ou cadastre produtos.
+            </div>
+          </div>
         ) : (
-          <div className={styles.tableWrap}>
-            <table className={styles.table}>
+          <div className={layoutStyles.tableContainer}>
+            <table className={layoutStyles.capacityTable}>
               <thead>
                 <tr>
                   <th>Produto</th>
                   <th>Categoria</th>
-                  <th className={styles.tableNumeric}>Disponivel agora</th>
-                  <th className={styles.tableNumeric}>Demanda futura</th>
-                  <th className={styles.tableNumeric}>Necessario produzir</th>
+                  <th className={layoutStyles.colNumeric}>Disponível</th>
+                  <th className={layoutStyles.colNumeric}>Demanda</th>
+                  <th className={layoutStyles.colNumeric}>Necessário produzir</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.productId}>
-                    <td>{row.productName}</td>
-                    <td>{row.categoryName}</td>
-                    <td className={styles.tableNumeric}>
-                      {formatQty(row.available, row.unitLabel)}
+                    <td>
+                      <span className={layoutStyles.productName}>{row.productName}</span>
                     </td>
-                    <td className={styles.tableNumeric}>
-                      {formatQty(row.demand, row.unitLabel)}
+                    <td>
+                      <span className={layoutStyles.categoryName}>{row.categoryName}</span>
                     </td>
-                    <td className={styles.tableNumeric}>
-                      {formatQty(row.gap, row.unitLabel)}
+                    <td className={layoutStyles.colNumeric}>
+                      <span className={layoutStyles.numericValue}>
+                        {formatQty(row.available, row.unitLabel)}
+                      </span>
+                    </td>
+                    <td className={layoutStyles.colNumeric}>
+                      <span className={layoutStyles.numericValue}>
+                        {formatQty(row.demand, row.unitLabel)}
+                      </span>
+                    </td>
+                    <td className={layoutStyles.colNumeric}>
+                      <span className={`${layoutStyles.gapValue} ${row.gap > 0 ? layoutStyles.gapPositive : layoutStyles.gapZero}`}>
+                        {formatQty(row.gap, row.unitLabel)}
+                      </span>
                     </td>
                   </tr>
                 ))}
