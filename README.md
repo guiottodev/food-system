@@ -21,12 +21,11 @@ Testes (Vitest + SQLite):
 Popular base de testes:
 - `node scripts\\fill_test_data.js --count=1000 --pastDays=90 --futureDays=30 --reset`
 
-Catalogo (Categorias/Produtos/SKUs):
+Produtos e SKUs (Categorias/Produtos/SKUs):
 - Categoria: nome unico, descricao opcional.
-- Produto: lead time (horas), visibilidade publica, sob consulta, imagens (principal + extras).
+- Produto: lead time (horas), imagens (principal + extras).
 - SKU: tamanho, sabor, congelado, tipo de venda (UNIDADE/KG), passo de quantidade, minimo, preco.
 - UnitLabel: "un", "cento", "kg", "kit" (compativel com o tipo de venda).
-- Sob consulta: SKU usa override quando definido; caso contrario herda do produto.
 - Imagens extras ficam em `product_images` e tags em `sku_tags`.
 - Labels pt-BR: Tamanho, Tipo de venda, Passo de quantidade, Preco atual.
 - Regra: novo pedido usa somente SKUs ativos; historico sempre aparece via snapshots no order_items.
@@ -34,7 +33,7 @@ Catalogo (Categorias/Produtos/SKUs):
 Integridade do banco:
 - Rodar `npm run db:check` antes de iniciar, ou use `scripts\\start-local.bat`.
 
-Smoke test (Catalogo + Pedidos):
+Smoke test (Produtos + Pedidos):
 1) `npm.cmd run dev`
 2) Login
 3) Criar categoria

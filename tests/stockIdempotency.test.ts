@@ -44,8 +44,6 @@ describe("stock idempotency", () => {
         name: "Produto teste",
         categoryId: category.id,
         isActive: true,
-        isPublicHidden: false,
-        sobConsulta: false,
       },
     });
 

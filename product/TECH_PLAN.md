@@ -24,7 +24,7 @@
 
 **Não inclui (por enquanto)**
 - E-commerce/pagamento online.
-- Catálogo público (link para clientes).
+- Portal público (link para clientes).
 - Multi-loja/multi-PC.
 - App mobile nativo.
 - Integrações externas (WhatsApp API, etc).

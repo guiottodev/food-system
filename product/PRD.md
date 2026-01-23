@@ -18,7 +18,7 @@ Secundários
 - Uso principal em PC; responsivo mobile é nice-to-have.
 
 ## Não-objetivos
-- Catálogo público ou vendas online.
+- Portal público para clientes finais ou vendas online.
 - Pagamentos ou integrações financeiras.
 - App móvel dedicado.
 

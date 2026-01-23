@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     conditions: ["node"],
     alias: {
+      "@": resolve(__dirname, "."),
       "@prisma/client": resolve(
         __dirname,
         "node_modules/.prisma/client/index.js"

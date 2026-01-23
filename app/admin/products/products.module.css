@@ -118,6 +118,26 @@
   border-bottom: 0;
 }
 
+.productCell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.productMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.skuCount {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  justify-content: flex-end;
+}
+
 @media (max-width: 720px) {
   .filtersPanel {
     position: static;

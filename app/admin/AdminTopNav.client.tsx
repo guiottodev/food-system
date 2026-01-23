@@ -22,7 +22,6 @@ export default function AdminTopNav() {
   const isCapacidade =
     pathname === "/admin/capacidade" || pathname.startsWith("/admin/capacidade/");
   const isAdminHome = pathname === "/admin" || pathname === "/admin/";
-  const isCatalog = pathname === "/admin/catalog" || pathname.startsWith("/admin/catalog/");
   const isCategories =
     pathname === "/admin/categories" || pathname.startsWith("/admin/categories/");
   const isProducts =
@@ -78,13 +77,6 @@ export default function AdminTopNav() {
         aria-current={isOrdersNew ? "page" : undefined}
       >
         Novo pedido
-      </Link>
-      <Link
-        className={linkClass(isCatalog)}
-        href="/admin/catalog"
-        aria-current={isCatalog ? "page" : undefined}
-      >
-        Catalogo
       </Link>
       <Link
         className={linkClass(isCategories)}

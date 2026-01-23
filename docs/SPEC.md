@@ -1,18 +1,18 @@
 ﻿    # SPEC
 
     ## Problem
-    A operação interna de pedidos e produção é hoje fragmentada (WhatsApp, anotações manuais e memória operacional), causando retrabalho, inconsistência de catálogo/preços, risco de erro na produção e dificuldade de visualizar o que deve ser produzido e entregue em cada dia.
+    A operação interna de pedidos e produção é hoje fragmentada (WhatsApp, anotações manuais e memória operacional), causando retrabalho, inconsistência de produtos/preços, risco de erro na produção e dificuldade de visualizar o que deve ser produzido e entregue em cada dia.
 
     ## Goals (30 days)
     - Reduzir em **50%** o tempo médio de cadastro de um pedido (comparação antes/depois em amostra mínima de 10 pedidos).
     - Garantir que **≥95%** dos pedidos do dia sejam operados pela lista “Hoje” do sistema (sem papel avulso).
     - Ter **0 ocorrências** de quebra de listagem por inconsistência de unidade (`UnitType`) durante 14 dias consecutivos.
-    - Ter **100% dos produtos ativos** disponíveis via Catálogo interno no fluxo de novo pedido.
+    - Ter **100% dos produtos ativos** disponíveis no fluxo de novo pedido.
     - Utilizar o sistema diariamente por **7 dias consecutivos** sem necessidade de correção manual fora do sistema.
 
     ## MVP
     Um operador interno consegue, diariamente e sem ajuda externa:  
-    fazer login, cadastrar pedidos completos (cliente, data de entrega, itens), visualizar e operar a fila de pedidos por data de entrega, alterar status até “Entregue”, cancelar pedidos com motivo obrigatório e manter um catálogo interno mínimo (categorias, produtos e SKUs) usado obrigatoriamente em novos pedidos.
+    fazer login, cadastrar pedidos completos (cliente, data de entrega, itens), visualizar e operar a fila de pedidos por data de entrega, alterar status até “Entregue”, cancelar pedidos com motivo obrigatório e manter o cadastro interno de categorias, produtos e SKUs usado obrigatoriamente em novos pedidos.
 
     ## Non-goals
     - Pagamentos online ou controle financeiro.
@@ -48,11 +48,10 @@
     - Novo → Em Produção → Pronto → Entregue
     - Cancelado é permitido até antes de “Entregue”.
     - “Entregue” é estado final e imutável.
-    - Catálogo:
+    - Produtos e SKUs:
     - Estrutura: Categoria → Produto (pai) → SKU (vendável).
     - Apenas SKUs **ativos** podem ser usados em novos pedidos.
     - Pedidos antigos devem exibir itens mesmo que o SKU/produto esteja inativo.
-    - “Sob consulta” pode existir no produto e ser sobrescrito no SKU.
     - Lead time é definido no produto pai.
     - Unidades e quantidades:
     - **UNIDADE**: apenas valores inteiros.
@@ -100,7 +99,7 @@
 
     ## Risks
     - Inconsistência histórica de unidades quebrando regras de validação (mitigar com normalização/migração).
-    - Crescimento de escopo no catálogo antes de estabilizar o CRUD básico (mitigar com MVP estrito).
+    - Crescimento de escopo em produtos/SKUs antes de estabilizar o CRUD básico (mitigar com MVP estrito).
     - Dependência de operação manual única (mitigar com simplicidade extrema e validações fortes).
 
     ## Assumptions

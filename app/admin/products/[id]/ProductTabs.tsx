@@ -9,8 +9,8 @@ type TabDefinition = {
 };
 
 const TABS: TabDefinition[] = [
-  { id: "details", label: "Detalhes" },
   { id: "skus", label: "SKUs" },
+  { id: "details", label: "Detalhes" },
   { id: "images", label: "Imagens" },
 ];
 

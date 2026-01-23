@@ -12,7 +12,7 @@ import {
 import { createCustomerWithPhone } from "@/lib/domain/customerService";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { parseOrderPayment } from "@/lib/domain/orderPayment";
-import { isSkuSellableInternal } from "@/lib/catalog";
+import { isSkuAvailableInternal } from "@/lib/skuAvailability";
 import { OrderStatus, OrderType, Prisma } from "@prisma/client";
 
 type DeliveryAddressPayload = {
@@ -183,7 +183,6 @@ export async function createOrderAction(formData: FormData) {
     include: {
       product: {
         select: {
-          sobConsulta: true,
           name: true,
           isActive: true,
         },
@@ -197,7 +196,7 @@ export async function createOrderAction(formData: FormData) {
     if (!sku) {
       redirect("/admin/orders/new?error=sku-invalido");
     }
-    if (!isSkuSellableInternal({ sku, product: sku.product })) {
+    if (!isSkuAvailableInternal({ sku, product: sku.product })) {
       redirect("/admin/orders/new?error=sku-invalido");
     }
     const quantityResult = validateSkuQuantity(
@@ -219,13 +218,6 @@ export async function createOrderAction(formData: FormData) {
     const quantity = item.quantity;
     const unitPrice = Number(item.sku.priceCurrent);
     const lineTotal = quantity * unitPrice;
-    const snapshotIsSobConsulta =
-      item.sku.sobConsultaOverride === true
-        ? true
-        : item.sku.sobConsultaOverride === false
-        ? false
-        : item.sku.product.sobConsulta;
-
     return {
       sku: item.sku,
       skuId: item.skuId,
@@ -240,7 +232,6 @@ export async function createOrderAction(formData: FormData) {
         snapshotSizeText: item.sku.sizeText || null,
         snapshotFlavorText: item.sku.flavorText || null,
         snapshotIsFrozen: item.sku.isFrozen,
-        snapshotIsSobConsulta,
       },
     };
   });
@@ -382,7 +373,6 @@ export async function createOrderAction(formData: FormData) {
           snapshotSizeText: item.snapshot.snapshotSizeText,
           snapshotFlavorText: item.snapshot.snapshotFlavorText,
           snapshotIsFrozen: item.snapshot.snapshotIsFrozen,
-          snapshotIsSobConsulta: item.snapshot.snapshotIsSobConsulta,
           snapshotUnitPrice: toDecimal(item.unitPrice),
           lineTotal: toDecimal(item.lineTotal),
         })),

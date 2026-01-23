@@ -9,8 +9,6 @@ type ProductsSearchParams = {
   q?: string;
   categoryId?: string;
   active?: string;
-  hidden?: string;
-  sob?: string;
   error?: string;
 };
 
@@ -35,8 +33,6 @@ export default async function ProductsPage({
   const query = (sp?.q ?? "").trim();
   const categoryId = sp?.categoryId ?? "";
   const activeFilter = parseFilter(sp?.active, "all");
-  const hiddenFilter = parseFilter(sp?.hidden, "all");
-  const sobFilter = parseFilter(sp?.sob, "all");
 
   const categories = await prisma.category.findMany({
     orderBy: { name: "asc" },
@@ -56,16 +52,6 @@ export default async function ProductsPage({
       : activeFilter === "inactive"
       ? { isActive: false }
       : {}),
-    ...(hiddenFilter === "hidden"
-      ? { isPublicHidden: true }
-      : hiddenFilter === "public"
-      ? { isPublicHidden: false }
-      : {}),
-    ...(sobFilter === "yes"
-      ? { sobConsulta: true }
-      : sobFilter === "no"
-      ? { sobConsulta: false }
-      : {}),
   };
 
   const products = await prisma.product.findMany({
@@ -73,8 +59,8 @@ export default async function ProductsPage({
     orderBy: { name: "asc" },
     include: {
       category: true,
-      _count: {
-        select: { skus: true },
+      skus: {
+        select: { id: true, isActive: true },
       },
     },
   });
@@ -88,8 +74,6 @@ export default async function ProductsPage({
           initialQuery={query}
           initialCategoryId={categoryId}
           initialActive={activeFilter}
-          initialHidden={hiddenFilter}
-          initialSob={sobFilter}
         />
 
         {products.length === 0 ? (
@@ -101,41 +85,42 @@ export default async function ProductsPage({
                 <tr>
                   <th>Produto</th>
                   <th>Categoria</th>
-                  <th>Status</th>
-                  <th>Sob consulta</th>
                   <th className={styles.tableNumeric}>SKUs</th>
                   <th className={styles.tableActions}>Acoes</th>
                 </tr>
               </thead>
               <tbody>
-                {products.map((product) => (
+                {products.map((product) => {
+                  const activeSkus = product.skus.filter((sku) => sku.isActive).length;
+                  const totalSkus = product.skus.length;
+                  return (
                   <tr key={product.id}>
-                    <td>{product.name}</td>
+                    <td>
+                      <div className={layoutStyles.productCell}>
+                        <strong>{product.name}</strong>
+                        <div className={layoutStyles.productMeta}>
+                          <span
+                            className={`${styles.badge} ${
+                              product.isActive
+                                ? styles.badgeSuccess
+                                : styles.badgeNeutral
+                            }`}
+                          >
+                            {product.isActive ? "Ativo" : "Inativo"}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
                     <td>{product.category.name}</td>
-                    <td>
-                      <span
-                        className={`${styles.badge} ${
-                          product.isActive
-                            ? styles.badgeSuccess
-                            : styles.badgeNeutral
-                        }`}
-                      >
-                        {product.isActive ? "Ativo" : "Inativo"}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={`${styles.badge} ${
-                          product.sobConsulta
-                            ? styles.badgeWarning
-                            : styles.badgeNeutral
-                        }`}
-                      >
-                        {product.sobConsulta ? "Sim" : "Nao"}
-                      </span>
-                    </td>
                     <td className={styles.tableNumeric}>
-                      {product._count.skus}
+                      <div className={layoutStyles.skuCount}>
+                        {activeSkus} ativos / {totalSkus} total
+                        {activeSkus === 0 ? (
+                          <span className={`${styles.badge} ${styles.badgeWarning}`}>
+                            Sem SKU
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className={styles.tableActions}>
                       <Link
@@ -146,7 +131,8 @@ export default async function ProductsPage({
                       </Link>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

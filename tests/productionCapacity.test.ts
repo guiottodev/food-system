@@ -57,8 +57,6 @@ describe("production capacity", () => {
         name,
         categoryId: category.id,
         isActive: true,
-        isPublicHidden: false,
-        sobConsulta: false,
       },
     });
     const sku = await prisma.sku.create({

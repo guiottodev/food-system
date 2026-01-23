@@ -66,8 +66,6 @@ export async function updateProductAction(formData: FormData) {
   const hasLeadTime = formData.has("leadTime");
   const leadTime = hasLeadTime ? parseNumber(formData.get("leadTime")) : null;
   const isActive = parseBool(formData.get("isActive"));
-  const isPublicHidden = parseBool(formData.get("isPublicHidden"));
-  const sobConsulta = parseBool(formData.get("sobConsulta"));
   const hasImageMainUrl = formData.has("imageMainUrl");
   const hasImageExtraUrls = formData.has("imageExtraUrls");
   const imageMainUrl = hasImageMainUrl
@@ -90,8 +88,6 @@ export async function updateProductAction(formData: FormData) {
         descriptionLong: descriptionLong || null,
         ...(hasLeadTime ? { leadTime } : {}),
         isActive,
-        isPublicHidden,
-        sobConsulta,
         ...(hasImageMainUrl ? { imageMainUrl: imageMainUrl || null } : {}),
       },
     });
@@ -124,7 +120,6 @@ export async function createSkuAction(formData: FormData) {
   const cost = parseNumber(formData.get("cost"));
   const isFrozen = parseBool(formData.get("isFrozen"));
   const isActive = parseBool(formData.get("isActive"));
-  const sobRaw = parseText(formData.get("sobConsultaOverride"));
   const tags = parseTags(formData.get("tags"));
   const attributesInput = parseAttributesJson(
     formData.get("attributesJson")
@@ -171,11 +166,13 @@ export async function createSkuAction(formData: FormData) {
     );
   }
 
-  const sobConsultaOverride =
-    sobRaw === "true" ? true : sobRaw === "false" ? false : null;
   const attributesJson = attributesValidation.normalized.length
     ? attributesValidation.json
     : null;
+
+  const activeBefore = await prisma.sku.count({
+    where: { productId, isActive: true },
+  });
 
   await prisma.$transaction(async (tx) => {
     const sku = await tx.sku.create({
@@ -193,7 +190,6 @@ export async function createSkuAction(formData: FormData) {
         cost: cost ?? null,
         attributesJson,
         isActive,
-        sobConsultaOverride,
       },
     });
 
@@ -207,7 +203,10 @@ export async function createSkuAction(formData: FormData) {
     }
   });
 
-  redirect(`/admin/products/${productId}?tab=skus`);
+  const shouldShowReady = activeBefore === 0 && isActive;
+  redirect(
+    `/admin/products/${productId}?tab=skus${shouldShowReady ? "&ready=1" : ""}`
+  );
 }
 
 export async function updateSkuAction(formData: FormData) {
@@ -222,7 +221,6 @@ export async function updateSkuAction(formData: FormData) {
   const cost = parseNumber(formData.get("cost"));
   const isFrozen = parseBool(formData.get("isFrozen"));
   const isActive = parseBool(formData.get("isActive"));
-  const sobRaw = parseText(formData.get("sobConsultaOverride"));
   const tags = parseTags(formData.get("tags"));
   const attributesInput = parseAttributesJson(
     formData.get("attributesJson")
@@ -271,8 +269,6 @@ export async function updateSkuAction(formData: FormData) {
     );
   }
 
-  const sobConsultaOverride =
-    sobRaw === "true" ? true : sobRaw === "false" ? false : null;
   const attributesJson = attributesValidation.normalized.length
     ? attributesValidation.json
     : null;
@@ -293,7 +289,6 @@ export async function updateSkuAction(formData: FormData) {
         cost: cost ?? null,
         attributesJson,
         isActive,
-        sobConsultaOverride,
       },
     });
 
@@ -347,7 +342,6 @@ export async function duplicateSkuAction(formData: FormData) {
         cost: sku.cost,
         attributesJson: sku.attributesJson,
         isActive: sku.isActive,
-        sobConsultaOverride: sku.sobConsultaOverride,
       },
     });
 

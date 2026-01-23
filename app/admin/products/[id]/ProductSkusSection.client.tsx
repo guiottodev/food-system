@@ -7,9 +7,14 @@ import {
   validateSkuAttributes,
   type SkuAttributeInput,
 } from "@/lib/validation/skuAttributes";
+import {
+  formatSkuPriceInput,
+  validateSkuFormValues,
+  type SkuFormErrors,
+  type SkuFormValues,
+} from "@/lib/skuFormValidation";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "./productDetail.module.css";
-import { generateSkuDisplayName } from "./skuName";
 
 type SkuView = {
   id: string;
@@ -26,7 +31,6 @@ type SkuView = {
   priceCurrent: number;
   cost: number | null;
   isActive: boolean;
-  sobConsultaOverride: boolean | null;
   tags: string[];
 };
 
@@ -34,8 +38,6 @@ type SkuFormMode = "new" | "edit";
 
 type ProductSkusSectionProps = {
   productId: string;
-  productName: string;
-  productSobConsulta: boolean;
   skus: SkuView[];
   createSkuAction: (formData: FormData) => void;
   updateSkuAction: (formData: FormData) => void;
@@ -43,6 +45,7 @@ type ProductSkusSectionProps = {
   initialMode?: SkuFormMode;
   initialSkuId?: string | null;
   skuErrorMessage?: string;
+  showReadyNotice?: boolean;
 };
 
 const unitTypeOptions = [
@@ -52,17 +55,6 @@ const unitTypeOptions = [
 ];
 
 const maxAttributes = 15;
-const maxSkuNameLength = 90;
-const attributeSuggestions = [
-  "sabor",
-  "tamanho",
-  "cor",
-  "modelo",
-  "tipo",
-  "fragrancia",
-  "peso",
-  "volume",
-];
 
 function createEmptyAttribute(): SkuAttributeInput {
   return { key: "", value: "" };
@@ -110,8 +102,6 @@ function SkuFormActions({
 
 export default function ProductSkusSection({
   productId,
-  productName,
-  productSobConsulta,
   skus,
   createSkuAction,
   updateSkuAction,
@@ -119,6 +109,7 @@ export default function ProductSkusSection({
   initialMode,
   initialSkuId,
   skuErrorMessage,
+  showReadyNotice = false,
 }: ProductSkusSectionProps) {
   const initialSku = useMemo(
     () =>
@@ -134,9 +125,17 @@ export default function ProductSkusSection({
     initialSku?.id ?? null
   );
   const [modalError, setModalError] = useState(skuErrorMessage ?? "");
-  const [displayName, setDisplayName] = useState(
-    () => initialSku?.displayName ?? ""
+  const [displayName, setDisplayName] = useState(() => initialSku?.displayName ?? "");
+  const [unitTypeValue, setUnitTypeValue] = useState(
+    () => initialSku?.unitType ?? "UNIDADE"
   );
+  const [priceValue, setPriceValue] = useState(() =>
+    initialSku ? initialSku.priceCurrent.toFixed(2) : ""
+  );
+  const [isActiveValue, setIsActiveValue] = useState(
+    () => initialSku?.isActive ?? true
+  );
+  const [fieldErrors, setFieldErrors] = useState<SkuFormErrors>({});
   const [attributeRows, setAttributeRows] = useState<SkuAttributeInput[]>(
     () => getInitialAttributes(initialSku)
   );
@@ -145,8 +144,10 @@ export default function ProductSkusSection({
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
   >("all");
+  const nameInputRef = useRef<HTMLInputElement | null>(null);
+  const unitTypeRef = useRef<HTMLSelectElement | null>(null);
+  const priceRef = useRef<HTMLInputElement | null>(null);
   const valueInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
-  const pendingFocusIndex = useRef<number | null>(null);
 
   const activeSku = useMemo(
     () => skus.find((sku) => sku.id === activeSkuId) ?? null,
@@ -165,21 +166,15 @@ export default function ProductSkusSection({
     return () => window.removeEventListener("keydown", handleKey);
   }, [modalOpen]);
 
-  useEffect(() => {
-    const targetIndex = pendingFocusIndex.current;
-    if (targetIndex === null) return;
-    const target = valueInputRefs.current[targetIndex];
-    if (target) {
-      target.focus();
-    }
-    pendingFocusIndex.current = null;
-  }, [attributeRows]);
-
   function openNew() {
     setMode("new");
     setActiveSkuId(null);
     setModalError("");
     setDisplayName("");
+    setUnitTypeValue("UNIDADE");
+    setPriceValue("");
+    setIsActiveValue(true);
+    setFieldErrors({});
     setAttributeRows(getInitialAttributes(null));
     setShowAttributeError(false);
     setModalOpen(true);
@@ -191,6 +186,12 @@ export default function ProductSkusSection({
     setActiveSkuId(id);
     setModalError("");
     setDisplayName(nextSku?.displayName ?? "");
+    setUnitTypeValue(nextSku?.unitType ?? "UNIDADE");
+    setPriceValue(
+      nextSku?.priceCurrent ? nextSku.priceCurrent.toFixed(2) : ""
+    );
+    setIsActiveValue(nextSku?.isActive ?? true);
+    setFieldErrors({});
     setAttributeRows(getInitialAttributes(nextSku));
     setShowAttributeError(false);
     setModalOpen(true);
@@ -200,26 +201,15 @@ export default function ProductSkusSection({
     setModalOpen(false);
   }
 
-  function renderSobConsultaLabel(sku: SkuView) {
-    if (sku.sobConsultaOverride === true) return "SIM";
-    if (sku.sobConsultaOverride === false) return "NAO";
-    return productSobConsulta ? "SIM" : "NAO";
-  }
+  const activeSkuCount = useMemo(
+    () => skus.filter((sku) => sku.isActive).length,
+    [skus]
+  );
 
   const attributeValidation = useMemo(
     () => validateSkuAttributes(attributeRows),
     [attributeRows]
   );
-  const existingAttributeKeys = useMemo(() => {
-    const keys = new Set<string>();
-    for (const row of attributeRows) {
-      const normalized = normalizeKey(row.key);
-      if (normalized) {
-        keys.add(normalized);
-      }
-    }
-    return keys;
-  }, [attributeRows]);
   const duplicateAttributeKeys = useMemo(() => {
     const counts = new Map<string, number>();
     for (const row of attributeRows) {
@@ -292,45 +282,26 @@ export default function ProductSkusSection({
     });
   }
 
-  function handleSuggestionClick(suggestion: string) {
-    const normalized = normalizeKey(suggestion);
-    if (!normalized || existingAttributeKeys.has(normalized)) {
+  const formValues: SkuFormValues = {
+    displayName,
+    unitType: unitTypeValue,
+    price: priceValue,
+  };
+  const validationState = validateSkuFormValues(formValues);
+  const isFormValid = validationState.ok && !hasDuplicateAttributes;
+
+  function focusFirstError(nextErrors: SkuFormErrors) {
+    if (nextErrors.displayName) {
+      nameInputRef.current?.focus();
       return;
     }
-    setAttributeRows((prev) => {
-      let targetIndex = prev.findIndex(
-        (row) => !row.key.trim() && !row.value.trim()
-      );
-      if (targetIndex === -1) {
-        if (prev.length >= maxAttributes) {
-          return prev;
-        }
-        targetIndex = prev.length;
-        pendingFocusIndex.current = targetIndex;
-        return [
-          ...prev,
-          {
-            key: suggestion,
-            value: "",
-          },
-        ];
-      }
-      const next = [...prev];
-      next[targetIndex] = { ...next[targetIndex], key: suggestion };
-      pendingFocusIndex.current = targetIndex;
-      return next;
-    });
-  }
-
-  function handleGenerateName() {
-    if (displayName.trim()) return;
-    const generated = generateSkuDisplayName(
-      productName,
-      attributeRows,
-      maxSkuNameLength
-    );
-    if (!generated) return;
-    setDisplayName(generated);
+    if (nextErrors.unitType) {
+      unitTypeRef.current?.focus();
+      return;
+    }
+    if (nextErrors.price) {
+      priceRef.current?.focus();
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -340,6 +311,15 @@ export default function ProductSkusSection({
       setShowAttributeError(true);
       return;
     }
+    const result = validateSkuFormValues(formValues);
+    if (!result.ok) {
+      event.preventDefault();
+      setFieldErrors(result.errors);
+      setShowAttributeError(false);
+      focusFirstError(result.errors);
+      return;
+    }
+    setFieldErrors({});
     setShowAttributeError(false);
   }
 
@@ -358,6 +338,21 @@ export default function ProductSkusSection({
         </button>
       </div>
       <div className={styles.panelBody}>
+        {showReadyNotice ? (
+          <div className={styles.notice}>Pronto para usar em pedidos.</div>
+        ) : null}
+        {activeSkuCount === 0 ? (
+          <div className={`${styles.notice} ${styles.noticeWarning}`}>
+            Produto criado. Adicione pelo menos 1 SKU para usar em pedidos.
+            <button
+              type="button"
+              onClick={openNew}
+              className={`${styles.button} ${styles.buttonSm} ${styles.buttonGhost}`}
+            >
+              + Novo SKU
+            </button>
+          </div>
+        ) : null}
         {skus.length === 0 ? (
           <div className={styles.emptyState}>Nenhum SKU cadastrado.</div>
         ) : (
@@ -395,19 +390,12 @@ export default function ProductSkusSection({
                       <th>Unidade</th>
                       <th className={styles.tableNumeric}>Preco</th>
                       <th>Status</th>
-                      <th>Sob consulta</th>
                       <th className={styles.tableActions}>Acoes</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredSkus.map((sku) => {
                       const nextActive = !sku.isActive;
-                      const sobValue =
-                        sku.sobConsultaOverride === true
-                          ? "true"
-                          : sku.sobConsultaOverride === false
-                          ? "false"
-                          : "inherit";
                       const attributePreview = sku.attributes.slice(0, 3);
                       const attributeExtra =
                         sku.attributes.length - attributePreview.length;
@@ -456,7 +444,6 @@ export default function ProductSkusSection({
                             R$ {sku.priceCurrent.toFixed(2)}
                           </td>
                           <td>{sku.isActive ? "ATIVO" : "INATIVO"}</td>
-                          <td>{renderSobConsultaLabel(sku)}</td>
                           <td className={styles.tableActions}>
                             <div className={styles.clusterSm}>
                               <button
@@ -544,11 +531,6 @@ export default function ProductSkusSection({
                                   name="attributesJson"
                                   value={sku.attributesJson ?? ""}
                                 />
-                                <input
-                                  type="hidden"
-                                  name="sobConsultaOverride"
-                                  value={sobValue}
-                                />
                                 {nextActive ? (
                                   <input
                                     type="hidden"
@@ -604,7 +586,7 @@ export default function ProductSkusSection({
 
             <form
               action={mode === "edit" ? updateSkuAction : createSkuAction}
-              className={styles.formGrid}
+              className={detailStyles.skuModalForm}
               onSubmit={handleSubmit}
             >
               <input type="hidden" name="productId" value={productId} />
@@ -614,24 +596,29 @@ export default function ProductSkusSection({
               {!modalSku && mode === "edit" ? (
                 <p className={styles.textError}>SKU nao encontrado.</p>
               ) : null}
-              <div className={`${detailStyles.skuNameRow} ${styles.fieldFull}`}>
+              <label className={`${styles.field} ${styles.fieldFull}`}>
+                Nome exibido
                 <input
+                  ref={nameInputRef}
                   name="displayName"
                   placeholder="Nome exibido"
                   required
                   value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
+                  onChange={(event) => {
+                    setDisplayName(event.target.value);
+                    if (fieldErrors.displayName) {
+                      setFieldErrors((prev) => ({ ...prev, displayName: "" }));
+                    }
+                  }}
                   className={`${styles.control} ${detailStyles.skuNameInput}`}
+                  aria-invalid={Boolean(fieldErrors.displayName)}
                 />
-                <button
-                  type="button"
-                  onClick={handleGenerateName}
-                  disabled={displayName.trim() !== ""}
-                  className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-                >
-                  Gerar nome
-                </button>
-              </div>
+                {fieldErrors.displayName ? (
+                  <span className={styles.textError}>
+                    {fieldErrors.displayName}
+                  </span>
+                ) : null}
+              </label>
               {mode === "edit" && modalSku ? (
                 <>
                   <input
@@ -646,189 +633,187 @@ export default function ProductSkusSection({
                   />
                 </>
               ) : null}
-              <label className={styles.field}>
-                Tipo de venda
-                <select
-                  name="unitType"
-                  defaultValue={modalSku?.unitType ?? "UNIDADE"}
-                  className={styles.control}
-                >
-                  {unitTypeOptions.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={styles.field}>
-                Preco atual
-                <input
-                  type="number"
-                  name="priceCurrent"
-                  step="0.01"
-                  required
-                  defaultValue={
-                    modalSku ? String(modalSku.priceCurrent) : ""
-                  }
-                  className={styles.control}
-                />
-              </label>
-              <label className={styles.field}>
-                Custo (opcional)
-                <input
-                  type="number"
-                  name="cost"
-                  step="0.01"
-                  defaultValue={
-                    modalSku && modalSku.cost !== null
-                      ? String(modalSku.cost)
-                      : ""
-                  }
-                  className={styles.control}
-                />
-              </label>
-              <label className={styles.field}>
-                Tags (separadas por virgula)
-                <input
-                  name="tags"
-                  placeholder="salgado, festa"
-                  defaultValue={modalSku?.tags.join(", ") ?? ""}
-                  className={styles.control}
-                />
-              </label>
-              <div className={styles.fieldFull}>
-                <div className={detailStyles.attributeHeader}>
-                  <div>
-                    <div className={detailStyles.attributeTitle}>Atributos</div>
-                    <div className={styles.textMuted}>
-                      Opcional. Chaves sao normalizadas.
-                    </div>
-                  </div>
-                  <span className={detailStyles.attributeCount}>
-                    {filledAttributeCount}/{maxAttributes}
-                  </span>
-                </div>
-                <div className={detailStyles.attributeList}>
-                  {attributeRows.map((row, index) => {
-                    const normalizedKey = normalizeKey(row.key);
-                    const isDuplicate =
-                      Boolean(normalizedKey) &&
-                      duplicateAttributeKeys.has(normalizedKey);
-                    return (
-                      <div
-                        key={`attr-${index}`}
-                        className={`${detailStyles.attributeRow} ${
-                          isDuplicate ? detailStyles.attributeRowError : ""
-                        }`}
-                      >
-                      <input
-                        name={`attribute-key-${index}`}
-                        placeholder="atributo"
-                        value={row.key}
-                        onChange={(event) =>
-                          updateAttributeRow(index, "key", event.target.value)
-                        }
-                        className={styles.control}
-                      />
-                      <input
-                        name={`attribute-value-${index}`}
-                        placeholder="valor"
-                        value={row.value}
-                        onChange={(event) =>
-                          updateAttributeRow(
-                            index,
-                            "value",
-                            event.target.value
-                          )
-                        }
-                        ref={(element) => {
-                          valueInputRefs.current[index] = element;
-                        }}
-                        className={styles.control}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeAttributeRow(index)}
-                        className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-                      >
-                        Remover
-                      </button>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className={detailStyles.attributeSuggestions}>
-                  <span className={styles.textMuted}>Sugestoes:</span>
-                  <div className={detailStyles.attributeChips}>
-                    {attributeSuggestions.map((suggestion) => {
-                      const normalized = normalizeKey(suggestion);
-                      const disabled =
-                        !normalized ||
-                        existingAttributeKeys.has(normalized) ||
-                        filledAttributeCount >= maxAttributes;
-                      return (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          disabled={disabled}
-                          className={detailStyles.attributeChip}
-                        >
-                          {suggestion}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className={detailStyles.attributeFooter}>
-                  <button
-                    type="button"
-                    onClick={addAttributeRow}
-                    disabled={attributeRows.length >= maxAttributes}
-                    className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+              <div className={detailStyles.skuRequiredRow}>
+                <label className={styles.field}>
+                  Tipo de venda
+                  <select
+                    ref={unitTypeRef}
+                    name="unitType"
+                    value={unitTypeValue}
+                    onChange={(event) => {
+                      setUnitTypeValue(event.target.value);
+                      if (fieldErrors.unitType) {
+                        setFieldErrors((prev) => ({ ...prev, unitType: "" }));
+                      }
+                    }}
+                    className={styles.control}
+                    aria-invalid={Boolean(fieldErrors.unitType)}
                   >
-                    Adicionar atributo
-                  </button>
-                  {attributesError ? (
-                    <span className={styles.textError}>{attributesError}</span>
+                    {unitTypeOptions.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  {fieldErrors.unitType ? (
+                    <span className={styles.textError}>
+                      {fieldErrors.unitType}
+                    </span>
                   ) : null}
-                </div>
-                <input
-                  type="hidden"
-                  name="attributesJson"
-                  value={attributesJsonValue}
-                />
+                </label>
+                <label className={styles.field}>
+                  Preco atual
+                  <input
+                    ref={priceRef}
+                    name="priceCurrent"
+                    inputMode="decimal"
+                    required
+                    value={priceValue}
+                    onChange={(event) => {
+                      setPriceValue(event.target.value);
+                      if (fieldErrors.price) {
+                        setFieldErrors((prev) => ({ ...prev, price: "" }));
+                      }
+                    }}
+                    onBlur={(event) => {
+                      const formatted = formatSkuPriceInput(event.target.value);
+                      setPriceValue(formatted);
+                    }}
+                    className={styles.control}
+                    aria-invalid={Boolean(fieldErrors.price)}
+                  />
+                  {fieldErrors.price ? (
+                    <span className={styles.textError}>
+                      {fieldErrors.price}
+                    </span>
+                  ) : null}
+                </label>
               </div>
-              <label className={styles.field}>
-                Sob consulta
-                <select
-                  name="sobConsultaOverride"
-                  defaultValue={
-                    modalSku?.sobConsultaOverride === true
-                      ? "true"
-                      : modalSku?.sobConsultaOverride === false
-                      ? "false"
-                      : "inherit"
-                  }
-                  className={styles.control}
-                >
-                  <option value="inherit">Herdar do produto</option>
-                  <option value="true">Forcar sob consulta</option>
-                  <option value="false">Forcar nao</option>
-                </select>
-              </label>
-              <label className={styles.choiceRow}>
+              <label className={`${styles.choiceRow} ${detailStyles.skuActiveRow}`}>
                 <input
                   type="checkbox"
                   name="isActive"
-                  defaultChecked={modalSku?.isActive ?? true}
+                  checked={isActiveValue}
+                  onChange={(event) => setIsActiveValue(event.target.checked)}
                 />
                 <span className={styles.choiceLabel}>Ativo</span>
               </label>
+              <details className={detailStyles.skuAdvanced}>
+                <summary className={detailStyles.skuAdvancedSummary}>
+                  Avancado (opcional)
+                </summary>
+                <div className={detailStyles.skuAdvancedBody}>
+                  <div className={detailStyles.skuRequiredRow}>
+                    <label className={styles.field}>
+                      Custo (opcional)
+                      <input
+                        type="number"
+                        name="cost"
+                        step="0.01"
+                        defaultValue={
+                          modalSku && modalSku.cost !== null
+                            ? String(modalSku.cost)
+                            : ""
+                        }
+                        className={styles.control}
+                      />
+                    </label>
+                    <label className={styles.field}>
+                      Tags (separadas por virgula)
+                      <input
+                        name="tags"
+                        placeholder="salgado, festa"
+                        defaultValue={modalSku?.tags.join(", ") ?? ""}
+                        className={styles.control}
+                      />
+                    </label>
+                  </div>
+                  <div className={styles.fieldFull}>
+                    <div className={detailStyles.attributeHeader}>
+                      <div>
+                        <div className={detailStyles.attributeTitle}>Atributos</div>
+                        <div className={styles.textMuted}>
+                          Ex.: sabor=frango, tamanho=160g (o sistema padroniza automaticamente)
+                        </div>
+                      </div>
+                      <span className={detailStyles.attributeCount}>
+                        {filledAttributeCount}/{maxAttributes}
+                      </span>
+                    </div>
+                    <div className={detailStyles.attributeList}>
+                      {attributeRows.map((row, index) => {
+                        const normalizedKey = normalizeKey(row.key);
+                        const isDuplicate =
+                          Boolean(normalizedKey) &&
+                          duplicateAttributeKeys.has(normalizedKey);
+                        return (
+                          <div
+                            key={`attr-${index}`}
+                            className={`${detailStyles.attributeRow} ${
+                              isDuplicate ? detailStyles.attributeRowError : ""
+                            }`}
+                          >
+                            <input
+                              name={`attribute-key-${index}`}
+                              placeholder="atributo"
+                              value={row.key}
+                              onChange={(event) =>
+                                updateAttributeRow(index, "key", event.target.value)
+                              }
+                              className={styles.control}
+                            />
+                            <input
+                              name={`attribute-value-${index}`}
+                              placeholder="valor"
+                              value={row.value}
+                              onChange={(event) =>
+                                updateAttributeRow(
+                                  index,
+                                  "value",
+                                  event.target.value
+                                )
+                              }
+                              ref={(element) => {
+                                valueInputRefs.current[index] = element;
+                              }}
+                              className={styles.control}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => removeAttributeRow(index)}
+                              className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                            >
+                              Remover
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className={detailStyles.attributeFooter}>
+                      <button
+                        type="button"
+                        onClick={addAttributeRow}
+                        disabled={attributeRows.length >= maxAttributes}
+                        className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                      >
+                        Adicionar atributo
+                      </button>
+                      {attributesError ? (
+                        <span className={styles.textError}>{attributesError}</span>
+                      ) : null}
+                    </div>
+                    <input
+                      type="hidden"
+                      name="attributesJson"
+                      value={attributesJsonValue}
+                    />
+                  </div>
+                </div>
+              </details>
 
               <SkuFormActions
                 onCancel={closeModal}
-                disableSave={hasDuplicateAttributes}
+                disableSave={!isFormValid}
               />
             </form>
           </div>

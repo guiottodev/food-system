@@ -1,11 +1,11 @@
-# UI
+﻿# UI
 
 ## Principles
-- Speed: poucas telas, mínimo de cliques, foco em fluxo desktop
-- Error prevention: validação imediata (client + server), confirmações antes de ações destrutivas
-- Clarity: status, ativo/inativo e próxima ação sempre visíveis
-- Consistência: mesmos padrões de tabela, modais e mensagens em todo o admin
-- Acessibilidade: totalmente operável por teclado
+- Speed: poucas telas, mÃ­nimo de cliques, foco em fluxo desktop
+- Error prevention: validaÃ§Ã£o imediata (client + server), confirmaÃ§Ãµes antes de aÃ§Ãµes destrutivas
+- Clarity: status, ativo/inativo e prÃ³xima aÃ§Ã£o sempre visÃ­veis
+- ConsistÃªncia: mesmos padrÃµes de tabela, modais e mensagens em todo o admin
+- Acessibilidade: totalmente operÃ¡vel por teclado
 
 ---
 
@@ -21,22 +21,22 @@
 **Layout (wireframe in text)**
 - Header: Logo
 - Main: Form de login (email, senha)
-- Footer: Versão do sistema
+- Footer: VersÃ£o do sistema
 
 **Components**
 - Input Email
 - Input Senha
-- Botão Entrar
+- BotÃ£o Entrar
 
 **States**
-- Loading: botão desabilitado + spinner
-- Error: mensagem de credenciais inválidas
-- Disabled: botão Entrar desabilitado se campos inválidos
+- Loading: botÃ£o desabilitado + spinner
+- Error: mensagem de credenciais invÃ¡lidas
+- Disabled: botÃ£o Entrar desabilitado se campos invÃ¡lidos
 
 **Validation & messages**
-- Email inválido → "Informe um email válido."
-- Campos vazios → "Preencha este campo."
-- Credenciais inválidas → "Email ou senha incorretos."
+- Email invÃ¡lido â†’ "Informe um email vÃ¡lido."
+- Campos vazios â†’ "Preencha este campo."
+- Credenciais invÃ¡lidas â†’ "Email ou senha incorretos."
 
 **Microcopy**
 - Labels: "Email", "Senha"
@@ -44,68 +44,40 @@
 - Errors: conforme acima
 
 **Accessibility & keyboard**
-- Focus order: Email → Senha → Entrar
-- Enter submete o formulário
+- Focus order: Email â†’ Senha â†’ Entrar
+- Enter submete o formulÃ¡rio
 - Labels associados a inputs
 
 ---
 
 ### Screen: Admin Home (/admin)
 **Purpose**
-- Ponto inicial do operador para naveCAtalogo e pedidos.
+- Ponto inicial do operador para navegar pelos pedidos e produtos.
 
 **Primary actions**
 - Acessar Pedidos
-- Acessar Catálogo
+- Acessar Produtos
 
 **Layout (wireframe in text)**
-- Header: Navegação principal
-- Main: Cards de acesso rápido
+- Header: NavegaÃ§Ã£o principal
+- Main: Cards de acesso rÃ¡pido
 - Footer: vazio
 
 **Components**
 - Card Pedidos
-- Card Catálogo
+- Card Produtos
 
 **States**
 - Loading: skeleton dos cards
-- Error: "Não foi possível carregar o painel."
+- Error: "NÃ£o foi possÃ­vel carregar o painel."
 
 **Accessibility & keyboard**
-- Cards focáveis via Tab
+- Cards focÃ¡veis via Tab
 - Enter ativa o card
 
 ---
 
-### Screen: Catálogo (/admin/catalog)
-**Purpose**
-- Entrada do módulo de catálogo.
-
-**Primary actions**
-- Ir para Categorias
-- Ir para Produtos
-
-**Layout (wireframe in text)**
-- Header: Breadcrumb (Admin > Catálogo)
-- Main: Links em lista ou cards
-- Footer: vazio
-
-**Components**
-- Link Categorias
-- Link Produtos
-- KPI simples: "SKUs ativos: X"
-
-**States**
-- Loading: skeleton
-- Error: "Erro ao carregar catálogo."
-
-**Accessibility & keyboard**
-- Navegação por Tab
-- Enter ativa links
-
----
-
-### Screen: Categorias – Lista (/admin/catalog/categories)
+### Screen: Categorias â€“ Lista (/admin/categories)
 **Purpose**
 - Gerenciar categorias de produtos.
 
@@ -113,77 +85,17 @@
 - Criar categoria
 - Editar categoria
 
-**Layout (wireframe in text)**
-- Header: Breadcrumb
-- Main:
-  - Botão "Nova categoria"
-  - Tabela de categorias
-- Footer: paginação (se aplicável)
-
 **Components**
-- Tabela
-  - Colunas: Nome | Ativo
-- Botão Nova categoria
-- Ação Editar por linha
+- Busca por nome
+- BotÃ£o "Nova categoria" (modal)
+- Tabela: Colunas Nome | Ativo
 
 **States**
-- Loading: skeleton da tabela
 - Empty: "Nenhuma categoria cadastrada."
-- Error: "Erro ao carregar categorias."
-
-**Validation & messages**
-- Nenhuma específica na lista
-
-**Microcopy**
-- Buttons: "Nova categoria", "Editar"
-
-**Accessibility & keyboard**
-- Tabela navegável por teclado
-- Enter em "Editar" abre modal
 
 ---
 
-### Screen: Categoria – Form (modal)
-**Purpose**
-- Criar ou editar categoria.
-
-**Primary actions**
-- Salvar
-- Cancelar
-
-**Layout (wireframe in text)**
-- Modal:
-  - Campo Nome
-  - Toggle Ativo
-  - Ações no rodapé
-
-**Components**
-- Input Nome
-- Toggle Ativo
-- Botões Salvar / Cancelar
-
-**States**
-- Loading: botões desabilitados
-- Error: mensagem inline
-- Success: toast "Categoria salva com sucesso."
-
-**Validation & messages**
-- Nome obrigatório → "Informe o nome da categoria."
-- Nome duplicado → "Já existe uma categoria com este nome."
-
-**Microcopy**
-- Labels: "Nome", "Ativa"
-- Buttons: "Salvar", "Cancelar"
-- Confirmations (inativar): "Tem certeza que deseja inativar esta categoria?"
-
-**Accessibility & keyboard**
-- Focus inicial no campo Nome
-- Esc fecha modal
-- Enter salva
-
----
-
-### Screen: Produtos – Lista (/admin/catalog/products)
+### Screen: Produtos â€“ Lista (/admin/products)
 **Purpose**
 - Visualizar e acessar produtos.
 
@@ -196,13 +108,12 @@
 - Main:
   - Filtros
   - Tabela de produtos
-- Footer: paginação
+- Footer: paginaÃ§Ã£o
 
 **Components**
 - Filtros: Categoria, Status, Busca por nome
-- Tabela:
-  - Colunas: Produto | Categoria | Ativo | Lead time | Sob consulta
-- Botão Novo produto
+- Tabela: Colunas Produto | Categoria | Status | SKUs | AÃ§Ãµes
+- BotÃ£o Novo produto
 
 **States**
 - Loading: skeleton
@@ -210,18 +121,18 @@
 - Error: "Erro ao carregar produtos."
 
 **Validation & messages**
-- Busca sem resultado → estado vazio
+- Busca sem resultado â†’ estado vazio
 
 **Microcopy**
 - Buttons: "Novo produto", "Editar"
 
 **Accessibility & keyboard**
-- Filtros acessíveis por Tab
+- Filtros acessÃ­veis por Tab
 - Enter aplica filtros
 
 ---
 
-### Screen: Produto – Edição (/admin/catalog/products/[id])
+### Screen: Produto â€“ EdiÃ§Ã£o (/admin/products/[id])
 **Purpose**
 - Gerenciar dados do produto e seus SKUs.
 
@@ -232,43 +143,40 @@
 **Layout (wireframe in text)**
 - Header: Breadcrumb
 - Main:
-  - Seção Dados do produto
-  - Seção SKUs (tabela)
-- Footer: botão Salvar
+  - SeÃ§Ã£o Dados do produto
+  - SeÃ§Ã£o SKUs (tabela)
+- Footer: botÃ£o Salvar
 
 **Components**
 - Dados do produto:
   - Nome
   - Categoria
   - Toggle Ativo
-  - Lead time (opcional)
-  - Toggle Sob consulta
 - Tabela de SKUs
-  - Colunas: Display name | Unidade | Preço | Ativo | Crítico | Sob consulta
-  - Ações: Editar, Duplicar, Inativar
+  - Colunas: Display name | Unidade | PreÃ§o | Status
+  - AÃ§Ãµes: Editar, Duplicar, Inativar
 
 **States**
-- Loading: skeleton da página
+- Loading: skeleton da pÃ¡gina
 - Error: "Erro ao carregar produto."
 - Success: toast "Produto salvo com sucesso."
 
 **Validation & messages**
-- Nome obrigatório → "Informe o nome do produto."
-- Categoria obrigatória → "Selecione uma categoria."
-- Lead time < 0 → "Lead time deve ser maior ou igual a zero."
+- Nome obrigatÃ³rio â†’ "Informe o nome do produto."
+- Categoria obrigatÃ³ria â†’ "Selecione uma categoria."
 
 **Microcopy**
 - Buttons: "Salvar", "Adicionar SKU"
 - Confirmations: "Deseja inativar este SKU?"
 
 **Accessibility & keyboard**
-- Navegação linear por Tab
+- NavegaÃ§Ã£o linear por Tab
 - Enter salva produto
-- Tabela de SKUs navegável por teclado
+- Tabela de SKUs navegÃ¡vel por teclado
 
 ---
 
-### Screen: SKU – Form (modal)
+### Screen: SKU â€“ Form (modal)
 **Purpose**
 - Criar ou editar SKU.
 
@@ -279,27 +187,25 @@
 **Layout (wireframe in text)**
 - Modal:
   - Campos do SKU
-  - Ações no rodapé
+  - AÃ§Ãµes no rodapÃ©
 
 **Components**
 - Input Display name
-- Select unitType (UNIDADE, KG, CENTO — DECISÃO PENDENTE)
+- Select unitType (UNIDADE, KG, CENTO â€” DECISÃƒO PENDENTE)
 - Input unitLabel
 - Input priceCurrent
-- Toggle Crítico
 - Toggle Ativo
-- Select Sob consulta (Herdar / Forçar sim / Forçar não)
 
 **States**
-- Loading: botões desabilitados
+- Loading: botÃµes desabilitados
 - Error: mensagens inline
 - Success: toast "SKU salvo com sucesso."
 
 **Validation & messages**
-- Display name obrigatório → "Informe o nome do SKU."
-- unitLabel obrigatório → "Informe a unidade."
-- priceCurrent <= 0 → "Preço deve ser maior que zero."
-- unitType KG fora do passo → "Quantidade em KG deve ser múltiplo de 0,05."
+- Display name obrigatÃ³rio â†’ "Informe o nome do SKU."
+- unitLabel obrigatÃ³rio â†’ "Informe a unidade."
+- priceCurrent <= 0 â†’ "PreÃ§o deve ser maior que zero."
+- unitType KG fora do passo â†’ "Quantidade em KG deve ser mÃºltiplo de 0,05."
 
 **Microcopy**
 - Buttons: "Salvar", "Cancelar"
@@ -312,14 +218,17 @@
 ---
 
 ## Navigation & flow
-- Breadcrumbs em todas as telas de catálogo
-- Voltar do produto retorna à lista de produtos
-- Modais não alteram rota
+- Breadcrumbs em todas as telas de Produtos
+- Voltar do produto retorna Ã  lista de produtos
+- Modais nÃ£o alteram rota
 
 ---
 
 ## Notes for engineering
-- Validações devem ser replicadas no backend
-- Snapshot de dados (SKU e preço) deve ser usado em pedidos já criados
-- Inativação não bloqueia entidades já usadas em pedidos
+- ValidaÃ§Ãµes devem ser replicadas no backend
+- Snapshot de dados (SKU e preÃ§o) deve ser usado em pedidos jÃ¡ criados
+- InativaÃ§Ã£o nÃ£o bloqueia entidades jÃ¡ usadas em pedidos
 - Usar toast global para feedback de sucesso/erro
+
+
+

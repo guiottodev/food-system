@@ -17,6 +17,8 @@ type ProductSearchParams = {
   tab?: string;
   skuMode?: string;
   skuId?: string;
+  created?: string;
+  ready?: string;
 };
 
 function parseAttributesJson(value: string | null): SkuAttributeInput[] {
@@ -49,6 +51,8 @@ export default async function ProductDetailPage({
   const skuMode = sp?.skuMode;
   const skuId = sp?.skuId;
   const error = sp?.error;
+  const created = sp?.created === "1";
+  const ready = sp?.ready === "1";
 
   const product = await prisma.product.findUnique({
     where: { id: productId },
@@ -96,7 +100,7 @@ export default async function ProductDetailPage({
       : "";
 
   const initialTab =
-    tab === "skus" || tab === "images" || tab === "details" ? tab : "details";
+    tab === "skus" || tab === "images" || tab === "details" ? tab : "skus";
   const initialSkuMode =
     skuMode === "edit" || skuMode === "new" ? skuMode : undefined;
   const initialSkuId = skuId || undefined;
@@ -116,7 +120,6 @@ export default async function ProductDetailPage({
     priceCurrent: Number(sku.priceCurrent),
     cost: sku.cost ? Number(sku.cost) : null,
     isActive: sku.isActive,
-    sobConsultaOverride: sku.sobConsultaOverride,
     tags: sku.tags.map((tag) => tag.name),
   }));
 
@@ -125,6 +128,16 @@ export default async function ProductDetailPage({
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>Produto: {product.name}</h1>
         <Link href="/admin/products">Voltar</Link>
+      </div>
+      {created ? <div className={styles.notice}>Produto criado.</div> : null}
+      <div className={styles.clusterSm}>
+        <span
+          className={`${styles.badge} ${
+            product.isActive ? styles.badgeSuccess : styles.badgeNeutral
+          }`}
+        >
+          {product.isActive ? "Ativo" : "Inativo"}
+        </span>
       </div>
 
       <ProductTabs activeTab={initialTab} productId={product.id} />
@@ -136,8 +149,6 @@ export default async function ProductDetailPage({
             categoryId: product.categoryId,
             descriptionLong: product.descriptionLong,
             isActive: product.isActive,
-            isPublicHidden: product.isPublicHidden,
-            sobConsulta: product.sobConsulta,
           }}
           categories={categories}
           errorMessage={productErrorMessage}
@@ -146,8 +157,6 @@ export default async function ProductDetailPage({
       {initialTab === "skus" ? (
         <ProductSkusSection
           productId={product.id}
-          productName={product.name}
-          productSobConsulta={product.sobConsulta}
           skus={skusView}
           createSkuAction={createSkuAction}
           updateSkuAction={updateSkuAction}
@@ -155,6 +164,7 @@ export default async function ProductDetailPage({
           initialMode={initialSkuMode}
           initialSkuId={initialSkuId}
           skuErrorMessage={skuErrorMessage}
+          showReadyNotice={ready}
         />
       ) : null}
       {initialTab === "images" ? (

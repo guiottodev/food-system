@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
-import { isSkuSellableInternal } from "@/lib/catalog";
+import { isSkuAvailableInternal } from "@/lib/skuAvailability";
 import type { Prisma } from "@prisma/client";
 
 async function hasValidSession() {
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
       sku,
       product: sku.product,
     }))
-      .filter(({ sku, product }) => isSkuSellableInternal({ sku, product }))
+      .filter(({ sku, product }) => isSkuAvailableInternal({ sku, product }))
       .map(({ sku, product }) => ({
         skuId: sku.id,
         skuLabel: sku.displayName,

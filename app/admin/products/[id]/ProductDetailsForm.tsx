@@ -13,8 +13,6 @@ type ProductDetailsFormProps = {
     categoryId: string;
     descriptionLong: string | null;
     isActive: boolean;
-    isPublicHidden: boolean;
-    sobConsulta: boolean;
   };
   categories: CategoryOption[];
   errorMessage?: string;
@@ -67,22 +65,6 @@ export default function ProductDetailsForm({
               defaultChecked={product.isActive}
             />
             <span className={styles.choiceLabel}>Ativo</span>
-          </label>
-          <label className={styles.choiceRow}>
-            <input
-              type="checkbox"
-              name="isPublicHidden"
-              defaultChecked={product.isPublicHidden}
-            />
-            <span className={styles.choiceLabel}>Ocultar do publico</span>
-          </label>
-          <label className={styles.choiceRow}>
-            <input
-              type="checkbox"
-              name="sobConsulta"
-              defaultChecked={product.sobConsulta}
-            />
-            <span className={styles.choiceLabel}>Sob consulta</span>
           </label>
           <button
             type="submit"

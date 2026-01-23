@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { validateSkuQuantity } from "../lib/quantity";
 import { getSkuDefaults, normalizeUnitLabel, normalizeUnitType } from "../lib/unit";
-import { isSkuSellableInternal } from "../lib/catalog";
+import { isSkuAvailableInternal } from "../lib/skuAvailability";
 
 describe("validateSkuQuantity", () => {
   it("enforces integer quantities for UNIDADE with step=1", () => {
@@ -98,25 +98,25 @@ describe("getSkuDefaults", () => {
   });
 });
 
-describe("isSkuSellableInternal", () => {
-  it("allows internal sale for public-hidden product when active", () => {
+describe("isSkuAvailableInternal", () => {
+  it("allows when sku and product are active", () => {
     expect(
-      isSkuSellableInternal({
+      isSkuAvailableInternal({
         sku: { isActive: true },
-        product: { isActive: true, isPublicHidden: true },
+        product: { isActive: true },
       })
     ).toBe(true);
   });
 
   it("rejects inactive sku or product", () => {
     expect(
-      isSkuSellableInternal({
+      isSkuAvailableInternal({
         sku: { isActive: false },
         product: { isActive: true },
       })
     ).toBe(false);
     expect(
-      isSkuSellableInternal({
+      isSkuAvailableInternal({
         sku: { isActive: true },
         product: { isActive: false },
       })

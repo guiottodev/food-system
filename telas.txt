@@ -6,11 +6,6 @@
 - Conteudo exibido: Receita (soma de pedidos ENTREGUE no periodo), Pendencias fortes (contador), Pedidos em producao (contador).
 - Acoes/links: Ver pendencias -> /admin/pendencias, Ver pedidos -> /admin/orders?status=EM_PRODUCAO.
 
-## /admin/catalog - Catalogo
-- O que faz: hub de catalogo para navegar entre categorias e produtos.
-- Conteudo exibido: contagem "SKUs ativos".
-- Acoes/links: links para /admin/categories e /admin/products.
-
 ## /admin/products - Produtos
 - O que faz: lista produtos com filtros e acesso ao detalhe.
 - Campos/controles:
@@ -18,11 +13,9 @@
   - Botao "Filtros" abre painel com:
     - Categoria (select).
     - Status (Ativos/Inativos).
-    - Publico (Publico/Oculto).
-    - Sob consulta (Sim/Nao).
   - Botao "Novo produto".
   - Chips de filtros ativos com botao "x".
-- Conteudo exibido (tabela): Produto, Categoria, Status (badge Ativo/Inativo), Sob consulta (badge Sim/Nao), SKUs (contador), Acoes (Ver detalhes).
+- Conteudo exibido (tabela): Produto, Categoria, Status (badge Ativo/Inativo), SKUs (contador), Acoes (Ver detalhes).
 - Regras: filtros e busca server-side, ordenacao por nome.
 
 ## /admin/products/new - Novo produto
@@ -32,8 +25,6 @@
   - Categoria (select, required).
   - Descricao longa (textarea, opcional).
   - Ativo (checkbox).
-  - Ocultar do publico (checkbox).
-  - Sob consulta (checkbox).
   - URL da imagem principal (input).
   - URLs extras (textarea, uma por linha).
 - Acoes: Criar produto.
@@ -44,7 +35,7 @@
 - Abas: Detalhes, SKUs, Imagens.
 
 ### Aba: Detalhes
-- Campos: Nome, Categoria, Descricao longa, Ativo, Ocultar do publico, Sob consulta.
+- Campos: Nome, Categoria, Descricao longa, Ativo.
 - Acoes: Salvar produto.
 
 ### Aba: SKUs
@@ -58,7 +49,6 @@
   - Unidade (unitType + unitLabel).
   - Preco (preco atual).
   - Status (ATIVO/INATIVO).
-  - Sob consulta (herdado ou override).
   - Acoes: Editar, Duplicar, Ativar/Desativar.
 - Modal "Novo SKU" / "Editar SKU":
   - Nome exibido (input, required) + botao "Gerar nome".
@@ -67,7 +57,6 @@
   - Custo (opcional).
   - Tags (texto separado por virgula).
   - Atributos (lista key/value, ate 15 linhas, sugestoes clicaveis).
-  - Sob consulta (Herdar/Forcar sim/Forcar nao).
   - Ativo (checkbox).
   - Acoes: Cancelar/Salvar.
 

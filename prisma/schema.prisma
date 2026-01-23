@@ -139,8 +139,6 @@ model Product {
   leadTime            Int? @map("leadTimeHours")
   descriptionLong     String?
   isActive            Boolean  @default(true) @map("active")
-  isPublicHidden      Boolean  @default(false)
-  sobConsulta         Boolean @default(false) @map("isSobConsulta")
   imageMainUrl        String?
   createdAt           DateTime @default(now())
   updatedAt           DateTime @default(now()) @updatedAt
@@ -230,7 +228,6 @@ model Sku {
   cost         Decimal?
   attributesJson String?
   isActive     Boolean  @default(true) @map("active")
-  sobConsultaOverride Boolean? @map("isSobConsultaOverride")
   stockQuantity Decimal @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now()) @updatedAt
@@ -311,7 +308,6 @@ model OrderItem {
   snapshotSizeText    String?
   snapshotFlavorText  String?
   snapshotIsFrozen    Boolean @default(false)
-  snapshotIsSobConsulta Boolean @default(false)
   snapshotUnitPrice Decimal @map("priceAtTime")
   lineTotal   Decimal
   createdAt   DateTime @default(now())

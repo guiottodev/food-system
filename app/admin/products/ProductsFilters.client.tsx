@@ -16,8 +16,6 @@ type ProductsFiltersProps = {
   initialQuery: string;
   initialCategoryId: string;
   initialActive: string;
-  initialHidden: string;
-  initialSob: string;
 };
 
 const ACTIVE_LABELS: Record<string, string> = {
@@ -25,23 +23,11 @@ const ACTIVE_LABELS: Record<string, string> = {
   inactive: "Inativos",
 };
 
-const HIDDEN_LABELS: Record<string, string> = {
-  hidden: "Ocultos",
-  public: "Publicos",
-};
-
-const SOB_LABELS: Record<string, string> = {
-  yes: "Sob consulta",
-  no: "Sem sob consulta",
-};
-
 export default function ProductsFilters({
   categories,
   initialQuery,
   initialCategoryId,
   initialActive,
-  initialHidden,
-  initialSob,
 }: ProductsFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -59,15 +45,10 @@ export default function ProductsFilters({
   const currentQuery = searchParams.get("q") ?? initialQuery;
   const currentCategory = searchParams.get("categoryId") ?? initialCategoryId;
   const currentActive = searchParams.get("active") ?? initialActive;
-  const currentHidden = searchParams.get("hidden") ?? initialHidden;
-  const currentSob = searchParams.get("sob") ?? initialSob;
-
   const hasActiveFilters =
     Boolean(currentQuery) ||
     Boolean(currentCategory) ||
-    currentActive !== "all" ||
-    currentHidden !== "all" ||
-    currentSob !== "all";
+    currentActive !== "all";
 
   const applyParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -127,20 +108,6 @@ export default function ProductsFilters({
           key: "active",
           label: `Status: ${ACTIVE_LABELS[currentActive] ?? "Selecionado"}`,
           onRemove: () => applyParams({ active: "all" }),
-        }
-      : null,
-    currentHidden !== "all"
-      ? {
-          key: "hidden",
-          label: `Visibilidade: ${HIDDEN_LABELS[currentHidden] ?? "Selecionada"}`,
-          onRemove: () => applyParams({ hidden: "all" }),
-        }
-      : null,
-    currentSob !== "all"
-      ? {
-          key: "sob",
-          label: `Sob consulta: ${SOB_LABELS[currentSob] ?? "Selecionado"}`,
-          onRemove: () => applyParams({ sob: "all" }),
         }
       : null,
   ].filter(Boolean) as Array<{
@@ -232,36 +199,6 @@ export default function ProductsFilters({
                       <option value="all">Ativos e inativos</option>
                       <option value="active">Somente ativos</option>
                       <option value="inactive">Somente inativos</option>
-                    </select>
-                  </label>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Publico</span>
-                    <select
-                      name="hidden"
-                      value={currentHidden}
-                      onChange={(event) =>
-                        applyParams({ hidden: event.target.value })
-                      }
-                      className={styles.control}
-                      disabled={isPending}
-                    >
-                      <option value="all">Publico e oculto</option>
-                      <option value="public">Somente publico</option>
-                      <option value="hidden">Somente oculto</option>
-                    </select>
-                  </label>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Sob consulta</span>
-                    <select
-                      name="sob"
-                      value={currentSob}
-                      onChange={(event) => applyParams({ sob: event.target.value })}
-                      className={styles.control}
-                      disabled={isPending}
-                    >
-                      <option value="all">Com ou sem sob consulta</option>
-                      <option value="yes">Somente sob consulta</option>
-                      <option value="no">Sem sob consulta</option>
                     </select>
                   </label>
                 </div>
