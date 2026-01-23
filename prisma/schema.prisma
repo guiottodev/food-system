@@ -146,8 +146,6 @@ model Product {
   category Category @relation(fields: [categoryId], references: [id])
   skus     Sku[]
   images   ProductImage[]
-  productionItems ProductionSessionItem[]
-  productionConsumptions ProductionConsumption[]
 
   @@map("products")
   @@unique([name, categoryId])
@@ -239,6 +237,8 @@ model Sku {
   inventoryMoves   InventoryMovement[]
   capacityRules    CapacityRule[]
   tags             SkuTag[]
+  productionItems       ProductionSessionItem[]
+  productionConsumptions ProductionConsumption[]
 
   @@map("skus")
   @@unique([productId, displayName])

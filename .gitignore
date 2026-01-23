@@ -7,3 +7,4 @@ node_modules/
 !.env.example
 !.env.test
 prisma/data/
+tsconfig.tsbuildinfo
