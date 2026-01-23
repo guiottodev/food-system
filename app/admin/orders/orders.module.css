@@ -278,6 +278,7 @@
 .orderRowExpanded {
   background: rgba(37, 99, 235, 0.04) !important;
   box-shadow: inset 3px 0 0 var(--action-primary);
+  border-bottom: none !important;
 }
 
 /* ===== CELLS ===== */
@@ -325,24 +326,17 @@
 
 /* Order number */
 .orderNumber {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 10px;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
-  border-radius: var(--radius-md);
   font-family: "SF Mono", "Fira Code", "Consolas", monospace;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--action-primary);
   text-decoration: none;
-  transition: all 150ms ease;
-  border: 1px solid transparent;
+  transition: color 150ms ease;
 }
 
 .orderNumber:hover {
-  background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
-  border-color: var(--border);
-  transform: translateY(-1px);
+  color: var(--action-primary-hover);
+  text-decoration: underline;
 }
 
 /* Customer info */
@@ -490,11 +484,12 @@
 
 /* ===== EXPANDED ROW ===== */
 .expandedRow {
-  background: transparent !important;
+  background: rgba(37, 99, 235, 0.04) !important;
+  box-shadow: inset 3px 0 0 var(--action-primary);
 }
 
 .expandedRow > td {
-  padding: 0 var(--space-4) var(--space-5) !important;
+  padding: 0 var(--space-4) var(--space-4) !important;
   border-bottom: 1px solid var(--border);
 }
 
