@@ -11,8 +11,7 @@ export type TransitionResult =
         | "invalid_transition"
         | "final_status"
         | "not_ready"
-        | "strong_pending"
-        | "payment_required";
+        | "strong_pending";
     };
 
 type TransitionOptions = {
@@ -83,14 +82,38 @@ export async function transitionOrderStatus(
 
       if (marked.count === 1) {
         appliedStock = true;
+        const totalsBySku = new Map<string, number>();
         for (const item of order.items) {
           if (!item.skuId) continue;
+          totalsBySku.set(
+            item.skuId,
+            (totalsBySku.get(item.skuId) ?? 0) + Number(item.quantity)
+          );
+        }
+
+        const skuBalances = await tx.sku.findMany({
+          where: { id: { in: Array.from(totalsBySku.keys()) } },
+          select: {
+            id: true,
+            stockQuantity: true,
+            pendingProductionQuantity: true,
+          },
+        });
+        const balanceMap = new Map(skuBalances.map((sku) => [sku.id, sku]));
+
+        for (const [skuId, qty] of totalsBySku.entries()) {
+          const current = balanceMap.get(skuId);
+          if (!current) continue;
+          const stock = Number(current.stockQuantity ?? 0);
+          const pending = Number(current.pendingProductionQuantity ?? 0);
+          const shortage = Math.max(qty - stock, 0);
+          const nextStock = Math.max(stock - qty, 0);
+          const nextPending = pending + shortage;
           await tx.sku.update({
-            where: { id: item.skuId },
+            where: { id: skuId },
             data: {
-              stockQuantity: {
-                decrement: item.quantity,
-              },
+              stockQuantity: nextStock,
+              pendingProductionQuantity: nextPending,
             },
           });
         }

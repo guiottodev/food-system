@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
 import { DEFAULT_DELIVERY_TIME, getOrderPendingSummary } from "@/lib/domain/order";
-import { computeOrderPendingFlags } from "@/lib/domain/production";
+import { computeOrderPendingFlags, computeStockShortageForOrders } from "@/lib/domain/production";
 import { OrderStatus } from "@prisma/client";
 import {
   confirmOrderAction,
@@ -151,6 +151,10 @@ export default async function OrderDetailPage({
     status: order.status,
     items: order.items,
   });
+  const stockShortageMap = await computeStockShortageForOrders(prisma, [
+    { id: order.id, status: order.status, items: order.items },
+  ]);
+  const hasStockShortage = stockShortageMap.get(order.id) ?? false;
 
   const availabilityBySku = new Map(
     availability.itemAvailability.map((item) => [item.skuId, item])
@@ -170,6 +174,7 @@ export default async function OrderDetailPage({
     needsReconfirmation: order.needsReconfirmation,
     paidAt: order.paidAt,
     hasUnavailableItems: availability.hasUnavailableItems,
+    hasStockShortage,
   });
 
   const pendingSummary = getOrderPendingSummary({
@@ -270,9 +275,6 @@ export default async function OrderDetailPage({
           blockedReasons.push("Reconfirmacao pendente.");
         }
       }
-      if (!hasPayment) {
-        blockedReasons.push("Pagamento pendente.");
-      }
       return {
         label: "Marcar entregue",
         type: "status" as const,
@@ -287,7 +289,7 @@ export default async function OrderDetailPage({
   if (order.orderType === "ENCOMENDA") {
     whyList.push("Pedido de encomenda: producao planejada.");
   } else {
-    whyList.push("Pronta entrega: exige saldo disponivel.");
+    whyList.push("Pronta entrega: alerta de saldo insuficiente quando aplicavel.");
   }
   if (attention.strongReasons.length > 0) {
     whyList.push(`Pendencias bloqueando: ${attention.strongReasons.length}.`);

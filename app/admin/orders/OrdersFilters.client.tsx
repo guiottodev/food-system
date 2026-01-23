@@ -38,7 +38,8 @@ type AttentionValue =
   | "ALTERADO_APOS_CONFIRMACAO"
   | "UNAVAILABLE_ITEMS"
   | "MISSING_TIME"
-  | "MISSING_ADDRESS";
+  | "MISSING_ADDRESS"
+  | "SALDO_INSUFICIENTE";
 
 type FiltersState = {
   period: PeriodValue;
@@ -57,6 +58,7 @@ const attentionOptions: Array<{ value: AttentionValue; label: string }> = [
   { value: "all", label: "Todas" },
   { value: "with", label: "Com pendencias" },
   { value: "UNAVAILABLE_ITEMS", label: "Itens indisponiveis" },
+  { value: "SALDO_INSUFICIENTE", label: "Saldo insuficiente" },
   { value: "INCOMPLETE", label: "Pedido incompleto" },
   { value: "ALTERADO_APOS_CONFIRMACAO", label: "Alterado apos confirmacao" },
   { value: "MISSING_ADDRESS", label: "Endereco nao informado" },
@@ -67,6 +69,7 @@ const attentionSummaryLabels: Record<AttentionValue, string> = {
   all: "Todas",
   with: "Com pendencias",
   UNAVAILABLE_ITEMS: "Itens indisponiveis",
+  SALDO_INSUFICIENTE: "Saldo insuficiente",
   INCOMPLETE: "Pedido incompleto",
   ALTERADO_APOS_CONFIRMACAO: "Alterado apos confirmacao",
   MISSING_ADDRESS: "Endereco nao informado",

@@ -5,8 +5,7 @@ type StatusTransitionError = "final_status" | "invalid_transition";
 type OrderTransitionError =
   | StatusTransitionError
   | "not_ready"
-  | "strong_pending"
-  | "payment_required";
+  | "strong_pending";
 
 type ValidationResult<TError extends string = string> =
   | { ok: true }
@@ -116,13 +115,6 @@ export function validateOrderTransition(
 
   if ((nextStatus === "PRONTO" || nextStatus === "ENTREGUE") && pending.strongPending) {
     return { ok: false, error: "strong_pending" };
-  }
-
-  if (nextStatus === "ENTREGUE") {
-    const paid = Boolean(order.paidAt) || Boolean(options.willMarkPaid);
-    if (!paid) {
-      return { ok: false, error: "payment_required" };
-    }
   }
 
   return { ok: true };

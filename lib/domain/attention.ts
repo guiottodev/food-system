@@ -7,7 +7,8 @@ export type AttentionReasonType =
   | "ALTERADO_APOS_CONFIRMACAO"
   | "UNAVAILABLE_ITEMS"
   | "MISSING_TIME"
-  | "MISSING_ADDRESS";
+  | "MISSING_ADDRESS"
+  | "SALDO_INSUFICIENTE";
 
 export type AttentionReason = {
   type: AttentionReasonType;
@@ -34,6 +35,7 @@ export type OrderAttentionInput = {
   needsReconfirmation?: boolean | null;
   paidAt?: Date | null;
   hasUnavailableItems?: boolean | null;
+  hasStockShortage?: boolean | null;
 };
 
 export type OrderAttentionSummary = {
@@ -92,12 +94,35 @@ function buildFlag(state: FieldFlagState, label: string): FieldFlag {
 export function getOrderAttentionSummary(
   order: OrderAttentionInput
 ): OrderAttentionSummary {
-  if (FINAL_STATUSES.includes(order.status)) {
+  if (FINAL_STATUSES.includes(order.status) && !order.hasStockShortage) {
     return {
       reasons: [],
       strongReasons: [],
       weakReasons: [],
       hasAttention: false,
+      missingFields: [],
+      flags: {
+        items: buildFlag("OPTIONAL", "Sem pendencia"),
+        date: buildFlag("OPTIONAL", "Sem pendencia"),
+        time: buildFlag("OPTIONAL", "Sem pendencia"),
+        address: buildFlag("OPTIONAL", "Sem pendencia"),
+        payment: buildFlag("OPTIONAL", "Sem pendencia"),
+      },
+    };
+  }
+  if (FINAL_STATUSES.includes(order.status) && order.hasStockShortage) {
+    const reasons: AttentionReason[] = [
+      {
+        type: "SALDO_INSUFICIENTE",
+        severity: "weak",
+        label: "Saldo insuficiente (producao pendente)",
+      },
+    ];
+    return {
+      reasons,
+      strongReasons: [],
+      weakReasons: reasons,
+      hasAttention: true,
       missingFields: [],
       flags: {
         items: buildFlag("OPTIONAL", "Sem pendencia"),
@@ -146,6 +171,14 @@ export function getOrderAttentionSummary(
       type: "UNAVAILABLE_ITEMS",
       severity: "weak",
       label: unavailableLabel,
+    });
+  }
+
+  if (order.hasStockShortage) {
+    reasons.push({
+      type: "SALDO_INSUFICIENTE",
+      severity: "weak",
+      label: "Saldo insuficiente (producao pendente)",
     });
   }
 

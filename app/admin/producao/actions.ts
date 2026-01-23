@@ -5,10 +5,9 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { validateSkuQuantity } from "@/lib/quantity";
-import { getDefaultSkuMap } from "@/lib/domain/production";
 
 type ProductionItemPayload = {
-  productId?: string;
+  skuId?: string;
   quantity?: number | string;
   note?: string;
 };
@@ -55,31 +54,41 @@ export async function createProductionSessionAction(formData: FormData) {
   }
 
   const producedAt = parseProducedAt(payload.producedAt);
-  const productIds = items
-    .map((item) => (typeof item.productId === "string" ? item.productId : ""))
+  const skuIds = items
+    .map((item) => (typeof item.skuId === "string" ? item.skuId : ""))
     .filter(Boolean);
 
-  if (productIds.length === 0) {
-    redirect("/admin/producao?error=produto-invalido");
+  if (skuIds.length === 0) {
+    redirect("/admin/producao?error=sku-invalido");
   }
 
-  const rulesMap = await getDefaultSkuMap(prisma, productIds);
+  const skuRows = await prisma.sku.findMany({
+    where: { id: { in: skuIds } },
+    select: {
+      id: true,
+      unitType: true,
+      minQty: true,
+      quantityStep: true,
+    },
+  });
+  const skuMap = new Map(skuRows.map((sku) => [sku.id, sku]));
+
   const normalizedItems = items.map((item) => {
-    const productId = typeof item.productId === "string" ? item.productId : "";
-    if (!productId) {
-      redirect("/admin/producao?error=produto-invalido");
+    const skuId = typeof item.skuId === "string" ? item.skuId : "";
+    if (!skuId) {
+      redirect("/admin/producao?error=sku-invalido");
     }
-    const rules = rulesMap.get(productId);
-    if (!rules) {
-      redirect("/admin/producao?error=produto-invalido");
+    const sku = skuMap.get(skuId);
+    if (!sku) {
+      redirect("/admin/producao?error=sku-invalido");
     }
 
     const quantityInput = item.quantity ?? "";
     const quantityResult = validateSkuQuantity(
       {
-        unitType: rules.unitType as "KG" | "UNIDADE" | "CENTO",
-        minQty: rules.minQty,
-        quantityStep: rules.quantityStep,
+        unitType: sku.unitType as "KG" | "UNIDADE" | "CENTO",
+        minQty: sku.minQty,
+        quantityStep: sku.quantityStep,
       },
       quantityInput
     );
@@ -89,7 +98,7 @@ export async function createProductionSessionAction(formData: FormData) {
     }
 
     return {
-      productId,
+      skuId,
       quantity: quantityResult.normalized,
       note: item.note?.trim() || null,
     };
@@ -101,19 +110,53 @@ export async function createProductionSessionAction(formData: FormData) {
     select: { id: true },
   });
 
-  await prisma.productionSession.create({
-    data: {
-      producedAt,
-      note: payload.note?.trim() || null,
-      createdById: actor?.id ?? null,
-      items: {
-        create: normalizedItems.map((item) => ({
-          productId: item.productId,
-          quantity: toDecimal(item.quantity),
-          note: item.note,
-        })),
+  await prisma.$transaction(async (tx) => {
+    await tx.productionSession.create({
+      data: {
+        producedAt,
+        note: payload.note?.trim() || null,
+        createdById: actor?.id ?? null,
+        items: {
+          create: normalizedItems.map((item) => ({
+            skuId: item.skuId,
+            quantity: toDecimal(item.quantity),
+            note: item.note,
+          })),
+        },
       },
-    },
+    });
+
+    const totalsBySku = new Map<string, number>();
+    for (const item of normalizedItems) {
+      totalsBySku.set(item.skuId, (totalsBySku.get(item.skuId) ?? 0) + item.quantity);
+    }
+
+    const skuBalances = await tx.sku.findMany({
+      where: { id: { in: Array.from(totalsBySku.keys()) } },
+      select: { id: true, stockQuantity: true, pendingProductionQuantity: true },
+    });
+    const balanceMap = new Map(skuBalances.map((sku) => [sku.id, sku]));
+
+    for (const [skuId, producedQty] of totalsBySku.entries()) {
+      const current = balanceMap.get(skuId);
+      if (!current) continue;
+      let pending = Number(current.pendingProductionQuantity ?? 0);
+      let stock = Number(current.stockQuantity ?? 0);
+      let remaining = producedQty;
+      if (pending > 0) {
+        const reduce = Math.min(pending, remaining);
+        pending -= reduce;
+        remaining -= reduce;
+      }
+      stock += remaining;
+      await tx.sku.update({
+        where: { id: skuId },
+        data: {
+          pendingProductionQuantity: toDecimal(pending),
+          stockQuantity: toDecimal(stock),
+        },
+      });
+    }
   });
 
   redirect("/admin/producao?created=1");

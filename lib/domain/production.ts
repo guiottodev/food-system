@@ -180,20 +180,14 @@ export async function getCapacityRows(
     return [] as CapacityRow[];
   }
 
-  const [producedAgg, consumedAgg, demandItems] = await Promise.all([
-    prisma.productionSessionItem.groupBy({
-      by: ["productId"],
-      where: {
-        productId: { in: productIds },
-      },
-      _sum: { quantity: true },
+  const [producedItems, consumedItems, demandItems] = await Promise.all([
+    prisma.productionSessionItem.findMany({
+      where: { sku: { productId: { in: productIds } } },
+      select: { quantity: true, sku: { select: { productId: true } } },
     }),
-    prisma.productionConsumption.groupBy({
-      by: ["productId"],
-      where: {
-        productId: { in: productIds },
-      },
-      _sum: { quantity: true },
+    prisma.productionConsumption.findMany({
+      where: { sku: { productId: { in: productIds } } },
+      select: { quantity: true, sku: { select: { productId: true } } },
     }),
     prisma.orderItem.findMany({
       where: {
@@ -213,18 +207,18 @@ export async function getCapacityRows(
     }),
   ]);
 
-  const producedMap = new Map(
-    producedAgg.map((row) => [
-      row.productId,
-      asNumber(row._sum.quantity ?? 0),
-    ])
-  );
-  const consumedMap = new Map(
-    consumedAgg.map((row) => [
-      row.productId,
-      asNumber(row._sum.quantity ?? 0),
-    ])
-  );
+  const producedMap = new Map<string, number>();
+  for (const item of producedItems) {
+    const productId = item.sku?.productId;
+    if (!productId) continue;
+    producedMap.set(productId, (producedMap.get(productId) ?? 0) + asNumber(item.quantity));
+  }
+  const consumedMap = new Map<string, number>();
+  for (const item of consumedItems) {
+    const productId = item.sku?.productId;
+    if (!productId) continue;
+    consumedMap.set(productId, (consumedMap.get(productId) ?? 0) + asNumber(item.quantity));
+  }
   const demandMap = new Map<string, number>();
   for (const item of demandItems) {
     const productId = item.sku?.productId;
@@ -269,14 +263,14 @@ export async function getProductCapacitySnapshot(
 ) {
   const { start, end } = getWindowRange(window, now);
 
-  const [producedAgg, consumedAgg, demandItems] = await Promise.all([
-    prisma.productionSessionItem.aggregate({
-      where: { productId },
-      _sum: { quantity: true },
+  const [producedItems, consumedItems, demandItems] = await Promise.all([
+    prisma.productionSessionItem.findMany({
+      where: { sku: { productId } },
+      select: { quantity: true },
     }),
-    prisma.productionConsumption.aggregate({
-      where: { productId },
-      _sum: { quantity: true },
+    prisma.productionConsumption.findMany({
+      where: { sku: { productId } },
+      select: { quantity: true },
     }),
     prisma.orderItem.findMany({
       where: {
@@ -293,8 +287,14 @@ export async function getProductCapacitySnapshot(
     }),
   ]);
 
-  const produced = asNumber(producedAgg._sum.quantity ?? 0);
-  const consumed = asNumber(consumedAgg._sum.quantity ?? 0);
+  const produced = producedItems.reduce(
+    (sum, item) => sum + asNumber(item.quantity),
+    0
+  );
+  const consumed = consumedItems.reduce(
+    (sum, item) => sum + asNumber(item.quantity),
+    0
+  );
   const available = produced - consumed;
   const demand = demandItems.reduce(
     (sum, item) => sum + asNumber(item.quantity),
@@ -321,31 +321,29 @@ async function getAvailableNowByProductIds(
     return new Map<string, number>();
   }
 
-  const [producedAgg, consumedAgg] = await Promise.all([
-    prisma.productionSessionItem.groupBy({
-      by: ["productId"],
-      where: { productId: { in: productIds } },
-      _sum: { quantity: true },
+  const [producedItems, consumedItems] = await Promise.all([
+    prisma.productionSessionItem.findMany({
+      where: { sku: { productId: { in: productIds } } },
+      select: { quantity: true, sku: { select: { productId: true } } },
     }),
-    prisma.productionConsumption.groupBy({
-      by: ["productId"],
-      where: { productId: { in: productIds } },
-      _sum: { quantity: true },
+    prisma.productionConsumption.findMany({
+      where: { sku: { productId: { in: productIds } } },
+      select: { quantity: true, sku: { select: { productId: true } } },
     }),
   ]);
 
-  const producedMap = new Map(
-    producedAgg.map((row) => [
-      row.productId,
-      asNumber(row._sum.quantity ?? 0),
-    ])
-  );
-  const consumedMap = new Map(
-    consumedAgg.map((row) => [
-      row.productId,
-      asNumber(row._sum.quantity ?? 0),
-    ])
-  );
+  const producedMap = new Map<string, number>();
+  for (const item of producedItems) {
+    const productId = item.sku?.productId;
+    if (!productId) continue;
+    producedMap.set(productId, (producedMap.get(productId) ?? 0) + asNumber(item.quantity));
+  }
+  const consumedMap = new Map<string, number>();
+  for (const item of consumedItems) {
+    const productId = item.sku?.productId;
+    if (!productId) continue;
+    consumedMap.set(productId, (consumedMap.get(productId) ?? 0) + asNumber(item.quantity));
+  }
 
   const availableMap = new Map<string, number>();
   for (const productId of productIds) {
@@ -436,6 +434,64 @@ export async function computeUnavailableItemsForOrders(
       unavailableItems,
       itemAvailability,
     });
+  }
+
+  return result;
+}
+
+export async function computeStockShortageForOrders(
+  prisma: PrismaClient,
+  orders: OrderAvailabilityInput[]
+) {
+  const skuIds = new Set<string>();
+  for (const order of orders) {
+    for (const item of order.items ?? []) {
+      if (typeof item.skuId === "string" && item.skuId.trim()) {
+        skuIds.add(item.skuId);
+      }
+    }
+  }
+
+  const skuList = Array.from(skuIds);
+  const skuRows = skuList.length
+    ? await prisma.sku.findMany({
+        where: { id: { in: skuList } },
+        select: {
+          id: true,
+          stockQuantity: true,
+          pendingProductionQuantity: true,
+        },
+      })
+    : [];
+  const skuMap = new Map(
+    skuRows.map((sku) => [
+      sku.id,
+      {
+        stock: asNumber(sku.stockQuantity ?? 0),
+        pending: asNumber(sku.pendingProductionQuantity ?? 0),
+      },
+    ])
+  );
+
+  const result = new Map<string, boolean>();
+  for (const order of orders) {
+    if (order.status === "ENTREGUE") {
+      const hasPending = (order.items ?? []).some((item) => {
+        const skuId = typeof item.skuId === "string" ? item.skuId : "";
+        if (!skuId) return false;
+        return (skuMap.get(skuId)?.pending ?? 0) > 0;
+      });
+      result.set(order.id, hasPending);
+      continue;
+    }
+    const hasInsufficient = (order.items ?? []).some((item) => {
+      const skuId = typeof item.skuId === "string" ? item.skuId : "";
+      if (!skuId) return false;
+      const available = skuMap.get(skuId)?.stock ?? 0;
+      const required = asNumber(item.quantity);
+      return required > available;
+    });
+    result.set(order.id, hasInsufficient);
   }
 
   return result;

@@ -130,24 +130,14 @@ describe("order core domain", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("requires payment only for entregue", () => {
+  it("allows moving to entregue without payment", () => {
     const ready = buildOrder({ status: "EM_PRODUCAO", paidAt: null });
     const pronto = validateOrderTransition(ready, "PRONTO");
     expect(pronto.ok).toBe(true);
 
-    const entregueBlocked = validateOrderTransition(
-      { ...ready, status: "PRONTO" },
-      "ENTREGUE"
-    );
-    expect(entregueBlocked.ok).toBe(false);
-    if (!entregueBlocked.ok) {
-      expect(entregueBlocked.error).toBe("payment_required");
-    }
-
     const entregueOk = validateOrderTransition(
       { ...ready, status: "PRONTO" },
-      "ENTREGUE",
-      { willMarkPaid: true }
+      "ENTREGUE"
     );
     expect(entregueOk.ok).toBe(true);
   });

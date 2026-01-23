@@ -25,6 +25,7 @@ type OrderRow = {
   incomplete: boolean;
   altered: boolean;
   unavailableItems?: boolean;
+  stockShortage?: boolean;
   deliveryDatetime: string;
   totalLabel: string;
   items: OrderItem[];
@@ -148,6 +149,14 @@ export default function OrdersTableClient({
                           title="Alguns itens deste pedido nao estao disponiveis no momento. Sera necessario produzir antes de atender."
                         >
                           Itens indisponiveis
+                        </span>
+                      ) : null}
+                      {order.stockShortage ? (
+                        <span
+                          className={`${styles.badge} ${styles.badgeWarning}`}
+                          title="Entrega registrada sem saldo suficiente. Ha producao pendente."
+                        >
+                          Saldo insuficiente
                         </span>
                       ) : null}
                     </div>

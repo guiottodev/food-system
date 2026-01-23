@@ -5,14 +5,10 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
 import { validateSkuQuantity } from "@/lib/quantity";
-import {
-  getDefaultSkuMap,
-  getProductCapacitySnapshot,
-  normalizeCapacityWindow,
-} from "@/lib/domain/production";
+import { getProductCapacitySnapshot, normalizeCapacityWindow } from "@/lib/domain/production";
 
 type CreateConsumptionPayload = {
-  productId?: string;
+  skuId?: string;
   quantity?: number | string;
   sourceType?: "IMMEDIATE" | "MANUAL";
   note?: string;
@@ -36,23 +32,33 @@ function buildWarningRedirect(params: Record<string, string>) {
 
 export async function createConsumptionAction(formData: FormData) {
   const payload = parsePayload(formData);
-  const productId = typeof payload.productId === "string" ? payload.productId : "";
-  if (!productId) {
-    redirect("/admin/consumo?error=produto-invalido");
+  const skuId = typeof payload.skuId === "string" ? payload.skuId : "";
+  if (!skuId) {
+    redirect("/admin/consumo?error=sku-invalido");
   }
 
-  const rulesMap = await getDefaultSkuMap(prisma, [productId]);
-  const rules = rulesMap.get(productId);
-  if (!rules) {
-    redirect("/admin/consumo?error=produto-invalido");
+  const sku = await prisma.sku.findUnique({
+    where: { id: skuId },
+    select: {
+      id: true,
+      productId: true,
+      unitType: true,
+      minQty: true,
+      quantityStep: true,
+      stockQuantity: true,
+      pendingProductionQuantity: true,
+    },
+  });
+  if (!sku) {
+    redirect("/admin/consumo?error=sku-invalido");
   }
 
   const quantityInput = payload.quantity ?? "";
   const quantityResult = validateSkuQuantity(
     {
-      unitType: rules.unitType as "KG" | "UNIDADE" | "CENTO",
-      minQty: rules.minQty,
-      quantityStep: rules.quantityStep,
+      unitType: sku.unitType as "KG" | "UNIDADE" | "CENTO",
+      minQty: sku.minQty,
+      quantityStep: sku.quantityStep,
     },
     quantityInput
   );
@@ -62,7 +68,7 @@ export async function createConsumptionAction(formData: FormData) {
 
   const normalizedQuantity = quantityResult.normalized;
   const window = normalizeCapacityWindow(payload.window);
-  const snapshot = await getProductCapacitySnapshot(prisma, productId, window);
+  const snapshot = await getProductCapacitySnapshot(prisma, sku.productId, window);
   const projectedAvailable = snapshot.available - normalizedQuantity;
   const gapAfter = Math.max(snapshot.demand - projectedAvailable, 0);
 
@@ -88,15 +94,31 @@ export async function createConsumptionAction(formData: FormData) {
     select: { id: true },
   });
 
-  await prisma.productionConsumption.create({
-    data: {
-      productId,
-      quantity: toDecimal(normalizedQuantity),
-      consumedAt: new Date(),
-      sourceType: payload.sourceType === "MANUAL" ? "MANUAL" : "IMMEDIATE",
-      note: payload.note?.trim() || null,
-      createdById: actor?.id ?? null,
-    },
+  await prisma.$transaction(async (tx) => {
+    await tx.productionConsumption.create({
+      data: {
+        skuId,
+        quantity: toDecimal(normalizedQuantity),
+        consumedAt: new Date(),
+        sourceType: payload.sourceType === "MANUAL" ? "MANUAL" : "IMMEDIATE",
+        note: payload.note?.trim() || null,
+        createdById: actor?.id ?? null,
+      },
+    });
+
+    const currentStock = Number(sku.stockQuantity ?? 0);
+    const currentPending = Number(sku.pendingProductionQuantity ?? 0);
+    const shortage = Math.max(normalizedQuantity - currentStock, 0);
+    const nextStock = Math.max(currentStock - normalizedQuantity, 0);
+    const nextPending = currentPending + shortage;
+
+    await tx.sku.update({
+      where: { id: skuId },
+      data: {
+        stockQuantity: toDecimal(nextStock),
+        pendingProductionQuantity: toDecimal(nextPending),
+      },
+    });
   });
 
   redirect("/admin/consumo?created=1");

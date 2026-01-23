@@ -170,21 +170,21 @@ model ProductionSession {
 model ProductionSessionItem {
   id        String   @id @default(cuid())
   sessionId String
-  productId String
+  skuId     String
   quantity  Decimal
   note      String?
 
   session ProductionSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  product Product @relation(fields: [productId], references: [id])
+  sku     Sku @relation(fields: [skuId], references: [id])
 
   @@map("production_session_items")
-  @@index([productId])
+  @@index([skuId])
   @@index([sessionId])
 }
 
 model ProductionConsumption {
   id        String   @id @default(cuid())
-  productId String
+  skuId     String
   quantity  Decimal
   consumedAt DateTime
   sourceType ProductionConsumptionSourceType
@@ -192,11 +192,11 @@ model ProductionConsumption {
   createdAt DateTime @default(now())
   createdById String?
 
-  product   Product @relation(fields: [productId], references: [id])
+  sku       Sku @relation(fields: [skuId], references: [id])
   createdBy User? @relation(fields: [createdById], references: [id])
 
   @@map("production_consumptions")
-  @@index([productId])
+  @@index([skuId])
   @@index([consumedAt])
 }
 
@@ -229,6 +229,7 @@ model Sku {
   attributesJson String?
   isActive     Boolean  @default(true) @map("active")
   stockQuantity Decimal @default(0)
+  pendingProductionQuantity Decimal @default(0)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @default(now()) @updatedAt
 

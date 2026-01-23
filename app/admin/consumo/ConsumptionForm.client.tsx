@@ -7,9 +7,10 @@ import styles from "../_styles/adminPrimitives.module.css";
 
 const DRAFT_KEY = "production-consumption-draft-v1";
 
-type ProductOption = {
-  id: string;
-  name: string;
+type SkuOption = {
+  skuId: string;
+  skuLabel: string;
+  productName: string;
   categoryName: string;
   unitLabel: string | null;
   unitType: string | null;
@@ -18,8 +19,8 @@ type ProductOption = {
 };
 
 type ConsumptionDraft = {
-  productQuery: string;
-  selectedProduct: ProductOption | null;
+  skuQuery: string;
+  selectedSku: SkuOption | null;
   quantity: string;
   sourceType: "IMMEDIATE" | "MANUAL";
   note: string;
@@ -38,11 +39,10 @@ function parseDraft(raw: string | null): ConsumptionDraft | null {
   try {
     const parsed = JSON.parse(raw) as Partial<ConsumptionDraft>;
     return {
-      productQuery:
-        typeof parsed.productQuery === "string" ? parsed.productQuery : "",
-      selectedProduct:
-        parsed.selectedProduct && typeof parsed.selectedProduct === "object"
-          ? (parsed.selectedProduct as ProductOption)
+      skuQuery: typeof parsed.skuQuery === "string" ? parsed.skuQuery : "",
+      selectedSku:
+        parsed.selectedSku && typeof parsed.selectedSku === "object"
+          ? (parsed.selectedSku as SkuOption)
           : null,
       quantity: typeof parsed.quantity === "string" ? parsed.quantity : "1",
       sourceType: parsed.sourceType === "MANUAL" ? "MANUAL" : "IMMEDIATE",
@@ -88,16 +88,14 @@ export default function ConsumptionForm({
   quantity?: number;
   windowKey?: string;
 }) {
-  const [productQuery, setProductQuery] = useState("");
-  const [productResults, setProductResults] = useState<ProductOption[]>([]);
-  const [productOpen, setProductOpen] = useState(false);
-  const [productActiveIndex, setProductActiveIndex] = useState(-1);
-  const [productStatus, setProductStatus] = useState<"idle" | "loading" | "error">(
+  const [skuQuery, setSkuQuery] = useState("");
+  const [skuResults, setSkuResults] = useState<SkuOption[]>([]);
+  const [skuOpen, setSkuOpen] = useState(false);
+  const [skuActiveIndex, setSkuActiveIndex] = useState(-1);
+  const [skuStatus, setSkuStatus] = useState<"idle" | "loading" | "error">(
     "idle"
   );
-  const [selectedProduct, setSelectedProduct] = useState<ProductOption | null>(
-    null
-  );
+  const [selectedSku, setSelectedSku] = useState<SkuOption | null>(null);
   const [quantity, setQuantity] = useState("1");
   const [sourceType, setSourceType] = useState<"IMMEDIATE" | "MANUAL">("IMMEDIATE");
   const [note, setNote] = useState("");
@@ -107,13 +105,13 @@ export default function ConsumptionForm({
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const formRef = useRef<HTMLFormElement | null>(null);
-  const productInputRef = useRef<HTMLInputElement | null>(null);
+  const skuInputRef = useRef<HTMLInputElement | null>(null);
 
   const errorMessage = useMemo(() => {
     if (!errorCode) return "";
     const map: Record<string, string> = {
-      "produto-invalido": "Selecione um produto valido.",
-      "quantidade-invalida": "Quantidade invalida para o produto.",
+      "sku-invalido": "Selecione um SKU valido.",
+      "quantidade-invalida": "Quantidade invalida para o SKU.",
     };
     return map[errorCode] ?? "Nao foi possivel registrar o consumo.";
   }, [errorCode]);
@@ -130,8 +128,8 @@ export default function ConsumptionForm({
     if (!errorCode && !hasWarnings) return;
     const draft = parseDraft(sessionStorage.getItem(DRAFT_KEY));
     if (!draft) return;
-    setProductQuery(draft.productQuery);
-    setSelectedProduct(draft.selectedProduct);
+    setSkuQuery(draft.skuQuery);
+    setSelectedSku(draft.selectedSku);
     setQuantity(draft.quantity);
     setSourceType(draft.sourceType);
     setNote(draft.note);
@@ -140,51 +138,51 @@ export default function ConsumptionForm({
 
   useEffect(() => {
     const draft: ConsumptionDraft = {
-      productQuery,
-      selectedProduct,
+      skuQuery,
+      selectedSku,
       quantity,
       sourceType,
       note,
       window: windowValue,
     };
     sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-  }, [productQuery, selectedProduct, quantity, sourceType, note, windowValue]);
+  }, [skuQuery, selectedSku, quantity, sourceType, note, windowValue]);
 
   useEffect(() => {
-    if (!productQuery.trim()) {
-      setProductResults([]);
-      setProductOpen(false);
-      setProductActiveIndex(-1);
-      setProductStatus("idle");
+    if (!skuQuery.trim()) {
+      setSkuResults([]);
+      setSkuOpen(false);
+      setSkuActiveIndex(-1);
+      setSkuStatus("idle");
       return;
     }
 
     const controller = new AbortController();
     const timeout = setTimeout(async () => {
-      setProductStatus("loading");
+      setSkuStatus("loading");
       try {
         const params = new URLSearchParams();
-        params.set("q", productQuery.trim());
+        params.set("q", skuQuery.trim());
         params.set("limit", "10");
         const response = await fetch(
-          `/api/products/lookup?${params.toString()}`,
+          `/api/products/search?${params.toString()}`,
           { signal: controller.signal }
         );
         if (!response.ok) {
           throw new Error("request-failed");
         }
-        const data = (await response.json()) as { items?: ProductOption[] };
+        const data = (await response.json()) as { items?: SkuOption[] };
         if (controller.signal.aborted) return;
         const next = data.items ?? [];
-        setProductResults(next);
-        setProductOpen(true);
-        setProductActiveIndex(next.length > 0 ? 0 : -1);
-        setProductStatus("idle");
+        setSkuResults(next);
+        setSkuOpen(true);
+        setSkuActiveIndex(next.length > 0 ? 0 : -1);
+        setSkuStatus("idle");
       } catch {
         if (controller.signal.aborted) return;
-        setProductStatus("error");
-        setProductResults([]);
-        setProductOpen(false);
+        setSkuStatus("error");
+        setSkuResults([]);
+        setSkuOpen(false);
       }
     }, 250);
 
@@ -192,38 +190,39 @@ export default function ConsumptionForm({
       controller.abort();
       clearTimeout(timeout);
     };
-  }, [productQuery]);
+  }, [skuQuery]);
 
   useEffect(() => {
-    if (!productOpen) return;
-    setProductActiveIndex(productResults.length > 0 ? 0 : -1);
-  }, [productOpen, productResults]);
+    if (!skuOpen) return;
+    setSkuActiveIndex(skuResults.length > 0 ? 0 : -1);
+  }, [skuOpen, skuResults]);
 
   useEffect(() => {
     if (!confirmWarnings) return;
     formRef.current?.requestSubmit();
   }, [confirmWarnings]);
 
-  function selectProduct(option: ProductOption) {
-    setSelectedProduct(option);
-    setProductQuery(option.name);
-    setProductOpen(false);
-    setProductActiveIndex(-1);
+  function selectSku(option: SkuOption) {
+    setSelectedSku(option);
+    setSkuQuery(`${option.productName} - ${option.skuLabel}`);
+    setSkuOpen(false);
+    setSkuActiveIndex(-1);
+    setQuantity(option.minQty ? String(option.minQty) : "1");
     setFormError("");
   }
 
   function validateForm() {
-    if (!selectedProduct) {
-      return "Selecione um produto.";
+    if (!selectedSku) {
+      return "Selecione um SKU.";
     }
-    if (!selectedProduct.unitType) {
-      return "Produto sem regras de unidade.";
+    if (!selectedSku.unitType) {
+      return "SKU sem regras de unidade.";
     }
     const result = validateSkuQuantity(
       {
-        unitType: selectedProduct.unitType as "KG" | "UNIDADE" | "CENTO",
-        minQty: selectedProduct.minQty,
-        quantityStep: selectedProduct.quantityStep,
+        unitType: selectedSku.unitType as "KG" | "UNIDADE" | "CENTO",
+        minQty: selectedSku.minQty,
+        quantityStep: selectedSku.quantityStep,
       },
       quantity
     );
@@ -245,7 +244,7 @@ export default function ConsumptionForm({
   }
 
   const payload = JSON.stringify({
-    productId: selectedProduct?.id,
+    skuId: selectedSku?.skuId,
     quantity,
     sourceType,
     note,
@@ -285,9 +284,8 @@ export default function ConsumptionForm({
             ) : null}
             {warnNegative ? (
               <div>
-                <strong>Consumo maior que o disponivel.</strong> O sistema
-                permitira o registro, mas o saldo ficara negativo. Revise os
-                lancamentos de producao.
+                <strong>Consumo maior que o disponível.</strong> O sistema
+                permitirá o registro, mas irá gerar pendência de produção.
               </div>
             ) : null}
             <div className={styles.clusterSm}>
@@ -316,76 +314,76 @@ export default function ConsumptionForm({
       ) : null}
 
       <label className={styles.field}>
-        <span className={styles.fieldLabel}>Produto</span>
+        <span className={styles.fieldLabel}>SKU</span>
         <div className={styles.autocomplete}>
           <input
-            ref={productInputRef}
+            ref={skuInputRef}
             type="text"
-            placeholder="Buscar produto"
-            value={productQuery}
+            placeholder="Buscar SKU"
+            value={skuQuery}
             onChange={(event) => {
-              setProductQuery(event.target.value);
-              setSelectedProduct(null);
+              setSkuQuery(event.target.value);
+              setSelectedSku(null);
             }}
             onFocus={() => {
-              if (productResults.length > 0 || productQuery.trim()) {
-                setProductOpen(true);
+              if (skuResults.length > 0 || skuQuery.trim()) {
+                setSkuOpen(true);
               }
             }}
-            onBlur={() => setTimeout(() => setProductOpen(false), 150)}
+            onBlur={() => setTimeout(() => setSkuOpen(false), 150)}
             onKeyDown={(event) => {
-              if (!productOpen) return;
+              if (!skuOpen) return;
               if (event.key === "ArrowDown") {
                 event.preventDefault();
-                setProductActiveIndex((prev) =>
-                  Math.min(prev + 1, productResults.length - 1)
+                setSkuActiveIndex((prev) =>
+                  Math.min(prev + 1, skuResults.length - 1)
                 );
               }
               if (event.key === "ArrowUp") {
                 event.preventDefault();
-                setProductActiveIndex((prev) => Math.max(prev - 1, 0));
+                setSkuActiveIndex((prev) => Math.max(prev - 1, 0));
               }
               if (event.key === "Enter") {
                 event.preventDefault();
-                const option = productResults[productActiveIndex];
+                const option = skuResults[skuActiveIndex];
                 if (option) {
-                  selectProduct(option);
+                  selectSku(option);
                 }
               }
               if (event.key === "Escape") {
-                setProductOpen(false);
+                setSkuOpen(false);
               }
             }}
             className={styles.control}
             aria-invalid={submitAttempted && Boolean(formError)}
           />
-          {productOpen ? (
+          {skuOpen ? (
             <ul className={styles.autocompleteList}>
-              {productResults.length === 0 ? (
+              {skuResults.length === 0 ? (
                 <li className={styles.autocompleteEmpty}>
-                  {productStatus === "loading"
+                  {skuStatus === "loading"
                     ? "Buscando..."
-                    : "Nenhum produto encontrado."}
+                    : "Nenhum SKU encontrado."}
                 </li>
               ) : null}
-              {productResults.map((option, index) => (
+              {skuResults.map((option, index) => (
                 <li
-                  key={option.id}
+                  key={option.skuId}
                   className={`${styles.autocompleteOption} ${
-                    index === productActiveIndex
+                    index === skuActiveIndex
                       ? styles.autocompleteOptionActive
                       : ""
                   }`}
-                  onMouseDown={() => selectProduct(option)}
+                  onMouseDown={() => selectSku(option)}
                 >
                   <div className={styles.autocompleteMain}>
-                    <span>{option.name}</span>
+                    <span>{option.productName}</span>
                     <span className={styles.autocompleteMeta}>
-                      {option.unitLabel ?? option.unitType ?? ""}
+                      {option.skuLabel}
                     </span>
                   </div>
                   <span className={styles.autocompleteMeta}>
-                    {option.categoryName}
+                    {option.categoryName} · {option.unitLabel ?? option.unitType ?? ""}
                   </span>
                 </li>
               ))}

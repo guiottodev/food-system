@@ -50,8 +50,6 @@ export async function updateStatusAction(formData: FormData) {
         ? "ready"
         : result.error === "strong_pending"
         ? "pendencia"
-        : result.error === "payment_required"
-        ? "pagamento"
         : "transicao";
     redirect(`/admin/orders/${orderId}?error=${errorParam}`);
   }

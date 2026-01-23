@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary, hasStrongAttention } from "@/lib/domain/attention";
-import { computeUnavailableItemsForOrders } from "@/lib/domain/production";
+import {
+  computeStockShortageForOrders,
+  computeUnavailableItemsForOrders,
+} from "@/lib/domain/production";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { OrderStatus } from "@prisma/client";
 import OrdersTableClient from "../orders/OrdersTableClient";
@@ -139,14 +142,15 @@ export default async function PendenciasPage({
     },
   });
 
-  const availabilityMap = await computeUnavailableItemsForOrders(
-    prisma,
-    allOrders.map((order) => ({
-      id: order.id,
-      status: order.status,
-      items: order.items,
-    }))
-  );
+  const orderInputs = allOrders.map((order) => ({
+    id: order.id,
+    status: order.status,
+    items: order.items,
+  }));
+  const [availabilityMap, shortageMap] = await Promise.all([
+    computeUnavailableItemsForOrders(prisma, orderInputs),
+    computeStockShortageForOrders(prisma, orderInputs),
+  ]);
 
   const entries = allOrders.map((order) => {
     const hasUnavailableItems =
@@ -156,6 +160,7 @@ export default async function PendenciasPage({
       attention: getOrderAttentionSummary({
         ...order,
         hasUnavailableItems,
+        hasStockShortage: shortageMap.get(order.id) ?? false,
       }),
       hasUnavailableItems,
     };
@@ -163,11 +168,15 @@ export default async function PendenciasPage({
 
   const filtered =
     typeParam === "all"
-      ? entries.filter(
-          (entry) => hasStrongAttention(entry.attention) || entry.hasUnavailableItems
-        )
+      ? entries.filter((entry) => entry.attention.hasAttention)
       : typeParam === "UNAVAILABLE_ITEMS"
-      ? entries.filter((entry) => entry.hasUnavailableItems)
+      ? entries.filter((entry) =>
+          entry.attention.reasons.some((reason) => reason.type === "UNAVAILABLE_ITEMS")
+        )
+      : typeParam === "SALDO_INSUFICIENTE"
+      ? entries.filter((entry) =>
+          entry.attention.reasons.some((reason) => reason.type === "SALDO_INSUFICIENTE")
+        )
       : entries.filter((entry) =>
           entry.attention.strongReasons.some((reason) => reason.type === typeParam)
         );
@@ -227,6 +236,9 @@ export default async function PendenciasPage({
               ),
               unavailableItems: attention.reasons.some(
                 (reason) => reason.type === "UNAVAILABLE_ITEMS"
+              ),
+              stockShortage: attention.reasons.some(
+                (reason) => reason.type === "SALDO_INSUFICIENTE"
               ),
               deliveryDatetime: formatDeliveryLabel(
                 order.deliveryDatetime,

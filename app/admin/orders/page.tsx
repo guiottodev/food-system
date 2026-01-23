@@ -1,7 +1,10 @@
 ﻿import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
-import { computeUnavailableItemsForOrders } from "@/lib/domain/production";
+import {
+  computeStockShortageForOrders,
+  computeUnavailableItemsForOrders,
+} from "@/lib/domain/production";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import { normalizePhoneDigits } from "@/lib/phone";
 import { DeliveryMethod, OrderStatus, OrderType, Prisma } from "@prisma/client";
@@ -204,6 +207,7 @@ const attentionTypeOptions = [
   "INCOMPLETE",
   "ALTERADO_APOS_CONFIRMACAO",
   "UNAVAILABLE_ITEMS",
+  "SALDO_INSUFICIENTE",
   "MISSING_TIME",
   "MISSING_ADDRESS",
 ] as const;
@@ -400,20 +404,22 @@ export default async function OrdersPage({
       take: maxFetch,
       include: orderInclude,
     });
-    const availabilityMap = await computeUnavailableItemsForOrders(
-      prisma,
-      allOrders.map((order) => ({
-        id: order.id,
-        status: order.status,
-        items: order.items,
-      }))
-    );
+    const orderInputs = allOrders.map((order) => ({
+      id: order.id,
+      status: order.status,
+      items: order.items,
+    }));
+    const [availabilityMap, shortageMap] = await Promise.all([
+      computeUnavailableItemsForOrders(prisma, orderInputs),
+      computeStockShortageForOrders(prisma, orderInputs),
+    ]);
     const decorated = allOrders.map((order) => ({
       order,
       attention: getOrderAttentionSummary({
         ...order,
         hasUnavailableItems:
           availabilityMap.get(order.id)?.hasUnavailableItems ?? false,
+        hasStockShortage: shortageMap.get(order.id) ?? false,
       }),
     }));
     const filtered = decorated.filter((entry) =>
@@ -446,20 +452,22 @@ export default async function OrdersPage({
       prisma.order.count({ where }),
     ]);
     totalCount = count;
-    const availabilityMap = await computeUnavailableItemsForOrders(
-      prisma,
-      orderRows.map((order) => ({
-        id: order.id,
-        status: order.status,
-        items: order.items,
-      }))
-    );
+    const orderInputs = orderRows.map((order) => ({
+      id: order.id,
+      status: order.status,
+      items: order.items,
+    }));
+    const [availabilityMap, shortageMap] = await Promise.all([
+      computeUnavailableItemsForOrders(prisma, orderInputs),
+      computeStockShortageForOrders(prisma, orderInputs),
+    ]);
     orders = orderRows.map((order) => ({
       order,
       attention: getOrderAttentionSummary({
         ...order,
         hasUnavailableItems:
           availabilityMap.get(order.id)?.hasUnavailableItems ?? false,
+        hasStockShortage: shortageMap.get(order.id) ?? false,
       }),
     }));
   }
@@ -537,6 +545,9 @@ export default async function OrdersPage({
                 ),
                 unavailableItems: attention.reasons.some(
                   (reason) => reason.type === "UNAVAILABLE_ITEMS"
+                ),
+                stockShortage: attention.reasons.some(
+                  (reason) => reason.type === "SALDO_INSUFICIENTE"
                 ),
                 deliveryDatetime: formatDeliveryLabel(
                   order.deliveryDatetime,

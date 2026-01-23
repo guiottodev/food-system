@@ -520,6 +520,67 @@ export async function updateOrderAction(formData: FormData) {
       });
     }
 
+    if (order.status === "ENTREGUE") {
+      const beforeTotals = new Map<string, number>();
+      for (const item of order.items) {
+        if (!item.skuId) continue;
+        beforeTotals.set(
+          item.skuId,
+          (beforeTotals.get(item.skuId) ?? 0) + Number(item.quantity)
+        );
+      }
+      const afterTotals = new Map<string, number>();
+      for (const item of computedItems) {
+        afterTotals.set(
+          item.skuId,
+          (afterTotals.get(item.skuId) ?? 0) + Number(item.quantity)
+        );
+      }
+      const skuIds = Array.from(
+        new Set([...beforeTotals.keys(), ...afterTotals.keys()])
+      );
+      const skuBalances = skuIds.length
+        ? await tx.sku.findMany({
+            where: { id: { in: skuIds } },
+            select: { id: true, stockQuantity: true, pendingProductionQuantity: true },
+          })
+        : [];
+      const balanceMap = new Map(skuBalances.map((sku) => [sku.id, sku]));
+
+      for (const skuId of skuIds) {
+        const beforeQty = beforeTotals.get(skuId) ?? 0;
+        const afterQty = afterTotals.get(skuId) ?? 0;
+        const delta = afterQty - beforeQty;
+        if (delta === 0) continue;
+        const current = balanceMap.get(skuId);
+        if (!current) continue;
+        let stock = Number(current.stockQuantity ?? 0);
+        let pending = Number(current.pendingProductionQuantity ?? 0);
+
+        if (delta > 0) {
+          const shortage = Math.max(delta - stock, 0);
+          stock = Math.max(stock - delta, 0);
+          pending += shortage;
+        } else {
+          let remaining = Math.abs(delta);
+          if (pending > 0) {
+            const reduce = Math.min(pending, remaining);
+            pending -= reduce;
+            remaining -= reduce;
+          }
+          stock += remaining;
+        }
+
+        await tx.sku.update({
+          where: { id: skuId },
+          data: {
+            stockQuantity: toDecimal(stock),
+            pendingProductionQuantity: toDecimal(pending),
+          },
+        });
+      }
+    }
+
     if (shouldReconfirm && !order.needsReconfirmation) {
       auditEntries.push({
         actorId: actor?.id ?? null,

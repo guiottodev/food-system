@@ -8,20 +8,23 @@ type PendingType =
   | "all"
   | "INCOMPLETE"
   | "ALTERADO_APOS_CONFIRMACAO"
-  | "UNAVAILABLE_ITEMS";
+  | "UNAVAILABLE_ITEMS"
+  | "SALDO_INSUFICIENTE";
 
 const options: Array<{ value: PendingType; label: string }> = [
   { value: "all", label: "Todas" },
   { value: "INCOMPLETE", label: "Incompletas" },
   { value: "ALTERADO_APOS_CONFIRMACAO", label: "Alteradas" },
   { value: "UNAVAILABLE_ITEMS", label: "Itens indisponiveis" },
+  { value: "SALDO_INSUFICIENTE", label: "Saldo insuficiente" },
 ];
 
 function normalizeType(value: string | null, fallback: PendingType): PendingType {
   if (
     value === "INCOMPLETE" ||
     value === "ALTERADO_APOS_CONFIRMACAO" ||
-    value === "UNAVAILABLE_ITEMS"
+    value === "UNAVAILABLE_ITEMS" ||
+    value === "SALDO_INSUFICIENTE"
   ) {
     return value;
   }
