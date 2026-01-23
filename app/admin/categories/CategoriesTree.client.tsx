@@ -267,7 +267,7 @@ export default function CategoriesTreeClient({ rows }: { rows: CategoryRow[] }) 
               </button>
             </div>
 
-            <div className={styles.panelBody}>
+            <div className={layoutStyles.modalBody}>
               <form
                 action={updateCategoryAction}
                 className={styles.formSection}

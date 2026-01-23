@@ -297,68 +297,71 @@ export default function CategoriesFilters({
                 Fechar
               </button>
             </div>
-            {modalError ? (
-              <div className={styles.textError}>{modalError}</div>
-            ) : null}
-            <div className={styles.textMuted} style={{ padding: "0 var(--space-4)" }}>
-              <span className={layoutStyles.modalHint}>
-                Dica: selecione uma <strong>categoria pai</strong> para criar uma subcategoria
-                (ex.: Salgados → Fritos).
-              </span>
-            </div>
-            <form
-              action={createCategoryAction}
-              className={styles.formSection}
-              onSubmit={() => setModalError("")}
-            >
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Categoria pai (opcional)</span>
-                <select
-                  name="parentId"
-                  value={modalParentId}
-                  onChange={(e) => setModalParentId(e.target.value)}
-                  className={styles.control}
-                >
-                  <option value="">(Sem pai) — categoria raiz</option>
-                  {parentOptions.map((opt) => (
-                    <option key={opt.id} value={opt.id}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <input
-                name="name"
-                placeholder="Nome"
-                required
-                className={styles.control}
-              />
-              <textarea
-                name="description"
-                placeholder="Descrição (opcional)"
-                className={`${styles.control} ${styles.controlTextarea}`}
-              ></textarea>
-              <label className={styles.choiceRow}>
-                <input type="checkbox" name="isActive" defaultChecked />
-                <span className={styles.choiceLabel}>Ativa</span>
-              </label>
-              <div className={layoutStyles.modalFooter}>
-                <button
-                  type="button"
-                  className={`${styles.button} ${styles.buttonGhost}`}
-                  onClick={closeModal}
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className={`${styles.button} ${styles.buttonPrimary}`}
-                  disabled={isPending}
-                >
-                  Criar categoria
-                </button>
+
+            <div className={layoutStyles.modalBody}>
+              {modalError ? (
+                <div className={styles.textError}>{modalError}</div>
+              ) : null}
+
+              <div className={layoutStyles.modalHint}>
+                Dica: selecione uma <strong>categoria pai</strong> para criar uma
+                subcategoria (ex.: Salgados → Fritos).
               </div>
-            </form>
+
+              <form
+                action={createCategoryAction}
+                className={styles.formSection}
+                onSubmit={() => setModalError("")}
+              >
+                <label className={styles.field}>
+                  <span className={styles.fieldLabel}>Categoria pai (opcional)</span>
+                  <select
+                    name="parentId"
+                    value={modalParentId}
+                    onChange={(e) => setModalParentId(e.target.value)}
+                    className={styles.control}
+                  >
+                    <option value="">(Sem pai) — categoria raiz</option>
+                    {parentOptions.map((opt) => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <input
+                  name="name"
+                  placeholder="Nome"
+                  required
+                  className={styles.control}
+                />
+                <textarea
+                  name="description"
+                  placeholder="Descrição (opcional)"
+                  className={`${styles.control} ${styles.controlTextarea}`}
+                ></textarea>
+                <label className={styles.choiceRow}>
+                  <input type="checkbox" name="isActive" defaultChecked />
+                  <span className={styles.choiceLabel}>Ativa</span>
+                </label>
+                <div className={layoutStyles.modalFooter}>
+                  <button
+                    type="button"
+                    className={`${styles.button} ${styles.buttonGhost}`}
+                    onClick={closeModal}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className={`${styles.button} ${styles.buttonPrimary}`}
+                    disabled={isPending}
+                  >
+                    Criar categoria
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       ) : null}
