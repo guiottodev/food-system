@@ -518,9 +518,48 @@ export default async function OrdersPage({
   const pageLink = (nextPage: number) =>
     withQuery("/admin/orders", { ...baseParams, page: nextPage });
 
+  // Calcular KPIs
+  const totalValue = orders.reduce((sum, { order }) => sum + Number(order.total), 0);
+  const pendingCount = orders.filter(({ attention }) => attention.strongReasons.length > 0).length;
+  const readyCount = orders.filter(({ order }) => order.status === "PRONTO").length;
+  const inProductionCount = orders.filter(({ order }) => order.status === "EM_PRODUCAO").length;
+
   return (
     <main className={styles.page}>
-      <h1 className={styles.pageTitle}>Pedidos</h1>
+      <div className={layoutStyles.pageHeader}>
+        <h1 className={styles.pageTitle}>Pedidos</h1>
+        <div className={layoutStyles.kpiBar}>
+          <div className={layoutStyles.kpiItem}>
+            <span className={layoutStyles.kpiValue}>{totalCount}</span>
+            <span className={layoutStyles.kpiLabel}>pedidos</span>
+          </div>
+          <div className={layoutStyles.kpiDivider} />
+          <div className={layoutStyles.kpiItem}>
+            <span className={layoutStyles.kpiValue}>
+              {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(totalValue)}
+            </span>
+            <span className={layoutStyles.kpiLabel}>total</span>
+          </div>
+          {pendingCount > 0 && (
+            <>
+              <div className={layoutStyles.kpiDivider} />
+              <div className={`${layoutStyles.kpiItem} ${layoutStyles.kpiWarning}`}>
+                <span className={layoutStyles.kpiValue}>{pendingCount}</span>
+                <span className={layoutStyles.kpiLabel}>pendentes</span>
+              </div>
+            </>
+          )}
+          {readyCount > 0 && (
+            <>
+              <div className={layoutStyles.kpiDivider} />
+              <div className={`${layoutStyles.kpiItem} ${layoutStyles.kpiSuccess}`}>
+                <span className={layoutStyles.kpiValue}>{readyCount}</span>
+                <span className={layoutStyles.kpiLabel}>prontos</span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
 
       <section className={styles.panel}>
         <OrdersFilters
