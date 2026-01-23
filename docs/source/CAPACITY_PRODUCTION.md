@@ -9,5 +9,7 @@ Resumo
 - A demanda usa pedidos RASCUNHO, CONFIRMADO, EM_PRODUCAO dentro da janela.
 Observação: capacidade/produção é por produto, enquanto estoque pronto é por SKU.
 Observação: a lista considera apenas produtos ativos.
+Observação: a categoria exibida na capacidade segue o **caminho da categoria folha**
+do produto (ex.: `Salgados › Fritos`), pois produtos ficam sempre em categorias folha.
 
 Janelas: hoje, 7 dias, 14 dias, 30 dias.

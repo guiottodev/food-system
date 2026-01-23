@@ -113,20 +113,35 @@ Observações importantes:
 - OrderItem.skuId é anulável (SKU pode ser removido/inativado depois).
 - inventory_movements e capacity_rules existem no schema, mas não são usados
   na lógica atual da aplicação.
+  - Observação: categorias agora suportam subcategorias (árvore) via `parentId`.
 
 ---
 
 ## 5. Catálogo (categorias, produtos, SKUs)
 
 ### Categorias
-- Campos: name, description (opcional), isActive
-- Criação e edição exigem nome.
-- Flag de ativo é usada para filtros no admin.
+- **Modelo hierárquico (subcategorias)**:
+  - Categorias são uma **árvore** (N níveis), com `parentId` opcional.
+  - Categorias **raiz**: `parentId = null`.
+  - Subcategorias: `parentId = <id do pai>`.
+- **Campos**: name, description (opcional), isActive, parentId (opcional)
+- **Unicidade (nome)**:
+  - Nome é único **por nível**: não pode existir duas categorias com o mesmo `name`
+    sob o mesmo `parentId`.
+  - Na **raiz**, `name` também é único.
+- **Ativo / inativo**:
+  - A flag `isActive` é usada para filtros no admin.
+  - **Cascata**: ao ativar/desativar uma categoria, o sistema aplica a mesma
+    mudança para todas as subcategorias descendentes.
 
 ### Produtos
 - Campos: name, categoryId, leadTime (horas, opcional), descriptionLong,
   imageMainUrl, isActive
 - Deve pertencer a uma categoria existente.
+- **Regra (categoria folha)**: o produto **só pode** estar em uma categoria **folha**
+  (sem subcategorias). Isso evita ambiguidade e mantém a navegação/relatórios coerentes.
+- **Regra (ancestrais ativos)**: ao criar/editar, a categoria escolhida e todos os
+  ancestrais precisam estar ativos.
 - Produto é criado junto com o primeiro SKU.
 
 ### SKUs
@@ -355,7 +370,8 @@ Itens presentes em docs ou schema, mas não implementados no código:
 - Impressão (ticket, lista do dia, lista da semana, produção do dia)
 - Relatórios e exportação CSV
 - Ledger de estoque com inventory_movements
-- Regras de capacidade (categoria e override por SKU crítico)
+- Regras de capacidade (categoria e override por SKU crítico) — há tabelas no schema,
+  mas não há UI/fluxo de edição dedicado.
 - Fluxo de anonimização LGPD
 - Uso de customer_addresses
 

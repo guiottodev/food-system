@@ -6,6 +6,7 @@ Não implementado no código atual:
 - Impressão (ticket, lista do dia, lista da semana, produção do dia)
 - Relatórios e exportação CSV
 - Ledger de estoque com inventory_movements
-- Regras de capacidade (categoria e override por SKU crítico)
+- Regras de capacidade (categoria e override por SKU crítico) — há tabela no schema,
+  mas não há UI/fluxo de edição dedicado.
 - Fluxo de anonimização LGPD
 - Uso de customer_addresses
