@@ -272,12 +272,10 @@
 
 .orderRow:hover {
   background: rgba(37, 99, 235, 0.03);
-  box-shadow: inset 3px 0 0 var(--action-primary);
 }
 
 .orderRowExpanded {
-  background: rgba(37, 99, 235, 0.04) !important;
-  box-shadow: inset 3px 0 0 var(--action-primary);
+  background: rgba(248, 250, 252, 0.8) !important;
   border-bottom: none !important;
 }
 
@@ -484,17 +482,16 @@
 
 /* ===== EXPANDED ROW ===== */
 .expandedRow {
-  background: rgba(37, 99, 235, 0.04) !important;
-  box-shadow: inset 3px 0 0 var(--action-primary);
+  background: rgba(248, 250, 252, 0.8) !important;
 }
 
 .expandedRow > td {
-  padding: 0 var(--space-4) var(--space-4) !important;
+  padding: var(--space-2) var(--space-4) var(--space-4) !important;
   border-bottom: 1px solid var(--border);
 }
 
 .expandedWrapper {
-  animation: slideDown 200ms ease;
+  margin-left: 48px;
 }
 
 @keyframes slideDown {
@@ -506,6 +503,10 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.expandedWrapper {
+  animation: slideDown 200ms ease;
 }
 
 .expandedCard {
