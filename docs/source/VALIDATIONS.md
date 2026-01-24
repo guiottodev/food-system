@@ -4,7 +4,7 @@ Referência canônica: `docs/SOURCE_OF_TRUTH.md` (seções 7.8 a 7.10).
 
 Regras de quantidade
 - KG: múltiplos de 0.05
-- UNIDADE/CENTO: inteiros
+- UNIDADE: inteiros
 - minQty e quantityStep do SKU são respeitados
 
 Datas

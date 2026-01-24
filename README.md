@@ -1,4 +1,4 @@
-﻿# Sistema interno de pedidos, impressao e estoque para o negocio (uso administrativo).
+# Sistema interno de pedidos, impressao e estoque para o negocio (uso administrativo).
 
 Scripts (placeholders):
 - start-local.bat: executar `scripts\\start-local.bat`
@@ -25,7 +25,7 @@ Produtos e SKUs (Categorias/Produtos/SKUs):
 - Categoria: nome unico, descricao opcional.
 - Produto: lead time (horas), imagens (principal + extras).
 - SKU: tamanho, sabor, congelado, tipo de venda (UNIDADE/KG), passo de quantidade, minimo, preco.
-- UnitLabel: "un", "cento", "kg", "kit" (compativel com o tipo de venda).
+- UnitLabel: "un", "kg" (compativel com o tipo de venda).
 - Imagens extras ficam em `product_images` e tags em `sku_tags`.
 - Labels pt-BR: Tamanho, Tipo de venda, Passo de quantidade, Preco atual.
 - Regra: novo pedido usa somente SKUs ativos; historico sempre aparece via snapshots no order_items.

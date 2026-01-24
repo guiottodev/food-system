@@ -162,7 +162,7 @@ export async function createSkuAction(formData: FormData) {
     );
   }
 
-  let unitType: "UNIDADE" | "CENTO" | "KG";
+  let unitType: "UNIDADE" | "KG";
   try {
     unitType = normalizeUnitType(unitTypeRaw);
   } catch {
@@ -263,7 +263,7 @@ export async function updateSkuAction(formData: FormData) {
     );
   }
 
-  let unitType: "UNIDADE" | "CENTO" | "KG";
+  let unitType: "UNIDADE" | "KG";
   try {
     unitType = normalizeUnitType(unitTypeRaw);
   } catch {

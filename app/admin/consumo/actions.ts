@@ -56,7 +56,7 @@ export async function createConsumptionAction(formData: FormData) {
   const quantityInput = payload.quantity ?? "";
   const quantityResult = validateSkuQuantity(
     {
-      unitType: sku.unitType as "KG" | "UNIDADE" | "CENTO",
+      unitType: sku.unitType as "KG" | "UNIDADE",
       minQty: sku.minQty,
       quantityStep: sku.quantityStep,
     },

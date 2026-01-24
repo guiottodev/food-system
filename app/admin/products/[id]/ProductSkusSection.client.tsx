@@ -51,7 +51,6 @@ type ProductSkusSectionProps = {
 
 const unitTypeOptions = [
   { value: "UNIDADE", label: "UNIDADE" },
-  { value: "CENTO", label: "CENTO" },
   { value: "KG", label: "KG" },
 ];
 

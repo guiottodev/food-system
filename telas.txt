@@ -55,7 +55,7 @@
   - Acoes: Editar, Duplicar, Ativar/Desativar.
 - Modal "Novo SKU" / "Editar SKU":
   - Nome exibido (input, required) + botao "Gerar nome".
-  - Tipo de venda (select: UNIDADE/CENTO/KG).
+  - Tipo de venda (select: UNIDADE/KG).
   - Preco atual (input number, required).
   - Custo (opcional).
   - Tags (texto separado por virgula).

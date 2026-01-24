@@ -10,7 +10,7 @@ export type SkuFormErrors = {
   price?: string;
 };
 
-const VALID_UNIT_TYPES = new Set(["UNIDADE", "CENTO", "KG"]);
+const VALID_UNIT_TYPES = new Set(["UNIDADE", "KG"]);
 
 export function normalizeSkuPriceInput(value: string) {
   const raw = value.trim();

@@ -9,6 +9,12 @@ Checklist operacional
 - Ativar/desativar categoria aplica **cascata** para subcategorias.
 - Produto exige nome e categoria **folha** (sem filhos) e com ancestrais ativos.
 - Criação de produto exige o primeiro SKU.
-- Tipo de unidade do SKU deve ser UNIDADE, CENTO ou KG.
+- Tipo de unidade do SKU deve ser UNIDADE ou KG.
 - minQty e quantityStep são definidos pelo tipo de unidade.
 - SKU só pode ser usado em pedidos se SKU e produto estiverem ativos.
+
+Listagem de produtos (/admin/products)
+- Tabela **expansível**: linha de produto com chevron; ao expandir, linhas de SKU (ou empty state "Adicionar SKU" se 0 SKUs).
+- Colunas: Produto, Categoria, SKUs/Un., **Disponível** (produto: "X de Y disponíveis"; SKU: valor + unitLabel, destaque quando 0), **Preço** (editável na célula via `updateSkuPriceAction`), Ações.
+- Linha de produto: links **Ver** e **Produção** (/admin/capacidade?q=nome). Linha de SKU: link **Editar** (?tab=skus&skuMode=edit&skuId=).
+- Filtros: chips com **×** para remover; botão **Limpar** e pill com quantidade no botão "Filtros" quando há filtros ativos.

@@ -5,11 +5,7 @@ import { buildCategoryIndex, buildCategoryOptions, getDescendantCategoryIds, bui
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./products.module.css";
 import ProductsFilters from "./ProductsFilters.client";
-
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-});
+import ProductsTableExpandable from "./ProductsTableExpandable.client";
 
 type ProductsSearchParams = {
   q?: string;
@@ -76,10 +72,42 @@ export default async function ProductsPage({
     include: {
       category: true,
       skus: {
-        select: { id: true, isActive: true },
+        select: {
+          id: true,
+          isActive: true,
+          displayName: true,
+          sizeText: true,
+          flavorText: true,
+          isFrozen: true,
+          unitType: true,
+          unitLabel: true,
+          priceCurrent: true,
+          stockQuantity: true,
+        },
+        orderBy: { displayName: "asc" },
       },
     },
   });
+
+  const productsForTable = products.map((p) => ({
+    id: p.id,
+    name: p.name,
+    imageMainUrl: p.imageMainUrl,
+    isActive: p.isActive,
+    categoryLabel: buildCategoryPathLabel(byId, p.categoryId),
+    skus: p.skus.map((s) => ({
+      id: s.id,
+      isActive: s.isActive,
+      displayName: s.displayName,
+      sizeText: s.sizeText,
+      flavorText: s.flavorText,
+      isFrozen: s.isFrozen,
+      unitType: s.unitType,
+      unitLabel: s.unitLabel,
+      priceCurrent: Number(s.priceCurrent),
+      stockQuantity: Number(s.stockQuantity),
+    })),
+  }));
 
   // KPIs
   const activeProducts = products.filter((p) => p.isActive).length;
@@ -92,26 +120,27 @@ export default async function ProductsPage({
   return (
     <main className={styles.page}>
       <div className={layoutStyles.pageHeader}>
-        <h1 className={styles.pageTitle}>Produtos</h1>
-        <div className={layoutStyles.kpiBar}>
-          <div className={layoutStyles.kpiItem}>
+        <div>
+          <h1 className={styles.pageTitle}>Produtos</h1>
+          <p className={layoutStyles.pageSubtitle}>Gerencie seu catálogo</p>
+        </div>
+        <div className={layoutStyles.kpiGrid}>
+          <div className={layoutStyles.kpiCard}>
             <span className={layoutStyles.kpiValue}>{products.length}</span>
             <span className={layoutStyles.kpiLabel}>produtos</span>
           </div>
-          <div className={layoutStyles.kpiDivider} />
-          <div className={`${layoutStyles.kpiItem} ${layoutStyles.kpiSuccess}`}>
+          <div className={`${layoutStyles.kpiCard} ${layoutStyles.kpiCardSuccess}`}>
             <span className={layoutStyles.kpiValue}>{activeProducts}</span>
             <span className={layoutStyles.kpiLabel}>ativos</span>
           </div>
-          <div className={layoutStyles.kpiDivider} />
-          <div className={layoutStyles.kpiItem}>
-            <span className={layoutStyles.kpiValue}>{activeSkusTotal}/{totalSkus}</span>
+          <div className={layoutStyles.kpiCard}>
+            <span className={layoutStyles.kpiValue}>{activeSkusTotal} / {totalSkus}</span>
             <span className={layoutStyles.kpiLabel}>SKUs ativos</span>
           </div>
         </div>
       </div>
 
-      <section className={styles.panel}>
+      <section className={`${styles.panel} ${layoutStyles.productsPanel}`}>
         <ProductsFilters
           categories={categoryOptions}
           initialQuery={query}
@@ -121,74 +150,22 @@ export default async function ProductsPage({
 
         {products.length === 0 ? (
           <div className={layoutStyles.emptyState}>
-            <div className={layoutStyles.emptyStateIcon}>📦</div>
+            <div className={layoutStyles.emptyStateIconWrap}>
+              <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M16.5 9.4l-9-5.19M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" />
+                <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" />
+              </svg>
+            </div>
             <div className={layoutStyles.emptyStateTitle}>Nenhum produto encontrado</div>
             <div className={layoutStyles.emptyStateText}>
               Tente ajustar os filtros ou cadastre um novo produto.
             </div>
-            <Link href="/admin/products/new" className={layoutStyles.primaryButton}>
+            <Link href="/admin/products/new" className={`${layoutStyles.primaryButton} ${layoutStyles.emptyStateCta}`}>
               Novo produto
             </Link>
           </div>
         ) : (
-          <div className={layoutStyles.tableContainer}>
-            <table className={layoutStyles.productsTable}>
-              <thead>
-                <tr>
-                  <th>Produto</th>
-                  <th>Categoria</th>
-                  <th className={layoutStyles.colNumeric}>SKUs</th>
-                  <th className={layoutStyles.colActions}>Ações</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map((product) => {
-                  const activeSkus = product.skus.filter((sku) => sku.isActive).length;
-                  const totalSkusProduct = product.skus.length;
-                  const categoryLabel = buildCategoryPathLabel(byId, product.categoryId);
-                  return (
-                    <tr key={product.id} className={layoutStyles.tableRow}>
-                      <td>
-                        <div className={layoutStyles.productCell}>
-                          <span className={layoutStyles.productName}>{product.name}</span>
-                          <span
-                            className={`${layoutStyles.statusBadge} ${
-                              product.isActive
-                                ? layoutStyles.statusActive
-                                : layoutStyles.statusInactive
-                            }`}
-                          >
-                            {product.isActive ? "Ativo" : "Inativo"}
-                          </span>
-                        </div>
-                      </td>
-                      <td>
-                        <span className={layoutStyles.categoryName}>{categoryLabel}</span>
-                      </td>
-                      <td className={layoutStyles.colNumeric}>
-                        <div className={layoutStyles.skuInfo}>
-                          <span className={layoutStyles.skuCount}>
-                            {activeSkus} / {totalSkusProduct}
-                          </span>
-                          {activeSkus === 0 && (
-                            <span className={layoutStyles.skuWarning}>Sem SKU ativo</span>
-                          )}
-                        </div>
-                      </td>
-                      <td className={layoutStyles.colActions}>
-                        <Link
-                          href={`/admin/products/${product.id}`}
-                          className={layoutStyles.actionLink}
-                        >
-                          Ver detalhes
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <ProductsTableExpandable products={productsForTable} />
         )}
       </section>
     </main>

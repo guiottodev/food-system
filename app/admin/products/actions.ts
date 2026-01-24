@@ -87,7 +87,7 @@ export async function createProductAction(formData: FormData) {
     redirect("/admin/products/new?error=sku_preco");
   }
 
-  let unitType: "UNIDADE" | "CENTO" | "KG";
+  let unitType: "UNIDADE" | "KG";
   try {
     unitType = normalizeUnitType(skuUnitTypeRaw);
   } catch {
@@ -152,4 +152,29 @@ export async function createProductAction(formData: FormData) {
   });
 
   redirect(`/admin/products/${product.id}?created=1&tab=skus`);
+}
+
+export async function updateSkuPriceAction(
+  skuId: string,
+  price: number
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireAdminSession();
+  if (!skuId || typeof skuId !== "string" || !skuId.trim()) {
+    return { ok: false, error: "SKU inválido" };
+  }
+  if (typeof price !== "number" || Number.isNaN(price) || price < 0) {
+    return { ok: false, error: "Preço inválido" };
+  }
+  const sku = await prisma.sku.findUnique({
+    where: { id: skuId.trim() },
+    select: { id: true },
+  });
+  if (!sku) {
+    return { ok: false, error: "SKU não encontrado" };
+  }
+  await prisma.sku.update({
+    where: { id: skuId.trim() },
+    data: { priceCurrent: price },
+  });
+  return { ok: true };
 }

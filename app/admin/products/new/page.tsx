@@ -106,7 +106,6 @@ export default async function ProductsNewPage({
                 <span className={styles.fieldLabel}>Tipo de venda</span>
                 <select name="skuUnitType" required className={styles.control}>
                   <option value="UNIDADE">UNIDADE</option>
-                  <option value="CENTO">CENTO</option>
                   <option value="KG">KG</option>
                 </select>
               </label>

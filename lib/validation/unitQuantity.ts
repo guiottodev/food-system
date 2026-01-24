@@ -1,4 +1,4 @@
-export type UnitType = "UNIDADE" | "CENTO" | "KG";
+export type UnitType = "UNIDADE" | "KG";
 
 type ParseResult =
   | { ok: true; value: number }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./products.module.css";
@@ -50,6 +51,12 @@ export default function ProductsFilters({
     Boolean(currentCategory) ||
     currentActive !== "all";
 
+  const activeFilterCount = [
+    Boolean(currentQuery),
+    Boolean(currentCategory),
+    currentActive !== "all",
+  ].filter(Boolean).length;
+
   const applyParams = useCallback(
     (updates: Record<string, string | null>) => {
       const params = new URLSearchParams(searchParamsString);
@@ -88,6 +95,11 @@ export default function ProductsFilters({
     return () => document.removeEventListener("mousedown", handleClick);
   }, [filtersOpen]);
 
+  const handleClearFilters = useCallback(() => {
+    applyParams({ q: "", categoryId: "", active: "all" });
+    setFiltersOpen(false);
+  }, [applyParams]);
+
   const chips = [
     currentQuery
       ? {
@@ -121,6 +133,7 @@ export default function ProductsFilters({
       <div className={layoutStyles.toolbar}>
         <div className={layoutStyles.toolbarMain}>
           <div className={layoutStyles.searchWrap}>
+            <Search size={18} className={layoutStyles.searchIcon} aria-hidden />
             <input
               type="text"
               name="q"
@@ -146,6 +159,15 @@ export default function ProductsFilters({
               className={`${styles.control} ${layoutStyles.searchInput}`}
             />
           </div>
+          {hasActiveFilters ? (
+            <button
+              type="button"
+              className={`${styles.button} ${layoutStyles.clearButton}`}
+              onClick={handleClearFilters}
+            >
+              Limpar
+            </button>
+          ) : null}
           <div className={layoutStyles.filtersWrap} ref={panelRef}>
             <button
               type="button"
@@ -157,6 +179,9 @@ export default function ProductsFilters({
               aria-controls="products-filters-panel"
             >
               Filtros
+              {activeFilterCount > 0 ? (
+                <span className={layoutStyles.filtersBadge}>{activeFilterCount}</span>
+              ) : null}
             </button>
             {filtersOpen ? (
               <div
@@ -225,7 +250,7 @@ export default function ProductsFilters({
                 className={layoutStyles.chipButton}
                 aria-label={`Remover filtro ${chip.label}`}
               >
-                x
+                ×
               </button>
             </span>
           ))}

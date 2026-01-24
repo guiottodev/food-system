@@ -404,7 +404,7 @@ export default function OrderForm({
     return items.map((item) => {
       const result = validateSkuQuantity(
         {
-          unitType: item.unitType as "KG" | "UNIDADE" | "CENTO",
+          unitType: item.unitType as "KG" | "UNIDADE",
           minQty: item.minQty,
           quantityStep: item.quantityStep,
         },
@@ -883,7 +883,7 @@ export default function OrderForm({
   function getItemError(item: OrderItem) {
     const result = validateSkuQuantity(
       {
-        unitType: item.unitType as "KG" | "UNIDADE" | "CENTO",
+        unitType: item.unitType as "KG" | "UNIDADE",
         minQty: item.minQty,
         quantityStep: item.quantityStep,
       },

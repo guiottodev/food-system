@@ -80,11 +80,6 @@ describe("getSkuDefaults", () => {
       quantityStep: 1,
       unitLabel: "un",
     });
-    expect(getSkuDefaults("CENTO")).toEqual({
-      minQty: 1,
-      quantityStep: 1,
-      unitLabel: "cento",
-    });
     expect(getSkuDefaults("KG")).toEqual({
       minQty: 0.5,
       quantityStep: 0.05,

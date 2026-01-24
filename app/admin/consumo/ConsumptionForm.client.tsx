@@ -221,7 +221,7 @@ export default function ConsumptionForm({
     }
     const result = validateSkuQuantity(
       {
-        unitType: selectedSku.unitType as "KG" | "UNIDADE" | "CENTO",
+        unitType: selectedSku.unitType as "KG" | "UNIDADE",
         minQty: selectedSku.minQty,
         quantityStep: selectedSku.quantityStep,
       },

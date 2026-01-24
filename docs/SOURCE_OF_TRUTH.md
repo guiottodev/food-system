@@ -1,6 +1,6 @@
 # FONTE DA VERDADE
 
-Última atualização: 2026-01-23
+Última atualização: 2026-01-24
 
 Este documento é a única fonte da verdade sobre como o produto funciona hoje.
 Ele reflete o código atual (Next.js + Prisma + SQLite). Se este documento e o
@@ -81,7 +81,7 @@ Enums:
 - OrderType: PRONTA_ENTREGA, ENCOMENDA
 - DeliveryMethod: ENTREGA, RETIRADA
 - PaymentMethod: PIX, DINHEIRO, CARTAO, TRANSFERENCIA, A_COMBINAR
-- UnitType: UNIDADE, CENTO, KG
+- UnitType: UNIDADE, KG
 - InventoryMovementType: IN, OUT, ADJUSTMENT
 - ProductionConsumptionSourceType: IMMEDIATE, MANUAL
 
@@ -143,10 +143,9 @@ Observações importantes:
 
 ### SKUs
 - SKU é a unidade vendável.
-- Tipos de unidade suportados: UNIDADE, CENTO, KG.
+- Tipos de unidade suportados: UNIDADE, KG.
 - Cada SKU tem defaults por tipo de unidade:
   - KG: minQty 0.5, quantityStep 0.05, unitLabel "kg"
-  - CENTO: minQty 1, quantityStep 1, unitLabel "cento"
   - UNIDADE: minQty 1, quantityStep 1, unitLabel "un"
 - Disponibilidade do SKU na criação/edição de pedidos:
   - O SKU deve estar ativo e o produto pai deve estar ativo.
@@ -157,6 +156,16 @@ Observações importantes:
   - Chave e valor obrigatórios se um dos dois estiver preenchido
   - Chaves normalizadas e únicas
   - Máximo de 15 atributos
+
+### Listagem de produtos (/admin/products)
+- **Tabela expansível**: cada linha de produto pode ser expandida para exibir as linhas de SKU.
+- **Colunas**: Produto (com miniatura, nome, link, badge ativo/inativo), Categoria, SKUs/Un. (ativo/total na linha de produto; unitLabel na linha de SKU), Disponível, Preço, Ações.
+- **Linha de produto**: botão para expandir/recolher; "X de Y disponíveis" (SKUs com stockQuantity > 0 / total); na coluna Preço "—"; links **Ver** (detalhe do produto) e **Produção** (/admin/capacidade?q=nome).
+- **Linha de SKU** (ao expandir): displayName, sublinha (sizeText, flavorText, "Congelado"), badge Inativo se aplicável; **Disponível** formatado por unidade (KG: 2 decimais pt-BR + unitLabel; UNIDADE: inteiro + unitLabel), com destaque quando stockQuantity === 0; **Preço** editável na própria célula (clique para editar, blur ou Enter grava via `updateSkuPriceAction`, Escape cancela); link **Editar** para ?tab=skus&skuMode=edit&skuId=.
+- **Produto sem SKUs**: ao expandir, uma linha com empty state e link "Adicionar SKU" para ?tab=skus.
+- **Server Action** `updateSkuPriceAction(skuId, price)`: valida, atualiza `priceCurrent` do SKU e retorna `{ ok: true }` ou `{ ok: false, error }`.
+- **Filtros**: busca por nome, categoria, status (ativos/inativos). Chips de filtros ativos com botão **×** para remover; botão **Limpar** (remove todos os filtros e fecha o painel) quando há filtros ativos; no botão "Filtros", pill com a quantidade de filtros ativos quando > 0.
+- Em viewport ≤720px a coluna Categoria é ocultada.
 
 ---
 
@@ -264,7 +273,7 @@ Reconfirmação:
 ### 7.9 Validação de quantidade
 Regras por tipo de unidade:
 - KG: múltiplos de 0.05
-- UNIDADE/CENTO: apenas inteiros
+- UNIDADE: apenas inteiros
 - Também valida minQty e quantityStep do SKU
 
 ### 7.10 Validações de disponibilidade

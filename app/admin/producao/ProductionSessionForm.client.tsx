@@ -102,7 +102,7 @@ function getItemError(item: ProductionItem) {
   if (!item.unitType) return "SKU sem regras de unidade.";
   const result = validateSkuQuantity(
     {
-      unitType: item.unitType as "KG" | "UNIDADE" | "CENTO",
+      unitType: item.unitType as "KG" | "UNIDADE",
       minQty: item.minQty,
       quantityStep: item.quantityStep,
     },
@@ -297,7 +297,7 @@ export default function ProductionSessionForm({
 
     const result = validateSkuQuantity(
       {
-        unitType: selectedSku.unitType as "KG" | "UNIDADE" | "CENTO",
+        unitType: selectedSku.unitType as "KG" | "UNIDADE",
         minQty: selectedSku.minQty,
         quantityStep: selectedSku.quantityStep,
       },

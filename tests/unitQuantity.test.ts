@@ -10,17 +10,8 @@ describe("validateQuantity", () => {
     }
   });
 
-  it("accepts integers for CENTO", () => {
-    const result = validateQuantity("CENTO", "3");
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.normalized).toBe(3);
-    }
-  });
-
-  it("rejects decimals for UNIDADE/CENTO", () => {
+  it("rejects decimals for UNIDADE", () => {
     expect(validateQuantity("UNIDADE", 1.5).ok).toBe(false);
-    expect(validateQuantity("CENTO", 2.2).ok).toBe(false);
   });
 
   it("accepts KG multiples of 0.05", () => {

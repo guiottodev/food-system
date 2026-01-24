@@ -86,7 +86,7 @@ export async function createProductionSessionAction(formData: FormData) {
     const quantityInput = item.quantity ?? "";
     const quantityResult = validateSkuQuantity(
       {
-        unitType: sku.unitType as "KG" | "UNIDADE" | "CENTO",
+        unitType: sku.unitType as "KG" | "UNIDADE",
         minQty: sku.minQty,
         quantityStep: sku.quantityStep,
       },

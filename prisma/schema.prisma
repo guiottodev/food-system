@@ -42,7 +42,6 @@ enum PaymentMethod {
 
 enum UnitType {
   UNIDADE
-  CENTO
   KG
 }
 
