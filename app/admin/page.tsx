@@ -3,6 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary, hasStrongAttention } from "@/lib/domain/attention";
+import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
+import {
+  computeOrderStockStatus,
+  computeUnavailableItemsForOrders,
+} from "@/lib/domain/production";
 import { verifySessionValue } from "@/lib/session";
 import styles from "./_styles/adminPrimitives.module.css";
 
@@ -28,6 +33,14 @@ function addDays(date: Date, days: number) {
   const d = new Date(date);
   d.setDate(d.getDate() + days);
   return d;
+}
+
+function formatDeliveryLabel(value?: Date | null, time?: string | null) {
+  if (!value) return "-";
+  const dateLabel = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(value);
+  const t = (time ?? "").trim();
+  if (!t || t === DEFAULT_DELIVERY_TIME) return dateLabel;
+  return `${dateLabel} ${t}`;
 }
 
 function parseDateParam(value?: string) {
@@ -78,6 +91,7 @@ export default async function AdminPage({
   const today = new Date();
   const startToday = startOfDay(today);
   const endToday = endOfDay(today);
+  const endNext15 = endOfDay(addDays(today, 15));
 
   let rangeStart = startToday;
   let rangeEnd = endToday;
@@ -97,7 +111,7 @@ export default async function AdminPage({
     }
   }
 
-  const [revenueAgg, productionCount, attentionOrders] = await Promise.all([
+  const [revenueAgg, productionCount, attentionOrders, pendingListOrders] = await Promise.all([
     prisma.order.aggregate({
       _sum: {
         total: true,
@@ -140,7 +154,82 @@ export default async function AdminPage({
         },
       },
     }),
+    prisma.order.findMany({
+      where: {
+        status: { notIn: ["ENTREGUE", "CANCELADO"] },
+        deliveryDatetime: { gte: startToday, lte: endNext15 },
+      },
+      orderBy: { deliveryDatetime: "asc" },
+      select: {
+        id: true,
+        orderNumber: true,
+        status: true,
+        deliveryDatetime: true,
+        deliveryTime: true,
+        deliveryMethod: true,
+        orderType: true,
+        addressText: true,
+        addressCity: true,
+        needsReconfirmation: true,
+        paidAt: true,
+        customer: { select: { name: true } },
+        items: { select: { id: true, skuId: true, quantity: true } },
+      },
+    }),
   ]);
+
+  const orderInputsForList = pendingListOrders.map((o) => ({
+    id: o.id,
+    status: o.status,
+    items: o.items,
+  }));
+
+  const [availabilityMapList, stockStatusMapList] = await Promise.all([
+    computeUnavailableItemsForOrders(prisma, orderInputsForList),
+    computeOrderStockStatus(prisma, orderInputsForList),
+  ]);
+
+  const entriesForList = pendingListOrders.map((order) => {
+    const hasUnavailableItems = availabilityMapList.get(order.id)?.hasUnavailableItems ?? false;
+    const hasStockShortage = stockStatusMapList.get(order.id)?.deliveredShortage ?? false;
+    const attention = getOrderAttentionSummary({ ...order, hasUnavailableItems, hasStockShortage });
+    const stockStatus = stockStatusMapList.get(order.id) ?? {
+      needsProduction: false,
+      deliveredShortage: false,
+    };
+    return { order, attention, stockStatus };
+  });
+
+  const filteredList = entriesForList.filter(
+    (e) => e.attention.hasAttention || e.stockStatus.needsProduction
+  );
+
+  const sortedList = [...filteredList].sort((a, b) => {
+    const aStrong = a.attention.strongReasons.length > 0 ? 1 : 0;
+    const bStrong = b.attention.strongReasons.length > 0 ? 1 : 0;
+    if (bStrong !== aStrong) return bStrong - aStrong;
+    const aDt = a.order.deliveryDatetime?.getTime() ?? Infinity;
+    const bDt = b.order.deliveryDatetime?.getTime() ?? Infinity;
+    return aDt - bDt;
+  });
+
+  const pendingList = sortedList.slice(0, 10).map(({ order, attention, stockStatus }) => {
+    const labels = attention.reasons.map((r) => r.label);
+    if (
+      stockStatus.needsProduction &&
+      !labels.some((l) => /produzir|saldo/i.test(l))
+    ) {
+      labels.push("Precisa produzir");
+    }
+    const tipo = labels.slice(0, 2).join(" • ") || "Pendência";
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      customerName: order.customer?.name ?? "-",
+      deliveryLabel: formatDeliveryLabel(order.deliveryDatetime, order.deliveryTime),
+      tipo,
+    };
+  });
 
   const pendingStrongCount = attentionOrders.reduce((count, order) => {
     const summary = getOrderAttentionSummary(order);
@@ -206,7 +295,23 @@ export default async function AdminPage({
           <div className={styles.stackSm}>
             <h2>Pendencias fortes</h2>
             <div className={styles.pageTitle}>{pendingStrongCount}</div>
-            <Link href="/admin/pendencias">Ver pendencias</Link>
+            {pendingList.length > 0 ? (
+              <ul className={styles.stackSm} style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                {pendingList.map(({ id, orderNumber, customerName, deliveryLabel, tipo }) => (
+                  <li key={id}>
+                    <Link
+                      href={`/admin/orders/${id}`}
+                      className={styles.panelLink}
+                    >
+                      {orderNumber} — {customerName} · {deliveryLabel} · {tipo}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className={styles.textMuted}>Nenhum pedido com pendência nos próximos 15 dias.</p>
+            )}
+            <Link href="/admin/orders?attention=with">Ver todos</Link>
           </div>
         </section>
 

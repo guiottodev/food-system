@@ -1,10 +1,13 @@
 # Telas do Admin
 
 ## /admin - Painel
-- O que faz: mostra indicadores do dia/periodo (receita, pendencias fortes, pedidos em producao).
+- O que faz: mostra indicadores do dia/periodo (receita, pendencias fortes, pedidos em producao) e lista curta de pendências.
 - Campos/controles: Periodo (Hoje, Proximos 7 dias, Periodo customizado), Inicio (date), Fim (date), botao Aplicar.
-- Conteudo exibido: Receita (soma de pedidos ENTREGUE no periodo), Pendencias fortes (contador), Pedidos em producao (contador).
-- Acoes/links: Ver pendencias -> /admin/pendencias, Ver pedidos -> /admin/orders?status=EM_PRODUCAO.
+- Conteudo exibido:
+  - Receita: soma de pedidos ENTREGUE no periodo.
+  - Pendencias fortes: contador (fortes em todos os pedidos ativos) e lista de ate 10 itens (pedidos com hasAttention ou needsProduction, entrega nos proximos 15 dias), ordenados por fortes primeiro e depois por deliveryDatetime. Cada item: N pedido, cliente, entrega, tipo de pendencia; link para /admin/orders/[id]. Se vazio: "Nenhum pedido com pendência nos próximos 15 dias."
+  - Pedidos em producao: contador.
+- Acoes/links: Ver todos (pendências) -> /admin/orders?attention=with, Ver pedidos (produção) -> /admin/orders?status=EM_PRODUCAO.
 
 ## /admin/products - Produtos
 - O que faz: lista produtos com filtros e acesso ao detalhe.
@@ -217,32 +220,6 @@
   - Se status >= CONFIRMADO e houver mudanca critica (itens/data/endereco/valores),
     marca needsReconfirmation e registra audit log.
   - Mostra aviso "isso exigira reconfirmacao" e confirmacao ao salvar.
-
-## /admin/pendencias - Pendencias
-- O que faz: lista pedidos com pendencias fortes e/ou itens indisponiveis.
-- Campos/controles: select "Tipo de pendencia" (Todas, Incompletas, Alteradas, Itens indisponiveis).
-- Conteudo exibido: contador de pendencias + tabela de pedidos (mesmo layout de /admin/orders).
-
-### Logica exata da tela de pendencias
-- Fonte de pedidos:
-  - Busca todos os pedidos com status != ENTREGUE e != CANCELADO.
-  - Ordena por deliveryDatetime asc.
-- Calculo de pendencias:
-  - Para cada pedido, calcula "strongReasons" via getOrderAttentionSummary:
-    - INCOMPLETE quando nao tem itens ou nao tem data de entrega.
-    - ALTERADO_APOS_CONFIRMACAO quando needsReconfirmation = true.
-  - Calcula "Itens indisponiveis" via computeUnavailableItemsForOrders:
-    - availableNow por produto = soma produzida - soma consumida.
-    - Se qualquer item do pedido tiver qty > availableNow, marca hasUnavailableItems = true.
-    - Se pedido estiver CANCELADO ou ENTREGUE, hasUnavailableItems = false (ignorado).
-- Filtro "Todas":
-  - Inclui pedidos com pendencia forte (INCOMPLETE ou ALTERADO_APOS_CONFIRMACAO)
-    OU pedidos com hasUnavailableItems = true.
-  - Pendencias fracas (ex: endereco/horario) nao entram sozinhas.
-- Filtro "Incompletas" / "Alteradas":
-  - Inclui apenas quando o tipo esta presente em attention.strongReasons.
-- Filtro "Itens indisponiveis":
-  - Inclui apenas pedidos com hasUnavailableItems = true.
 
 ## /admin/capacidade - Capacidade
 - O que faz: mostra capacidade operacional por produto.

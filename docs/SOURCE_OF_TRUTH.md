@@ -44,16 +44,12 @@ Comportamento:
 
 ## 3. Navegação e rotas principais
 
-Navegação lateral (Sidebar):
-- /admin (Painel)
-- /admin/orders (Pedidos)
-- /admin/clientes (Clientes)
-- /admin/pendencias (Pendências)
-- /admin/capacidade (Capacidade)
-- /admin/producao (Produção)
-- /admin/orders/new (Novo pedido)
-- /admin/categories (Categorias)
-- /admin/products (Produtos)
+Sidebar (adminNav.ts), duas seções:
+- Operação: Visão geral (/admin), Pedidos (/admin/orders), Produção (/admin/capacidade), Clientes (/admin/clientes)
+- Cadastros: Produtos (/admin/products), Categorias (/admin/categories)
+- Ação primária: + Novo pedido (/admin/orders/new)
+
+Topo (AdminTopNav): Painel, Pedidos, Clientes, Produção (/admin/capacidade), Registrar produção (/admin/producao), Novo pedido, Categorias, Produtos.
 
 Rotas principais:
 - /login
@@ -69,10 +65,11 @@ Rotas principais:
 - /admin/products
 - /admin/products/new
 - /admin/products/[id]
-- /admin/pendencias
 - /admin/capacidade
 - /admin/producao
 - /admin/consumo
+
+A tela /admin/pendencias foi descontinuada; pendências no Painel (lista) e nos filtros de Pedidos.
 
 ---
 
@@ -310,10 +307,11 @@ Razões fracas:
 - SALDO_INSUFICIENTE: entrega realizada sem saldo suficiente; indica produção pendente
 
 Pendências são exibidas em:
-- /admin/orders (lista)
-- /admin/orders/[id]
-- /admin/pendencias
-Observação: pedidos ENTREGUE/CANCELADO não exibem pendências.
+- /admin (Painel: contador de fortes e lista de até 10 itens, 15 dias; "Ver todos" → /admin/orders?attention=with)
+- /admin/orders (lista, filtro "Com pendencias" e subtipos)
+- /admin/orders/[id] (blocos Pendencias/Alertas)
+
+A tela /admin/pendencias foi descontinuada. Pedidos ENTREGUE/CANCELADO não exibem pendências.
 
 ---
 

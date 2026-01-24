@@ -1,5 +1,4 @@
 import {
-  AlertCircle,
   ClipboardList,
   Gauge,
   LayoutDashboard,
@@ -35,12 +34,6 @@ export const navSections: NavSection[] = [
         href: "/admin/orders",
         match: "startsWith",
         icon: ClipboardList,
-      },
-      {
-        label: "Pendencias",
-        href: "/admin/pendencias",
-        match: "startsWith",
-        icon: AlertCircle,
       },
       {
         label: "Produção",

@@ -13,8 +13,6 @@ export default function AdminTopNav() {
   const isOrdersNew = pathname.startsWith("/admin/orders/new");
   const isOrders =
     !isOrdersNew && (pathname === "/admin/orders" || pathname.startsWith("/admin/orders/"));
-  const isPendencias =
-    pathname === "/admin/pendencias" || pathname.startsWith("/admin/pendencias/");
   const isClientes =
     pathname === "/admin/clientes" || pathname.startsWith("/admin/clientes/");
   const isProducao =
@@ -49,13 +47,6 @@ export default function AdminTopNav() {
         aria-current={isClientes ? "page" : undefined}
       >
         Clientes
-      </Link>
-      <Link
-        className={linkClass(isPendencias)}
-        href="/admin/pendencias"
-        aria-current={isPendencias ? "page" : undefined}
-      >
-        Pendencias
       </Link>
       <Link
         className={linkClass(isProducaoHub)}
