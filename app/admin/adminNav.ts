@@ -43,7 +43,7 @@ export const navSections: NavSection[] = [
         icon: AlertCircle,
       },
       {
-        label: "Capacidade",
+        label: "Produção",
         href: "/admin/capacidade",
         match: "startsWith",
         icon: Gauge,

@@ -115,9 +115,11 @@ function getItemError(item: ProductionItem) {
 export default function ProductionSessionForm({
   errorCode,
   created,
+  initialProductId,
 }: {
   errorCode?: string;
   created?: boolean;
+  initialProductId?: string;
 }) {
   const todayLabel = useMemo(() => formatDateInput(new Date()), []);
   const [producedAt, setProducedAt] = useState(todayLabel);
@@ -137,6 +139,7 @@ export default function ProductionSessionForm({
   const [itemQuantity, setItemQuantity] = useState("1");
   const [itemNote, setItemNote] = useState("");
   const [newItemError, setNewItemError] = useState("");
+  const initialProductIdFetched = useRef(false);
 
   const lineIdRef = useRef(0);
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -227,6 +230,51 @@ export default function ProductionSessionForm({
     if (!skuOpen) return;
     setSkuActiveIndex(skuResults.length > 0 ? 0 : -1);
   }, [skuOpen, skuResults]);
+
+  useEffect(() => {
+    if (
+      !initialProductId?.trim() ||
+      initialProductIdFetched.current ||
+      typeof window === "undefined"
+    ) {
+      return;
+    }
+    initialProductIdFetched.current = true;
+    const controller = new AbortController();
+    (async () => {
+      try {
+        const params = new URLSearchParams();
+        params.set("productId", initialProductId.trim());
+        params.set("limit", "10");
+        const res = await fetch(`/api/products/search?${params}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { items?: Array<Record<string, unknown>> };
+        const list = data.items ?? [];
+        if (controller.signal.aborted || list.length === 0) return;
+        const first = list[0];
+        const opt: SkuOption = {
+          skuId: String(first.skuId ?? ""),
+          skuLabel: String(first.skuLabel ?? ""),
+          productName: String(first.productName ?? ""),
+          categoryName: String(first.categoryName ?? ""),
+          unitLabel:
+            typeof first.unitLabel === "string" ? first.unitLabel : null,
+          unitType:
+            typeof first.unitType === "string" ? first.unitType : null,
+          minQty: typeof first.minQty === "number" ? first.minQty : 1,
+          quantityStep:
+            typeof first.quantityStep === "number" ? first.quantityStep : 1,
+        };
+        if (!opt.skuId || !opt.productName) return;
+        selectSku(opt);
+      } catch {
+        /* ignore */
+      }
+    })();
+    return () => controller.abort();
+  }, [initialProductId]);
 
   function selectSku(option: SkuOption) {
     setSelectedSku(option);

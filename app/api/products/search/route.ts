@@ -20,12 +20,13 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";
   const categoryId = searchParams.get("categoryId")?.trim() ?? "";
+  const productId = searchParams.get("productId")?.trim() ?? "";
   const rawLimit = Number(searchParams.get("limit") ?? 10);
   const limit = Number.isFinite(rawLimit)
     ? Math.min(Math.max(rawLimit, 1), 50)
     : 10;
 
-  if (!query && !categoryId) {
+  if (!query && !categoryId && !productId) {
     return NextResponse.json({ items: [] });
   }
 
@@ -33,13 +34,16 @@ export async function GET(request: Request) {
   if (categoryId) {
     productFilter.categoryId = categoryId;
   }
+  if (productId) {
+    productFilter.id = productId;
+  }
 
   const where: Prisma.SkuWhereInput = {
     isActive: true,
     product: productFilter,
   };
 
-  if (query) {
+  if (query && !productId) {
     where.OR = [
       { displayName: { contains: query } },
       { product: { name: { contains: query } } },
@@ -73,6 +77,7 @@ export async function GET(request: Request) {
         productName: product.name,
         categoryName: product.category.name,
         unit: sku.unitLabel,
+        unitLabel: sku.unitLabel,
         unitType: sku.unitType,
         price: Number(sku.priceCurrent),
         minQty: Number(sku.minQty),
