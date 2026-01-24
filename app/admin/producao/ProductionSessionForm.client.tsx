@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createProductionSessionAction } from "./actions";
 import { validateSkuQuantity } from "@/lib/quantity";
 import styles from "../_styles/adminPrimitives.module.css";
+import { InlineNotice } from "../design-system/InlineNotice.client";
 
 const DRAFT_KEY = "production-session-draft-v1";
 
@@ -354,7 +355,9 @@ export default function ProductionSessionForm({
       <input type="hidden" name="payload" value={payload} />
 
       {created ? (
-        <div className={styles.notice}>Producao registrada com sucesso.</div>
+        <InlineNotice tone="success" clearQueryKeys={["created"]}>
+          Producao registrada com sucesso.
+        </InlineNotice>
       ) : null}
 
       {errorMessage ? (

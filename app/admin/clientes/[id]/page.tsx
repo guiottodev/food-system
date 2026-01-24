@@ -5,6 +5,7 @@ import CustomerTabs from "../CustomerTabs";
 import { updateCustomerAction } from "./actions";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "../customerDetail.module.css";
+import { InlineNotice } from "../../design-system/InlineNotice.client";
 
 type CustomerSearchParams = {
   tab?: string;
@@ -94,17 +95,27 @@ export default async function CustomerDetailPage({
       </div>
 
       {sp?.created ? (
-        <div className={styles.notice}>Cliente criado.</div>
+        <InlineNotice tone="success" clearQueryKeys={["created"]}>
+          Cliente criado.
+        </InlineNotice>
       ) : null}
-      {sp?.saved ? <div className={styles.notice}>Dados salvos.</div> : null}
+      {sp?.saved ? (
+        <InlineNotice tone="success" clearQueryKeys={["saved"]}>
+          Dados salvos.
+        </InlineNotice>
+      ) : null}
       {errorMessage ? <p className={styles.textError}>{errorMessage}</p> : null}
       {showDuplicate ? (
-        <div className={styles.notice}>
+        <InlineNotice
+          tone="warning"
+          dismissAfterMs={0}
+          clearQueryKeys={["error", "existingId"]}
+        >
           Telefone ja cadastrado.{" "}
           <Link href={`/admin/clientes/${existingId}`}>
             Abrir cliente existente
           </Link>
-        </div>
+        </InlineNotice>
       ) : null}
 
       <CustomerTabs activeTab={activeTab} customerId={customer.id} />

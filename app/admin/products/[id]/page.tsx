@@ -12,6 +12,7 @@ import ProductSkusSection from "./ProductSkusSection.client";
 import styles from "../../_styles/adminPrimitives.module.css";
 import type { SkuAttributeInput } from "@/lib/validation/skuAttributes";
 import { buildCategoryOptions, buildCategoryPathLabel, buildCategoryIndex } from "@/lib/domain/categoryHierarchy";
+import { InlineNotice } from "../../design-system/InlineNotice.client";
 
 type ProductSearchParams = {
   error?: string;
@@ -138,7 +139,11 @@ export default async function ProductDetailPage({
         <h1 className={styles.pageTitle}>Produto: {product.name}</h1>
         <Link href="/admin/products">Voltar</Link>
       </div>
-      {created ? <div className={styles.notice}>Produto criado.</div> : null}
+      {created ? (
+        <InlineNotice tone="success" clearQueryKeys={["created"]}>
+          Produto criado.
+        </InlineNotice>
+      ) : null}
       <div className={styles.clusterSm}>
         <span
           className={`${styles.badge} ${

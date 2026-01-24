@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { createConsumptionAction } from "./actions";
 import { validateSkuQuantity } from "@/lib/quantity";
 import styles from "../_styles/adminPrimitives.module.css";
+import { InlineNotice } from "../design-system/InlineNotice.client";
 
 const DRAFT_KEY = "production-consumption-draft-v1";
 
@@ -262,7 +263,9 @@ export default function ConsumptionForm({
       <input type="hidden" name="payload" value={payload} />
 
       {created ? (
-        <div className={styles.notice}>Consumo registrado com sucesso.</div>
+        <InlineNotice tone="success" clearQueryKeys={["created"]}>
+          Consumo registrado com sucesso.
+        </InlineNotice>
       ) : null}
 
       {errorMessage ? (

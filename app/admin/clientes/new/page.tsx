@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createCustomerAction } from "./actions";
 import styles from "../../_styles/adminPrimitives.module.css";
+import { InlineNotice } from "../../design-system/InlineNotice.client";
 
 type CustomersNewSearchParams = {
   error?: string;
@@ -39,12 +40,16 @@ export default async function NewCustomerPage({
       {errorMessage ? <p className={styles.textError}>{errorMessage}</p> : null}
 
       {showDuplicate ? (
-        <div className={styles.notice}>
+        <InlineNotice
+          tone="warning"
+          dismissAfterMs={0}
+          clearQueryKeys={["error", "existingId"]}
+        >
           Telefone ja cadastrado.{" "}
           <Link href={`/admin/clientes/${existingId}`}>
             Abrir cliente existente
           </Link>
-        </div>
+        </InlineNotice>
       ) : null}
 
       <form action={createCustomerAction} className={styles.stackMd}>

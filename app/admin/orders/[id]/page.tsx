@@ -16,6 +16,7 @@ import CancelOrderForm from "./CancelOrderForm.client";
 import OrderDetailFocus from "./OrderDetailFocus.client";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "../orderDetail.module.css";
+import { InlineNotice } from "../../design-system/InlineNotice.client";
 
 const statusLabel: Record<OrderStatus, string> = {
   RASCUNHO: "Rascunho",
@@ -356,16 +357,22 @@ export default async function OrderDetailPage({
         </div>
       </div>
 
-      {created ? <div className={styles.notice}>Pedido salvo.</div> : null}
+      {created ? (
+        <InlineNotice tone="success" clearQueryKeys={["created"]}>
+          Pedido salvo.
+        </InlineNotice>
+      ) : null}
 
       {resolvedSearch?.updated ? (
-        <div className={styles.notice}>Pedido atualizado.</div>
+        <InlineNotice tone="success" clearQueryKeys={["updated"]}>
+          Pedido atualizado.
+        </InlineNotice>
       ) : null}
 
       {resolvedSearch?.converted ? (
-        <div className={`${styles.notice} ${styles.noticeWarning}`}>
+        <InlineNotice tone="warning" clearQueryKeys={["converted"]}>
           Estoque insuficiente para pronta entrega. Pedido convertido para encomenda.
-        </div>
+        </InlineNotice>
       ) : null}
 
       {resolvedSearch?.error === "motivo" ? (
@@ -433,11 +440,15 @@ export default async function OrderDetailPage({
       ) : null}
 
       {resolvedSearch?.confirmed ? (
-        <div className={styles.notice}>Pedido confirmado.</div>
+        <InlineNotice tone="success" clearQueryKeys={["confirmed"]}>
+          Pedido confirmado.
+        </InlineNotice>
       ) : null}
 
       {resolvedSearch?.reconfirmed ? (
-        <div className={styles.notice}>Pedido reconfirmado.</div>
+        <InlineNotice tone="success" clearQueryKeys={["reconfirmed"]}>
+          Pedido reconfirmado.
+        </InlineNotice>
       ) : null}
 
       <section className={`${styles.panel} ${styles.panelPrimary}`}>

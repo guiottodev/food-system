@@ -153,7 +153,8 @@ export default function CategoriesTreeClient({ rows }: { rows: CategoryRow[] }) 
                 <tr key={row.id}>
                   <td
                     className={layoutStyles.categoryCell}
-                    style={{ ["--depth" as any]: row.depth }}
+                    style={{ ["--depth" as any]: String(row.depth) }}
+                    data-depth={row.depth}
                   >
                     <div className={layoutStyles.categoryCellInner}>
                       {isExpandable ? (

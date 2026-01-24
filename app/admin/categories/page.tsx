@@ -3,6 +3,7 @@ import CategoriesFilters from "./CategoriesFilters.client";
 import CategoriesTreeClient from "./CategoriesTree.client";
 import layoutStyles from "./categories.module.css";
 import styles from "../_styles/adminPrimitives.module.css";
+import { InlineNotice } from "../design-system/InlineNotice.client";
 
 type CategoriesSearchParams = {
   q?: string;
@@ -237,13 +238,13 @@ export default async function CategoriesPage({
         />
 
         {notice === "created" ? (
-          <div className={`${styles.notice} ${styles.noticeSuccess}`}>
+          <InlineNotice tone="success" clearQueryKeys={["notice"]}>
             Categoria criada com sucesso.
-          </div>
+          </InlineNotice>
         ) : notice === "updated" ? (
-          <div className={`${styles.notice} ${styles.noticeSuccess}`}>
+          <InlineNotice tone="success" clearQueryKeys={["notice"]}>
             Categoria atualizada com sucesso.
-          </div>
+          </InlineNotice>
         ) : null}
 
         {error === "nome" && !openModal ? (

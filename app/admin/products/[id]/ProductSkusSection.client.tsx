@@ -15,6 +15,7 @@ import {
 } from "@/lib/skuFormValidation";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "./productDetail.module.css";
+import { InlineNotice } from "../../design-system/InlineNotice.client";
 
 type SkuView = {
   id: string;
@@ -339,7 +340,9 @@ export default function ProductSkusSection({
       </div>
       <div className={styles.panelBody}>
         {showReadyNotice ? (
-          <div className={styles.notice}>Pronto para usar em pedidos.</div>
+          <InlineNotice tone="success" clearQueryKeys={["ready"]}>
+            Pronto para usar em pedidos.
+          </InlineNotice>
         ) : null}
         {activeSkuCount === 0 ? (
           <div className={`${styles.notice} ${styles.noticeWarning}`}>

@@ -6,6 +6,7 @@ import { normalizePhoneBR, normalizePhoneDigits } from "@/lib/phone";
 import { validateSkuQuantity } from "@/lib/quantity";
 import type { OrderStatus } from "@prisma/client";
 import styles from "../../_styles/adminPrimitives.module.css";
+import { InlineNotice } from "../../design-system/InlineNotice.client";
 
 const DRAFT_KEY = "order-new-draft-v1";
 
@@ -1400,7 +1401,7 @@ export default function OrderForm({
               </div>
 
               {errorCode === "cliente-telefone-existente" && existingCustomer ? (
-                <div className={styles.notice}>
+                <InlineNotice tone="warning" dismissAfterMs={0}>
                   Este telefone ja existe para{" "}
                   {existingCustomerOption
                     ? formatCustomerLabel(existingCustomerOption)
@@ -1413,7 +1414,7 @@ export default function OrderForm({
                   >
                     Selecionar cliente existente
                   </button>
-                </div>
+                </InlineNotice>
               ) : null}
 
               {customerMode === "existing" ? (

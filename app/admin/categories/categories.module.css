@@ -364,12 +364,59 @@
 }
 
 .categoryCell {
-  padding-left: calc(var(--space-4) + (var(--depth, 0) * 18px));
+  position: relative;
+  z-index: 0;
+  /* Indentação mais evidente por nível */
+  padding-left: calc(var(--space-4) + (var(--depth, 0) * 40px));
+}
+
+.categoryCell[data-depth="0"]::before {
+  display: none;
+}
+
+.categoryCell::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  /* Trilho vertical do nível */
+  left: calc(var(--space-4) + ((var(--depth, 0) - 1) * 40px) + 14px);
+  width: 1px;
+  background: var(--border-subtle);
+  opacity: 0.9;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.categoryCell[data-depth="0"]::after {
+  display: none;
+}
+
+.categoryCell::after {
+  content: "";
+  position: absolute;
+  /* Conector horizontal (└─) na metade da linha */
+  top: 50%;
+  left: calc(var(--space-4) + ((var(--depth, 0) - 1) * 40px) + 14px);
+  width: 16px;
+  height: 1px;
+  background: var(--border-subtle);
+  opacity: 0.9;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .categoryName {
   font-weight: 650;
   color: var(--text-primary);
+}
+
+.categoryCell[data-depth="0"] .categoryName {
+  font-weight: 700;
+}
+
+.categoryCell:not([data-depth="0"]) .categoryName {
+  font-weight: 600;
 }
 
 .categoryPath {
@@ -448,6 +495,8 @@
   grid-template-columns: 22px 20px 1fr;
   align-items: start;
   gap: var(--space-2);
+  position: relative;
+  z-index: 1;
 }
 
 .expanderButton {

@@ -835,13 +835,15 @@
 
 .notice {
   display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
+  align-items: center;
+  gap: var(--space-2);
   border: 1px solid var(--border);
   background: var(--bg-subtle);
-  border-radius: var(--radius-md);
-  padding: var(--space-4);
-  border-left: 4px solid var(--action-primary);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--action-primary);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .notice::before {
@@ -849,30 +851,58 @@
   flex-shrink: 0;
 }
 
+.noticeContent {
+  min-width: 0;
+  flex: 1;
+}
+
+.noticeDismiss {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+/* Notificações: fundos um pouco mais “soft” do que badges/tags */
+.noticeSuccess {
+  border-color: var(--state-success-border);
+  border-left-color: var(--state-success);
+  background: rgba(22, 163, 74, 0.10);
+}
+
 .noticeWarning {
   border-color: var(--state-warning-border);
   border-left-color: var(--state-warning);
-  background: var(--state-warning-bg);
+  background: rgba(217, 119, 6, 0.10);
+}
+
+.noticeError {
+  border-color: var(--state-error-border);
+  border-left-color: var(--state-error);
+  background: rgba(220, 38, 38, 0.10);
+}
+
+.noticeDismiss:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text-secondary);
+}
+
+.noticeDismiss:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .noticeWarning::before {
   content: '⚠️';
 }
 
-.noticeError {
-  border-color: var(--state-error-border);
-  border-left-color: var(--state-error);
-  background: var(--state-error-bg);
-}
-
 .noticeError::before {
   content: '❌';
-}
-
-.noticeSuccess {
-  border-color: var(--state-success-border);
-  border-left-color: var(--state-success);
-  background: var(--state-success-bg);
 }
 
 .noticeSuccess::before {
