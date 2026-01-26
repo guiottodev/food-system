@@ -5,6 +5,7 @@ import { LogOut, Plus } from "lucide-react";
 import styles from "./_styles/adminNav.module.css";
 import primitives from "./_styles/adminPrimitives.module.css";
 import { primaryAction } from "./adminNav";
+import Button from "./_components/Button";
 
 export default function AdminSidebarFooter({
   collapsed,
@@ -15,25 +16,23 @@ export default function AdminSidebarFooter({
 }) {
   return (
     <div className={styles.navFooter}>
-      <Link
+      <Button
+        variant="primary"
         href={primaryAction.href}
-        className={`${primitives.button} ${primitives.buttonPrimary} ${
-          styles.ctaButton
-        } ${collapsed ? styles.ctaButtonCollapsed : ""}`}
+        className={`${styles.ctaButton} ${collapsed ? styles.ctaButtonCollapsed : ""}`}
       >
         <Plus size={18} aria-hidden />
         <span className={styles.ctaLabel}>{primaryAction.label}</span>
-      </Link>
+      </Button>
       <form action={logoutAction} className={styles.logoutForm}>
-        <button
+        <Button
           type="submit"
-          className={`${primitives.button} ${primitives.buttonSecondary} ${
-            styles.logoutButton
-          } ${collapsed ? styles.logoutButtonCollapsed : ""}`}
+          variant="secondary"
+          className={`${styles.logoutButton} ${collapsed ? styles.logoutButtonCollapsed : ""}`}
         >
           <LogOut size={18} aria-hidden />
           <span className={styles.logoutLabel}>Sair</span>
-        </button>
+        </Button>
       </form>
     </div>
   );

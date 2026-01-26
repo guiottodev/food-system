@@ -917,22 +917,23 @@
   color: var(--state-error);
 }
 
+/* ===== DEPRECATED: Use Chip component from app/admin/_components/Chip.tsx ===== */
+/* Estas classes são mantidas apenas para compatibilidade durante a migração. */
+/* Novos componentes devem usar Chip, não estas classes. */
 .badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
+  padding: 3px 12px;
   border-radius: var(--radius-full);
   border: none;
   background: var(--bg-subtle);
+  font-family: var(--font-sans);
   font-size: var(--text-xs);
-  font-weight: var(--fw-semibold);
+  font-weight: var(--fw-medium);
   color: var(--text-secondary);
   line-height: 1.4;
   white-space: nowrap;
-  transition: background var(--duration-fast) var(--ease-default),
-    color var(--duration-fast) var(--ease-default),
-    transform var(--duration-fast) var(--ease-default);
 }
 
 .badgeNeutral {
@@ -943,37 +944,37 @@
 .badgeSuccess {
   background: var(--state-success-bg);
   color: var(--state-success-text);
-  border: 1px solid var(--state-success-border);
 }
 
 .badgeWarning {
   background: var(--state-warning-bg);
   color: var(--state-warning-text);
-  border: 1px solid var(--state-warning-border);
 }
 
 .badgeDanger {
   background: var(--state-error-bg);
   color: var(--state-error-text);
-  border: 1px solid var(--state-error-border);
 }
 
 .badgeInfo {
   background: var(--state-info-bg);
   color: var(--state-info-text);
-  border: 1px solid var(--state-info-border);
 }
 
+/* ===== DEPRECATED: Use Input component from app/admin/_components/Input.tsx ===== */
+/* Estas classes são mantidas apenas para compatibilidade durante a migração. */
+/* Novos componentes devem usar Input, não estas classes. */
 .control {
   height: 44px;
   padding: 0 var(--space-4);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--bg-surface);
   color: var(--text-primary);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
-  box-shadow: var(--shadow-inner);
-  transition: all var(--duration-fast) var(--ease-default);
+  transition: border-color var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-normal) var(--ease-out);
 }
 
 .control::placeholder {
@@ -985,8 +986,8 @@
 }
 
 .control:focus-visible {
-  border-color: var(--focus-ring);
-  box-shadow: var(--shadow-focus), var(--shadow-inner);
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
   outline: none;
 }
 
@@ -994,6 +995,7 @@
   background: var(--bg-subtle);
   color: var(--text-muted);
   cursor: not-allowed;
+  opacity: var(--opacity-disabled);
 }
 
 .controlTextarea {
@@ -1025,37 +1027,40 @@
   color: var(--text-muted);
 }
 
+/* ===== DEPRECATED: Use Button component from app/admin/_components/Button.tsx ===== */
+/* Estas classes são mantidas apenas para compatibilidade durante a migração. */
+/* Novos componentes devem usar Button, não estas classes. */
 .button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
-  height: 42px;
+  height: 44px;
   padding: 0 var(--space-4);
   border: 1px solid var(--border);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--bg-surface);
   color: var(--text-primary);
+  font-family: var(--font-sans);
   font-size: var(--text-sm);
   font-weight: var(--fw-medium);
   cursor: pointer;
-  transition: all var(--duration-fast) var(--ease-default);
+  transition: background-color var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-normal) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
 }
 
-.button:hover {
+.button:hover:not(:disabled) {
   border-color: var(--border-strong);
   background: var(--bg-subtle);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-sm);
 }
 
-.button:active {
-  transform: translateY(0);
-  box-shadow: none;
+.button:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .button:focus-visible {
-  border-color: var(--focus-ring);
+  border-color: var(--border-focus);
   box-shadow: var(--shadow-focus);
   outline: none;
 }
@@ -1068,31 +1073,31 @@
 }
 
 .buttonPrimary {
-  background: linear-gradient(to bottom, var(--action-primary), var(--action-primary-hover));
+  background: var(--action-primary);
   border-color: transparent;
-  color: var(--text-inverse);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.1);
+  color: var(--action-primary-text);
+  box-shadow: var(--shadow-sm);
 }
 
-.buttonPrimary:hover {
-  background: linear-gradient(to bottom, var(--action-primary-hover), #1e40af);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255,255,255,0.1);
+.buttonPrimary:hover:not(:disabled) {
+  background: var(--action-primary-hover);
+  box-shadow: var(--shadow-md);
 }
 
-.buttonPrimary:active {
-  transform: translateY(0);
+.buttonPrimary:active:not(:disabled) {
+  background: var(--action-primary-active);
+  transform: scale(0.98);
   box-shadow: var(--shadow-xs);
 }
 
 .buttonSecondary {
-  background: var(--bg-surface);
+  background: var(--action-secondary);
   border-color: var(--border-strong);
-  color: var(--text-primary);
+  color: var(--action-primary);
 }
 
-.buttonSecondary:hover {
-  background: var(--bg-subtle);
+.buttonSecondary:hover:not(:disabled) {
+  background: var(--action-secondary-hover);
   border-color: var(--border-strong);
 }
 
@@ -1102,8 +1107,7 @@
   color: var(--text-secondary);
 }
 
-.buttonGhost:hover {
-  border-color: transparent;
+.buttonGhost:hover:not(:disabled) {
   background: var(--bg-subtle);
   color: var(--text-primary);
 }
@@ -1111,17 +1115,23 @@
 .buttonDanger {
   background: var(--state-error);
   border-color: var(--state-error);
-  color: #ffffff;
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
 }
 
-.buttonDanger:hover {
+.buttonDanger:hover:not(:disabled) {
   background: var(--state-error);
-  border-color: var(--state-error);
   filter: brightness(0.95);
+  box-shadow: var(--shadow-md);
+}
+
+.buttonDanger:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: var(--shadow-xs);
 }
 
 .buttonSm {
-  height: 32px;
-  padding: 0 var(--space-2);
+  height: 36px;
+  padding: 0 var(--space-3);
   font-size: var(--text-xs);
 }

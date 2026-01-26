@@ -48,12 +48,12 @@
 
 .kpiWarning .kpiValue,
 .kpiWarning .kpiLabel {
-  color: #b45309;
+  color: var(--state-warning);
 }
 
 .kpiSuccess .kpiValue,
 .kpiSuccess .kpiLabel {
-  color: #047857;
+  color: var(--state-success);
 }
 
 /* ===== TOOLBAR PREMIUM ===== */
@@ -96,7 +96,7 @@
 
 .searchInput {
   width: 100%;
-  height: 38px;
+  height: 44px;
   padding-left: var(--space-10) !important;
   font-size: 13px;
   font-weight: 500;
@@ -112,7 +112,7 @@
 .searchInput:focus {
   outline: none;
   border-color: var(--action-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  box-shadow: var(--shadow-focus);
 }
 
 .filtersWrap {
@@ -120,7 +120,7 @@
 }
 
 .filtersButton {
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-3);
   gap: 6px;
   font-size: 13px;
@@ -130,7 +130,7 @@
 
 .filtersButtonActive {
   border-color: var(--action-primary);
-  background: rgba(37, 99, 235, 0.05);
+  background: rgba(var(--action-primary-rgb), 0.05);
   color: var(--action-primary);
 }
 
@@ -149,7 +149,7 @@
 }
 
 .clearButton {
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-3);
   font-size: 13px;
   font-weight: 500;
@@ -191,7 +191,7 @@
   justify-content: space-between;
   padding: var(--space-4);
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, #fafbfc 0%, #f4f6f8 100%);
+  background: var(--bg-subtle);
 }
 
 .filtersPanelTitle {
@@ -363,7 +363,7 @@
 
 /* ===== BUTTONS ===== */
 .linkButton {
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-3);
   font-size: 13px;
   font-weight: 500;
@@ -383,7 +383,7 @@
 }
 
 .linkButtonSecondary {
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-3);
   font-size: 13px;
   font-weight: 500;
@@ -404,13 +404,17 @@
 
 .headerBtnPrimary {
   text-decoration: none;
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-4);
   font-size: 13px;
   font-weight: 600;
 }
 
 /* ===== TABLE ===== */
+.tableWrapper {
+  position: relative;
+}
+
 .tableContainer {
   background: var(--bg-surface);
   border-radius: var(--radius-lg);
@@ -426,7 +430,7 @@
 }
 
 .capacityTable thead {
-  background: linear-gradient(180deg, #fafbfc 0%, #f4f6f8 100%);
+  background: var(--bg-subtle);
 }
 
 .capacityTable thead th {
@@ -465,12 +469,12 @@
 }
 
 .capacityTable tbody tr:hover {
-  background: rgba(37, 99, 235, 0.04);
+  background: rgba(var(--action-primary-rgb), 0.05);
   box-shadow: inset 3px 0 0 var(--action-primary);
 }
 
 .capacityTable tbody tr.rowAlt:hover {
-  background: rgba(37, 99, 235, 0.04);
+  background: rgba(var(--action-primary-rgb), 0.05);
 }
 
 .thSortable {
@@ -526,7 +530,7 @@
 }
 
 .gapPositive {
-  color: #b45309;
+  color: var(--state-warning);
 }
 
 .gapZero {
@@ -542,7 +546,7 @@
   gap: var(--space-4);
   padding: var(--space-12) var(--space-4);
   text-align: center;
-  background: linear-gradient(180deg, var(--bg-subtle) 0%, transparent 100%);
+  background: var(--bg-subtle);
   border-radius: var(--radius-lg);
 }
 

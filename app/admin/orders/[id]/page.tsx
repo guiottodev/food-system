@@ -14,6 +14,7 @@ import {
 } from "./actions";
 import CancelOrderForm from "./CancelOrderForm.client";
 import OrderDetailFocus from "./OrderDetailFocus.client";
+import OrderDetailNextAction from "./OrderDetailNextAction.client";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "../orderDetail.module.css";
 import { InlineNotice } from "../../design-system/InlineNotice.client";
@@ -451,233 +452,29 @@ export default async function OrderDetailPage({
         </InlineNotice>
       ) : null}
 
-      <section className={`${styles.panel} ${styles.panelPrimary}`}>
-        <div className={detailStyles.summaryGrid}>
-          <div className={detailStyles.summaryHeader}>
-            <div className={styles.clusterSm}>
-              <strong className={detailStyles.sectionTitle}>Resumo operacional</strong>
-              <span className={`${styles.badge} ${styles.badgeNeutral}`}>
-                {statusLabel[order.status]}
-              </span>
-              {order.status === "CANCELADO" ? (
-                <span className={`${styles.badge} ${styles.badgeDanger}`}>
-                  Cancelado
-                </span>
-              ) : null}
-            </div>
-            <div className={detailStyles.timeline}>
-              {statusFlow.map((status, index) => {
-                const isActive = index === statusIndex;
-                const isComplete = index < statusIndex;
-                return (
-                  <span
-                    key={status}
-                    className={`${detailStyles.timelineStep} ${
-                      isActive ? detailStyles.timelineActive : ""
-                    } ${isComplete ? detailStyles.timelineComplete : ""}`}
-                  >
-                    {statusLabel[status]}
-                  </span>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className={detailStyles.actionBlock}>
-            <div className={detailStyles.sectionTitle}>Proxima acao recomendada</div>
-            <div className={detailStyles.summaryActions}>
-              {primaryAction.type === "confirm" ? (
-                <form action={confirmOrderAction} className={styles.clusterSm}>
-                  <input type="hidden" name="orderId" value={order.id} />
-                  <button
-                    type="submit"
-                    className={`${styles.button} ${styles.buttonPrimary}`}
-                    disabled={primaryDisabled}
-                  >
-                    {primaryAction.label}
-                  </button>
-                </form>
-              ) : null}
-              {primaryAction.type === "reconfirm" ? (
-                <form action={reconfirmOrderAction} className={styles.clusterSm}>
-                  <input type="hidden" name="orderId" value={order.id} />
-                  <button
-                    type="submit"
-                    className={`${styles.button} ${styles.buttonPrimary}`}
-                    disabled={primaryDisabled}
-                  >
-                    {primaryAction.label}
-                  </button>
-                </form>
-              ) : null}
-              {primaryAction.type === "status" ? (
-                <form action={updateStatusAction} className={styles.clusterSm}>
-                  <input type="hidden" name="orderId" value={order.id} />
-                  <input type="hidden" name="status" value={primaryAction.status} />
-                  {primaryAction.status === "ENTREGUE" && !hasPayment ? (
-                    <label className={styles.choiceRow}>
-                      <input type="checkbox" name="markPaid" value="1" />
-                      <span className={styles.choiceLabel}>
-                        Marcar pagamento ao entregar
-                      </span>
-                    </label>
-                  ) : null}
-                  <button
-                    type="submit"
-                    className={`${styles.button} ${styles.buttonPrimary}`}
-                    disabled={primaryDisabled}
-                  >
-                    {primaryAction.label}
-                  </button>
-                </form>
-              ) : null}
-            </div>
-            {primaryDisabled && blockedReasons.length > 0 ? (
-              <div>
-                <div className={detailStyles.sectionTitle}>Bloqueado porque</div>
-                <ul className={detailStyles.summaryList}>
-                  {blockedReasons.map((reason) => (
-                    <li key={reason}>{reason}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : null}
-          </div>
-
-          <div>
-            <div className={detailStyles.sectionTitle}>Checklist do pedido</div>
-            <ul className={styles.checklist}>
-              {(() => {
-                const badge = getChecklistBadge("ok");
-                return (
-                  <li className={styles.checklistItem}>
-                    <span className={`${styles.badge} ${badge.className}`}>
-                      {badge.label}
-                    </span>
-                    <div className={styles.checklistContent}>
-                      <span className={styles.checklistLabel}>Cliente</span>
-                      <span className={styles.checklistValue}>
-                        {order.customer.name}
-                      </span>
-                    </div>
-                  </li>
-                );
-              })()}
-
-              {(() => {
-                const status = itemsReady ? "ok" : "danger";
-                const badge = getChecklistBadge(status);
-                const label = hasItems
-                  ? `${order.items.length} item(s)`
-                  : "Nenhum item";
-                return (
-                  <li className={styles.checklistItem}>
-                    <span className={`${styles.badge} ${badge.className}`}>
-                      {badge.label}
-                    </span>
-                    <div className={styles.checklistContent}>
-                      <span className={styles.checklistLabel}>Itens</span>
-                      <span className={styles.checklistValue}>{label}</span>
-                    </div>
-                  </li>
-                );
-              })()}
-
-              {(() => {
-                const status =
-                  order.orderType === "PRONTA_ENTREGA"
-                    ? "ok"
-                    : scheduleReady
-                    ? "ok"
-                    : "danger";
-                const badge = getChecklistBadge(status);
-                const label =
-                  order.orderType === "PRONTA_ENTREGA"
-                    ? "Cadastro agora"
-                    : formatDate(order.deliveryDatetime);
-                return (
-                  <li className={styles.checklistItem}>
-                    <span className={`${styles.badge} ${badge.className}`}>
-                      {badge.label}
-                    </span>
-                    <div className={styles.checklistContent}>
-                      <span className={styles.checklistLabel}>Data</span>
-                      <span className={styles.checklistValue}>{label}</span>
-                    </div>
-                  </li>
-                );
-              })()}
-
-              {(() => {
-                const status =
-                  order.orderType === "PRONTA_ENTREGA"
-                    ? "neutral"
-                    : timeReady
-                    ? "ok"
-                    : "neutral";
-                const badge = getChecklistBadge(status);
-                const label =
-                  order.orderType === "PRONTA_ENTREGA"
-                    ? "Agora"
-                    : order.deliveryTime || "A confirmar";
-                return (
-                  <li className={styles.checklistItem}>
-                    <span className={`${styles.badge} ${badge.className}`}>
-                      {badge.label}
-                    </span>
-                    <div className={styles.checklistContent}>
-                      <span className={styles.checklistLabel}>Horario</span>
-                      <span className={styles.checklistValue}>{label}</span>
-                    </div>
-                  </li>
-                );
-              })()}
-
-              {(() => {
-                if (order.deliveryMethod === "RETIRADA") {
-                  const badge = getChecklistBadge("ok");
-                  return (
-                    <li className={styles.checklistItem}>
-                      <span className={`${styles.badge} ${badge.className}`}>
-                        {badge.label}
-                      </span>
-                      <div className={styles.checklistContent}>
-                        <span className={styles.checklistLabel}>Entrega</span>
-                        <span className={styles.checklistValue}>Retirada</span>
-                      </div>
-                    </li>
-                  );
-                }
-                const status = addressReady ? "ok" : "warning";
-                const badge = getChecklistBadge(status);
-                const label = addressReady
-                  ? "Endereco informado"
-                  : "Endereco pendente";
-                return (
-                  <li className={styles.checklistItem}>
-                    <span className={`${styles.badge} ${badge.className}`}>
-                      {badge.label}
-                    </span>
-                    <div className={styles.checklistContent}>
-                      <span className={styles.checklistLabel}>Entrega</span>
-                      <span className={styles.checklistValue}>{label}</span>
-                    </div>
-                  </li>
-                );
-              })()}
-            </ul>
-          </div>
-
-          <div>
-            <div className={detailStyles.sectionTitle}>Por que</div>
-            <ul className={detailStyles.summaryList}>
-              {whyList.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </section>
+      <OrderDetailNextAction
+        orderId={order.id}
+        status={order.status}
+        attention={attention}
+        pendingSummary={pendingSummary}
+        itemsReady={itemsReady}
+        scheduleReady={scheduleReady}
+        timeReady={timeReady}
+        addressReady={addressReady}
+        orderType={order.orderType}
+        deliveryMethod={order.deliveryMethod}
+        deliveryDatetime={order.deliveryDatetime}
+        deliveryTime={order.deliveryTime}
+        customerName={order.customer.name}
+        itemsCount={order.items.length}
+        subtotal={Number(order.subtotal)}
+        deliveryFee={order.deliveryFee ? Number(order.deliveryFee) : null}
+        total={Number(order.total)}
+        isFinal={isFinal}
+        needsReconfirmation={order.needsReconfirmation}
+        hasPayment={hasPayment}
+        primaryActionStatus={primaryAction.type === "status" ? primaryAction.status : undefined}
+      />
 
       <div className={detailStyles.twoColumn}>
         <section className={styles.panel}>

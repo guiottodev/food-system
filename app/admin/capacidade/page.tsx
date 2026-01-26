@@ -12,6 +12,7 @@ import layoutStyles from "./capacidade.module.css";
 import ProductionFilters from "./ProductionFilters.client";
 import CapacityTable from "./CapacityTable.client";
 import ProductionEmptyState from "./ProductionEmptyState.client";
+import Button from "../_components/Button";
 
 type SearchParams = {
   q?: string;
@@ -110,18 +111,12 @@ export default async function CapacidadePage({
           </div>
         </div>
         <div className={layoutStyles.headerActions}>
-          <Link
-            href="/admin/producao"
-            className={`${styles.button} ${styles.buttonPrimary} ${layoutStyles.headerBtnPrimary}`}
-          >
+          <Button variant="primary" href="/admin/producao">
             Registrar produção
-          </Link>
-          <Link
-            href="/admin/consumo"
-            className={layoutStyles.linkButtonSecondary}
-          >
+          </Button>
+          <Button variant="secondary" href="/admin/consumo">
             Registrar consumo
-          </Link>
+          </Button>
         </div>
       </div>
 

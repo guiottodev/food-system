@@ -7,6 +7,8 @@ import { validateSkuQuantity } from "@/lib/quantity";
 import type { OrderStatus } from "@prisma/client";
 import styles from "../../_styles/adminPrimitives.module.css";
 import { InlineNotice } from "../../design-system/InlineNotice.client";
+import NextAction from "../NextAction.client";
+import type { ChecklistItem } from "../NextAction.client";
 
 const DRAFT_KEY = "order-new-draft-v1";
 
@@ -1006,19 +1008,6 @@ export default function OrderForm({
     return new Intl.DateTimeFormat("pt-BR", { dateStyle: "short" }).format(date);
   }
 
-  type ChecklistStatus = "ok" | "warning" | "danger" | "neutral";
-  function getChecklistBadge(status: ChecklistStatus) {
-    if (status === "ok") {
-      return { label: "OK", className: styles.badgeSuccess };
-    }
-    if (status === "danger") {
-      return { label: "Falta", className: styles.badgeDanger };
-    }
-    if (status === "warning") {
-      return { label: "Atenção", className: styles.badgeWarning };
-    }
-    return { label: "Opcional", className: styles.badgeNeutral };
-  }
 
   function applySearchToNewCustomer(value: string) {
     const trimmed = value.trim();
@@ -2252,189 +2241,104 @@ export default function OrderForm({
         </div>
 
         <aside className={styles.pageAside}>
-          <section
-            className={`${styles.panel} ${styles.panelPrimary} ${styles.stickyPanel}`}
-          >
-            <div className={styles.panelHeader}>
-              <h2>Resumo</h2>
-            </div>
-            <div className={styles.panelBody}>
-              <div className={styles.stackSm}>
-                <div className={styles.stackSm}>
-                  <div className={styles.textMuted}>Proxima acao</div>
-                  <div className={styles.nextActionTitle}>
-                    {readyForConfirm
-                      ? "Pronto para confirmar o pedido."
-                      : "Conclua os itens abaixo para confirmar."}
-                  </div>
-                </div>
+          <NextAction
+            checklist={useMemo<ChecklistItem[]>(() => {
+              const customerLabel =
+                customerMode === "existing"
+                  ? customerName.trim() || "Não informado"
+                  : customerName.trim() || "Não informado";
+              const itemsLabel = hasItems
+                ? `${items.length} ${items.length === 1 ? "item" : "itens"}`
+                : "Nenhum item";
+              const dateLabel =
+                orderType === "PRONTA_ENTREGA"
+                  ? "Cadastro agora"
+                  : scheduleDate
+                  ? formatScheduleDate(scheduleDate)
+                  : "Não definida";
+              const timeLabel =
+                orderType === "PRONTA_ENTREGA"
+                  ? "Agora"
+                  : scheduleTime || "A confirmar";
+              const addressLabel =
+                deliveryMethod === "RETIRADA"
+                  ? "Retirada"
+                  : addressReady
+                  ? "Endereço informado"
+                  : "Endereço pendente";
 
-                <ul className={styles.checklist}>
-                  {(() => {
-                    const status = customerReady ? "ok" : "danger";
-                    const badge = getChecklistBadge(status);
-                    const label =
-                      customerMode === "existing"
-                        ? customerName.trim()
-                        : customerName.trim()
-                        ? customerName.trim()
-                        : "Nao informado";
-                    return (
-                      <li className={styles.checklistItem}>
-                        <span className={`${styles.badge} ${badge.className}`}>
-                          {badge.label}
-                        </span>
-                        <div className={styles.checklistContent}>
-                          <span className={styles.checklistLabel}>Cliente</span>
-                          <span className={styles.checklistValue}>{label}</span>
-                        </div>
-                      </li>
-                    );
-                  })()}
-
-                  {(() => {
-                    const status = itemsReady ? "ok" : "danger";
-                    const badge = getChecklistBadge(status);
-                    const label = hasItems
-                      ? `${items.length} item(s)`
-                      : "Nenhum item";
-                    return (
-                      <li className={styles.checklistItem}>
-                        <span className={`${styles.badge} ${badge.className}`}>
-                          {badge.label}
-                        </span>
-                        <div className={styles.checklistContent}>
-                          <span className={styles.checklistLabel}>Itens</span>
-                          <span className={styles.checklistValue}>{label}</span>
-                        </div>
-                      </li>
-                    );
-                  })()}
-
-                  {(() => {
-                    const status =
-                      orderType === "PRONTA_ENTREGA"
-                        ? "ok"
-                        : scheduleReady
-                        ? "ok"
-                        : "danger";
-                    const badge = getChecklistBadge(status);
-                    const label =
-                      orderType === "PRONTA_ENTREGA"
-                        ? "Cadastro agora"
-                        : scheduleDate
-                        ? formatScheduleDate(scheduleDate)
-                        : "Nao definida";
-                    return (
-                      <li className={styles.checklistItem}>
-                        <span className={`${styles.badge} ${badge.className}`}>
-                          {badge.label}
-                        </span>
-                        <div className={styles.checklistContent}>
-                          <span className={styles.checklistLabel}>Data</span>
-                          <span className={styles.checklistValue}>{label}</span>
-                        </div>
-                      </li>
-                    );
-                  })()}
-
-                  {(() => {
-                    const status =
-                      orderType === "PRONTA_ENTREGA"
-                        ? "neutral"
-                        : scheduleTime
-                        ? "ok"
-                        : "neutral";
-                    const badge = getChecklistBadge(status);
-                    const label =
-                      orderType === "PRONTA_ENTREGA"
-                        ? "Agora"
-                        : scheduleTime || "A confirmar";
-                    return (
-                      <li className={styles.checklistItem}>
-                        <span className={`${styles.badge} ${badge.className}`}>
-                          {badge.label}
-                        </span>
-                        <div className={styles.checklistContent}>
-                          <span className={styles.checklistLabel}>Horario</span>
-                          <span className={styles.checklistValue}>{label}</span>
-                        </div>
-                      </li>
-                    );
-                  })()}
-
-                  {(() => {
-                    if (deliveryMethod === "RETIRADA") {
-                      const badge = getChecklistBadge("ok");
-                      return (
-                        <li className={styles.checklistItem}>
-                          <span className={`${styles.badge} ${badge.className}`}>
-                            {badge.label}
-                          </span>
-                          <div className={styles.checklistContent}>
-                            <span className={styles.checklistLabel}>Entrega</span>
-                            <span className={styles.checklistValue}>Retirada</span>
-                          </div>
-                        </li>
-                      );
-                    }
-                    const status = addressReady ? "ok" : "warning";
-                    const badge = getChecklistBadge(status);
-                    const label = addressReady
-                      ? "Endereco informado"
-                      : "Endereco pendente";
-                    return (
-                      <li className={styles.checklistItem}>
-                        <span className={`${styles.badge} ${badge.className}`}>
-                          {badge.label}
-                        </span>
-                        <div className={styles.checklistContent}>
-                          <span className={styles.checklistLabel}>Entrega</span>
-                          <span className={styles.checklistValue}>{label}</span>
-                        </div>
-                      </li>
-                    );
-                  })()}
-                </ul>
-
-                <div className={styles.divider} />
-
-                {items.length === 0 ? (
-                  <div className={styles.textMuted}>
-                    Adicione itens para calcular o total.
-                  </div>
-                ) : (
-                  <div className={styles.stackSm}>
-                    <div className={styles.summaryRow}>
-                      <span>Subtotal</span>
-                      <strong>R$ {formatCurrency(subtotal)}</strong>
-                    </div>
-                    {deliveryMethod === "ENTREGA" ? (
-                      <div className={styles.summaryRow}>
-                        <span>Taxa de entrega</span>
-                        <strong>
-                          R$ {feeValue.ok ? formatCurrency(feeValue.value) : "--"}
-                        </strong>
-                      </div>
-                    ) : null}
-                    <div className={styles.summaryRow}>
-                      <span>Total</span>
-                      <strong>R$ {formatCurrency(total)}</strong>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className={styles.panelFooter}>
-              <button
-                type="submit"
-                disabled={!validation.isValid}
-                className={`${styles.button} ${styles.buttonPrimary}`}
-              >
-                Salvar pedido
-              </button>
-            </div>
-          </section>
+              return [
+                {
+                  label: `Cliente: ${customerLabel}`,
+                  status: customerReady ? "complete" : "pending",
+                },
+                {
+                  label: `Itens: ${itemsLabel}`,
+                  status: itemsReady ? "complete" : "pending",
+                },
+                {
+                  label: `Data: ${dateLabel}`,
+                  status:
+                    orderType === "PRONTA_ENTREGA"
+                      ? "complete"
+                      : scheduleReady
+                      ? "complete"
+                      : "pending",
+                },
+                {
+                  label: `Horário: ${timeLabel}`,
+                  status:
+                    orderType === "PRONTA_ENTREGA"
+                      ? "optional"
+                      : scheduleTime
+                      ? "complete"
+                      : "optional",
+                },
+                {
+                  label: `Entrega: ${addressLabel}`,
+                  status:
+                    deliveryMethod === "RETIRADA"
+                      ? "complete"
+                      : addressReady
+                      ? "complete"
+                      : "warning",
+                },
+              ];
+            }, [
+              customerMode,
+              customerName,
+              customerReady,
+              hasItems,
+              items.length,
+              itemsReady,
+              orderType,
+              scheduleDate,
+              scheduleReady,
+              scheduleTime,
+              deliveryMethod,
+              addressReady,
+            ])}
+            primaryAction={{
+              label: "Salvar pedido",
+              onClick: () => {
+                if (formRef.current && validation.isValid) {
+                  formRef.current.requestSubmit();
+                }
+              },
+              disabled: !validation.isValid,
+            }}
+            summary={
+              items.length > 0
+                ? {
+                    subtotal,
+                    tax: deliveryMethod === "ENTREGA" && feeValue.ok ? feeValue.value : undefined,
+                    total,
+                  }
+                : undefined
+            }
+            whenToShow="always"
+            sticky={true}
+          />
         </aside>
       </div>
     </form>

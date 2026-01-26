@@ -41,19 +41,19 @@
 }
 
 .kpiWarning .kpiValue {
-  color: #b45309;
+  color: var(--state-warning-text);
 }
 
 .kpiWarning .kpiLabel {
-  color: #b45309;
+  color: var(--state-warning-text);
 }
 
 .kpiSuccess .kpiValue {
-  color: #047857;
+  color: var(--state-success-text);
 }
 
 .kpiSuccess .kpiLabel {
-  color: #047857;
+  color: var(--state-success-text);
 }
 
 @media (max-width: 640px) {
@@ -111,7 +111,7 @@
 
 .searchInput {
   width: 100%;
-  height: 38px;
+  height: 44px;
   padding-left: var(--space-10) !important;
   font-size: 13px;
   font-weight: 500;
@@ -126,12 +126,12 @@
 
 .searchInput:focus {
   outline: none;
-  border-color: var(--action-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
 }
 
 .clearButton {
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-3);
   font-size: 13px;
   font-weight: 500;
@@ -144,7 +144,7 @@
 }
 
 .filtersButton {
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-3);
   gap: 6px;
   font-size: 13px;
@@ -154,7 +154,7 @@
 
 .filtersButtonActive {
   border-color: var(--action-primary);
-  background: rgba(37, 99, 235, 0.05);
+  background: rgba(var(--action-primary-rgb), 0.05);
   color: var(--action-primary);
 }
 
@@ -173,7 +173,7 @@
 }
 
 .newOrderButton {
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-4);
   font-size: 13px;
   font-weight: 600;
@@ -216,7 +216,7 @@
   justify-content: space-between;
   padding: var(--space-4);
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, #fafbfc 0%, #f4f6f8 100%);
+  background: var(--bg-subtle);
 }
 
 .filtersPanelTitle {
@@ -318,7 +318,7 @@
 /* Styled Select */
 .filterSelectStyled {
   width: 100%;
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-3);
   padding-right: var(--space-8);
   font-size: 13px;
@@ -342,8 +342,8 @@
 
 .filterSelectStyled:focus {
   outline: none;
-  border-color: var(--action-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
 }
 
 .filterSelectStyled:disabled {
@@ -355,7 +355,7 @@
 /* Styled Input */
 .filterInputStyled {
   width: 100%;
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-3);
   font-size: 13px;
   font-weight: 500;
@@ -372,8 +372,8 @@
 
 .filterInputStyled:focus {
   outline: none;
-  border-color: var(--action-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
 }
 
 /* Range row */
@@ -395,7 +395,7 @@
   color: var(--text-muted);
   font-style: italic;
   padding: var(--space-2) var(--space-3);
-  background: rgba(37, 99, 235, 0.05);
+  background: rgba(var(--action-primary-rgb), 0.05);
   border-radius: var(--radius-sm);
   border-left: 2px solid var(--action-primary);
 }
@@ -461,7 +461,7 @@
 
 .customSelectTrigger {
   width: 100%;
-  height: 38px;
+  height: 44px;
   padding: 0 var(--space-3);
   padding-right: var(--space-8);
   display: flex;
@@ -483,8 +483,8 @@
 }
 
 .customSelectTriggerOpen {
-  border-color: var(--action-primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
 }
 
 .customSelectTriggerDisabled {
@@ -565,12 +565,12 @@
 }
 
 .customSelectOptionSelected {
-  background: rgba(37, 99, 235, 0.08);
+  background: rgba(var(--action-primary-rgb), 0.08);
   color: var(--action-primary);
 }
 
 .customSelectOptionSelected:hover {
-  background: rgba(37, 99, 235, 0.12);
+  background: rgba(var(--action-primary-rgb), 0.12);
 }
 
 .customSelectCheck {
@@ -685,7 +685,7 @@
 
 .skeletonCell {
   height: 16px;
-  background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+  background: var(--bg-subtle);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: var(--radius-sm);
@@ -739,13 +739,9 @@
   max-width: 280px;
 }
 
-/* ===== TABLE CONTAINER ===== */
-.tableContainer {
-  background: var(--bg-surface);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+/* ===== TABLE WRAPPER ===== */
+.tableWrapper {
+  position: relative;
 }
 
 /* ===== TABLE BASE ===== */
@@ -757,7 +753,7 @@
 
 /* ===== HEADER ===== */
 .ordersTable thead {
-  background: linear-gradient(180deg, #fafbfc 0%, #f4f6f8 100%);
+  background: var(--bg-subtle);
 }
 
 .ordersTable thead th {
@@ -795,7 +791,7 @@
 }
 
 .orderRow:hover {
-  background: rgba(37, 99, 235, 0.04);
+  background: rgba(var(--action-primary-rgb), 0.05);
   box-shadow: inset 3px 0 0 var(--action-primary);
 }
 
@@ -804,7 +800,7 @@
 }
 
 .orderRowExpanded {
-  background: rgba(37, 99, 235, 0.04) !important;
+  background: rgba(var(--action-primary-rgb), 0.05) !important;
   box-shadow: inset 3px 0 0 var(--action-primary);
   border-bottom: none !important;
 }
@@ -863,6 +859,12 @@
 
 .orderNumber:hover {
   color: var(--action-primary);
+}
+
+.orderNumberCell {
+  font-size: var(--text-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
 }
 
 /* Customer info */
@@ -929,33 +931,33 @@
 }
 
 .statusRASCUNHO {
-  background: #f1f5f9;
-  color: #64748b;
+  background: var(--status-rascunho-bg);
+  color: var(--status-rascunho-text);
 }
 
 .statusCONFIRMADO {
-  background: #dbeafe;
-  color: #1d4ed8;
+  background: var(--status-confirmado-bg);
+  color: var(--status-confirmado-text);
 }
 
 .statusEM_PRODUCAO {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--status-em_producao-bg);
+  color: var(--status-em_producao-text);
 }
 
 .statusPRONTO {
-  background: #d1fae5;
-  color: #047857;
+  background: var(--status-pronto-bg);
+  color: var(--status-pronto-text);
 }
 
 .statusENTREGUE {
-  background: #dcfce7;
-  color: #15803d;
+  background: var(--status-entregue-bg);
+  color: var(--status-entregue-text);
 }
 
 .statusCANCELADO {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: var(--status-cancelado-bg);
+  color: var(--status-cancelado-text);
 }
 
 .operationalBadge {
@@ -969,13 +971,13 @@
 }
 
 .operationalWarning {
-  background: #fef3c7;
-  color: #92400e;
+  background: var(--attention-weak-bg);
+  color: var(--attention-weak-text);
 }
 
 .operationalDanger {
-  background: #fee2e2;
-  color: #991b1b;
+  background: var(--attention-strong-bg);
+  color: var(--attention-strong-text);
 }
 
 /* Date info */
@@ -1032,6 +1034,11 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+.expandedContent {
+  padding: var(--space-4);
+  animation: slideDown var(--duration-normal) var(--ease-out);
 }
 
 .expandedWrapper {
@@ -1161,7 +1168,7 @@
 }
 
 .summaryCard {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  background: var(--bg-subtle);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   padding: var(--space-4);
@@ -1222,7 +1229,7 @@
 .detailsLink:hover {
   background: var(--action-primary-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 /* ===== RESPONSIVE ===== */

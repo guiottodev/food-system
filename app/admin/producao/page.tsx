@@ -2,6 +2,7 @@ import Link from "next/link";
 import ProductionSessionForm from "./ProductionSessionForm.client";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./producao.module.css";
+import Button from "../_components/Button";
 
 type SearchParams = {
   error?: string;
@@ -23,9 +24,9 @@ export default async function ProducaoPage({
     <main className={styles.page}>
       <div className={layoutStyles.pageHeader}>
         <h1 className={styles.pageTitle}>Registrar Produção</h1>
-        <Link href="/admin/capacidade" className={layoutStyles.linkButton}>
+        <Button variant="secondary" href="/admin/capacidade">
           Ver produção
-        </Link>
+        </Button>
       </div>
 
       <section className={styles.panel}>

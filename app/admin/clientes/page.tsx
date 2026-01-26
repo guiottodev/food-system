@@ -5,19 +5,13 @@ import {
   buildCustomerListEntries,
   buildCustomerSearchFilter,
 } from "@/lib/domain/customer";
+import CustomersTable from "./CustomersTable.client";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./clientes.module.css";
 
 type CustomersSearchParams = {
   q?: string;
 };
-
-function formatDate(value?: Date | null) {
-  if (!value) return "—";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-  }).format(value);
-}
 
 export default async function CustomersPage({
   searchParams,
@@ -114,47 +108,7 @@ export default async function CustomersPage({
             </Link>
           </div>
         ) : (
-          <div className={layoutStyles.tableContainer}>
-            <table className={layoutStyles.customersTable}>
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Telefone</th>
-                  <th>Último pedido</th>
-                  <th className={layoutStyles.colNumeric}>Pedidos</th>
-                  <th className={layoutStyles.colActions}>Ação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((customer) => (
-                  <tr key={customer.id} className={layoutStyles.tableRow}>
-                    <td>
-                      <span className={layoutStyles.customerName}>{customer.name}</span>
-                    </td>
-                    <td>
-                      <span className={layoutStyles.customerPhone}>{customer.phone}</span>
-                    </td>
-                    <td>
-                      <span className={layoutStyles.dateValue}>
-                        {formatDate(customer.lastOrderDate)}
-                      </span>
-                    </td>
-                    <td className={layoutStyles.colNumeric}>
-                      <span className={layoutStyles.orderCount}>{customer.orderCount}</span>
-                    </td>
-                    <td className={layoutStyles.colActions}>
-                      <Link
-                        href={`/admin/clientes/${customer.id}`}
-                        className={layoutStyles.actionLink}
-                      >
-                        Ver detalhes
-                      </Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <CustomersTable entries={entries} />
         )}
       </section>
     </main>

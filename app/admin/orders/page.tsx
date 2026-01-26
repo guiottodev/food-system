@@ -1,4 +1,4 @@
-﻿import Link from "next/link";
+import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
@@ -597,19 +597,17 @@ export default async function OrdersPage({
           </div>
         ) : (
           <OrdersTableClient
-            columns={7}
             orders={orders.map(({ order, attention, stockStatus }) => {
-              const hasBlocking = attention.strongReasons.length > 0;
-              const operationalTag = hasBlocking
-                ? "Incompleto"
-                : stockStatus.needsProduction
-                ? "Precisa produzir"
-                : undefined;
-              const operationalTagTone = hasBlocking
-                ? "danger"
-                : stockStatus.needsProduction
-                ? "warning"
-                : undefined;
+              // Adicionar "Precisa produzir" como weak reason se necessário
+              const weakReasons = [...attention.weakReasons];
+              if (stockStatus.needsProduction && !weakReasons.some(r => r.type === "UNAVAILABLE_ITEMS")) {
+                weakReasons.push({
+                  type: "UNAVAILABLE_ITEMS",
+                  severity: "weak",
+                  label: "Precisa produzir",
+                });
+              }
+
               return {
                 id: order.id,
                 orderNumber: order.orderNumber,
@@ -618,8 +616,6 @@ export default async function OrdersPage({
                 deliveryMethodLabel: deliveryMethodLabel[order.deliveryMethod],
                 status: order.status,
                 statusLabel: statusLabel[order.status],
-                operationalTag,
-                operationalTagTone,
                 deliveryDatetime: formatDeliveryLabel(
                   order.deliveryDatetime,
                   order.deliveryTime
@@ -641,15 +637,14 @@ export default async function OrdersPage({
                 subtotal: Number(order.subtotal),
                 deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : 0,
                 total: Number(order.total),
-                attention: attention.reasons
-                  .filter(
-                    (reason) =>
-                      reason.type !== "UNAVAILABLE_ITEMS" &&
-                      reason.type !== "SALDO_INSUFICIENTE"
-                  )
-                  .map((reason) => reason.label),
+                attention: {
+                  strongReasons: attention.strongReasons,
+                  weakReasons: weakReasons,
+                },
               };
             })}
+            sort={sort}
+            dir={sort === "delivery_desc" || sort === "created_desc" ? "desc" : "asc"}
           />
         )}
       </section>

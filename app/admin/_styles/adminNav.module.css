@@ -114,8 +114,8 @@
 
 .navItemActive {
   color: var(--text-primary);
-  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(37, 99, 235, 0.02) 100%);
-  border-color: rgba(37, 99, 235, 0.2);
+  background: linear-gradient(135deg, rgba(var(--action-primary-rgb), 0.08) 0%, rgba(var(--action-primary-rgb), 0.02) 100%);
+  border-color: rgba(var(--action-primary-rgb), 0.2);
 }
 
 .navItemActive::before {

@@ -9,6 +9,7 @@ import {
   computeUnavailableItemsForOrders,
 } from "@/lib/domain/production";
 import { verifySessionValue } from "@/lib/session";
+import DashboardNextActions from "./DashboardNextActions.client";
 import styles from "./_styles/adminPrimitives.module.css";
 
 type SearchParams = {
@@ -172,6 +173,9 @@ export default async function AdminPage({
         addressCity: true,
         needsReconfirmation: true,
         paidAt: true,
+        subtotal: true,
+        deliveryFee: true,
+        total: true,
         customer: { select: { name: true } },
         items: { select: { id: true, skuId: true, quantity: true } },
       },
@@ -296,22 +300,33 @@ export default async function AdminPage({
             <h2>Pendencias fortes</h2>
             <div className={styles.pageTitle}>{pendingStrongCount}</div>
             {pendingList.length > 0 ? (
-              <ul className={styles.stackSm} style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                {pendingList.map(({ id, orderNumber, customerName, deliveryLabel, tipo }) => (
-                  <li key={id}>
-                    <Link
-                      href={`/admin/orders/${id}`}
-                      className={styles.panelLink}
-                    >
-                      {orderNumber} — {customerName} · {deliveryLabel} · {tipo}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <DashboardNextActions
+                  orders={sortedList.slice(0, 3).map(({ order, attention }) => ({
+                    id: order.id,
+                    orderNumber: order.orderNumber,
+                    status: order.status,
+                    attention,
+                    customerName: order.customer?.name ?? "-",
+                    itemsCount: order.items.length,
+                    subtotal: Number(order.subtotal),
+                    deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : null,
+                    total: Number(order.total),
+                    deliveryDatetime: order.deliveryDatetime,
+                    deliveryTime: order.deliveryTime,
+                    orderType: order.orderType,
+                    deliveryMethod: order.deliveryMethod,
+                    addressText: order.addressText,
+                    addressCity: order.addressCity,
+                    needsReconfirmation: order.needsReconfirmation,
+                    hasPayment: Boolean(order.paidAt),
+                  }))}
+                />
+                <Link href="/admin/orders?attention=with">Ver todos</Link>
+              </>
             ) : (
               <p className={styles.textMuted}>Nenhum pedido com pendência nos próximos 15 dias.</p>
             )}
-            <Link href="/admin/orders?attention=with">Ver todos</Link>
           </div>
         </section>
 
