@@ -36,8 +36,9 @@ export default function Button({
   const classes = `${baseClass} ${variantClass} ${sizeClass} ${densityClass} ${className || ""}`.trim();
 
   if (asChild && React.isValidElement(children) && children.type === Link) {
+    const childProps = children.props as Record<string, unknown>;
     return React.cloneElement(children as React.ReactElement<any>, {
-      className: `${classes} ${children.props.className || ""}`.trim(),
+      className: `${classes} ${(childProps.className as string) || ""}`.trim(),
       ...props,
     });
   }
