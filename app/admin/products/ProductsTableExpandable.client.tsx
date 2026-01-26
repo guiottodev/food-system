@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MoreVertical, Pencil } from "lucide-react";
 import DataTable from "../_components/DataTable";
 import ProductThumb from "./ProductThumb.client";
-import Chip from "../_components/Chip";
+import ToneChip from "../_components/ToneChip";
 import {
   deleteProductAction,
   duplicateProductAction,
@@ -72,7 +72,7 @@ function formatAvailable(sku: SkuRow): string {
 }
 
 function skuSubline(sku: SkuRow): string {
-  const parts = [sku.sizeText, sku.flavorText || null, sku.isFrozen ? "Congelado" : null].filter(Boolean) as string[];
+  const parts = [sku.sizeText, sku.flavorText || null].filter(Boolean) as string[];
   return parts.length ? parts.join(" · ") : "";
 }
 
@@ -157,6 +157,17 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
     [handlePriceBlur]
   );
 
+  // Gerar expandStateKey baseado em filtros (reseta expands quando filtros mudam)
+  const expandStateKey = useMemo(() => {
+    return JSON.stringify({
+      q: searchParams.get("q") ?? "",
+      active: searchParams.get("active") ?? "",
+      stock: searchParams.get("stock") ?? "",
+      categoryId: searchParams.get("categoryId") ?? "",
+      semSkuAtivo: searchParams.get("semSkuAtivo") ?? "",
+    });
+  }, [searchParams]);
+
   const columns = [
     {
       key: "product",
@@ -165,12 +176,9 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
         <div className={layoutStyles.productCell}>
           <ProductThumb imageMainUrl={row.imageMainUrl} name={row.name} />
           <div className={layoutStyles.productCellContent}>
-            <Link href={`/admin/products/${row.id}`} className={layoutStyles.productNameLink}>
-              {row.name}
-            </Link>
-            <Chip
-              variant={row.isActive ? "status" : "attention-weak"}
-              status={row.isActive ? "CONFIRMADO" : "CANCELADO"}
+            <span className={`${layoutStyles.productName} ${layoutStyles.productNameClamp}`}>{row.name}</span>
+            <ToneChip
+              tone={row.isActive ? "success" : "warning"}
               label={row.isActive ? "Ativo" : "Inativo"}
               density="comfortable"
             />
@@ -180,7 +188,6 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
       sortable: true,
       visible: true,
       mobilePriority: "high" as const,
-      truncation: "line-clamp-2" as const,
     },
     {
       key: "category",
@@ -190,6 +197,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
       ),
       sortable: true,
       visible: true,
+      mobilePriority: "low" as const,
     },
     {
       key: "skus",
@@ -198,37 +206,65 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
         const activeSkus = row.skus.filter((s) => s.isActive).length;
         const totalSkusProduct = row.skus.length;
         return (
-          <div className={layoutStyles.skuInfo}>
+          <div
+            className={layoutStyles.skuInfo}
+            title={`${activeSkus} ativos / ${totalSkusProduct} totais`}
+          >
             <span className={layoutStyles.skuCount}>
               {activeSkus} / {totalSkusProduct}
             </span>
             {activeSkus === 0 && (
-              <span className={layoutStyles.skuWarning}>Sem SKU ativo</span>
+              <ToneChip tone="neutral" label="Sem SKU ativo" density="compact" />
             )}
           </div>
         );
       },
       sortable: false,
       visible: true,
+      mobilePriority: "low" as const,
     },
     {
       key: "available",
       header: "Disponível",
       accessor: (row: ProductRow): React.ReactNode => {
-        const disponivelX = row.skus.filter((s) => (s.stockQuantity ?? 0) > 0).length;
-        const disponivelY = row.skus.length;
-        if (row.skus.length === 0) {
-          return "—";
+        const activeSkus = row.skus.filter((s) => s.isActive).length;
+        const disponivelX = row.skus.filter((s) => s.isActive && (s.stockQuantity ?? 0) > 0).length;
+        const disponivelY = activeSkus;
+        
+        if (row.skus.length === 0 || activeSkus === 0) {
+          return (
+            <div className={layoutStyles.availableCell}>
+              <ToneChip tone="neutral" label="Sem SKU ativo" density="compact" />
+            </div>
+          );
         }
+        
+        if (disponivelX === 0) {
+          return (
+            <div className={layoutStyles.availableCell}>
+              <Link
+                href={`/admin/capacidade?q=${encodeURIComponent(row.name)}`}
+                className={layoutStyles.actionLink}
+                title="Ver produção"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ToneChip tone="warning" label="Fora de estoque" density="compact" />
+              </Link>
+            </div>
+          );
+        }
+        
         return (
-          <Link
-            href={`/admin/capacidade?q=${encodeURIComponent(row.name)}`}
-            className={layoutStyles.actionLink}
-            title="Ver produção"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {disponivelX} de {disponivelY} disponíveis
-          </Link>
+          <div className={layoutStyles.availableCell}>
+            <Link
+              href={`/admin/capacidade?q=${encodeURIComponent(row.name)}`}
+              className={layoutStyles.actionLink}
+              title="Ver produção"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {disponivelX} de {disponivelY} disponíveis
+            </Link>
+          </div>
         );
       },
       sortable: false,
@@ -260,6 +296,9 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
         columns={columns}
         data={products}
         rowHref={(row: ProductRow) => `/admin/products/${row.id}`}
+        rowAriaLabel={(row: ProductRow) => `Ver detalhes de ${row.name}`}
+        expandStateKey={expandStateKey}
+        density="comfortable"
         expandRenderer={(row: ProductRow) => {
           if (row.skus.length === 0) {
             return (
@@ -292,65 +331,70 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
                         ) : null}
                       </div>
                       {!sku.isActive && (
-                        <Chip variant="attention-weak" label="Inativo" density="compact" />
+                        <div className={layoutStyles.skuHeaderChips}>
+                          <ToneChip tone="warning" label="Inativo" density="compact" />
+                        </div>
                       )}
                     </div>
                     <div className={layoutStyles.skuMeta}>
-                      <div className={layoutStyles.skuMetaItem}>
-                        <span className={layoutStyles.skuMetaLabel}>Unidade:</span>
-                        <span className={layoutStyles.skuMetaValue}>{sku.unitLabel}</span>
-                      </div>
-                      <div className={layoutStyles.skuMetaItem}>
-                        <span className={layoutStyles.skuMetaLabel}>Disponível:</span>
-                        <span
-                          className={`${layoutStyles.skuMetaValue} ${sku.stockQuantity === 0 ? layoutStyles.stockZero : ""}`}
-                        >
-                          {formatAvailable(sku)}
-                        </span>
-                      </div>
-                      <div className={layoutStyles.skuMetaItem}>
-                        <span className={layoutStyles.skuMetaLabel}>Preço:</span>
-                        <div className={layoutStyles.skuMetaValue}>
-                          {isEditing ? (
-                            <>
-                              <input
-                                ref={priceInputRef}
-                                type="text"
-                                inputMode="decimal"
-                                size={inputSize}
-                                defaultValue={initialFormattedValue}
-                                onChange={handlePriceChange}
-                                onBlur={() => handlePriceBlur(sku, row.id)}
-                                onKeyDown={(e) => handlePriceKeyDown(e, sku, row.id)}
-                                placeholder="0,00"
-                                aria-label={`Editar preço de ${sku.displayName}`}
-                                className={layoutStyles.priceInput}
-                                autoFocus
-                                onClick={(e) => e.stopPropagation()}
-                              />
-                              {err && <div className={layoutStyles.priceError}>{err.message}</div>}
-                            </>
-                          ) : (
-                            <button
-                              type="button"
-                              className={layoutStyles.priceDisplay}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setEditingPriceSkuId(sku.id);
-                                setPriceError(null);
-                              }}
-                              disabled={isSaving}
-                            >
-                              <span>{formatPrice(displayPrice)}</span>
-                              <Pencil size={12} className={layoutStyles.priceEditIcon} aria-hidden />
-                            </button>
-                          )}
+                      <div className={layoutStyles.skuMetaData}>
+                        <div className={layoutStyles.skuMetaItem}>
+                          <span className={layoutStyles.skuMetaLabel}>Disponível:</span>
+                          <Link
+                            href={`/admin/capacidade?q=${encodeURIComponent(row.name)}`}
+                            className={`${layoutStyles.skuMetaValue} ${layoutStyles.skuDisponivelLink} ${sku.stockQuantity === 0 ? layoutStyles.stockZero : ""}`}
+                            title="Ver produção"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            {formatAvailable(sku)}
+                          </Link>
+                        </div>
+                        <span className={layoutStyles.skuMetaSep} aria-hidden>·</span>
+                        <div className={layoutStyles.skuMetaItem}>
+                          <span className={layoutStyles.skuMetaLabel}>Preço:</span>
+                          <div className={layoutStyles.skuMetaValue}>
+                            {isEditing ? (
+                              <>
+                                <input
+                                  ref={priceInputRef}
+                                  type="text"
+                                  inputMode="decimal"
+                                  size={inputSize}
+                                  defaultValue={initialFormattedValue}
+                                  onChange={handlePriceChange}
+                                  onBlur={() => handlePriceBlur(sku, row.id)}
+                                  onKeyDown={(e) => handlePriceKeyDown(e, sku, row.id)}
+                                  placeholder="0,00"
+                                  aria-label={`Editar preço de ${sku.displayName}`}
+                                  className={layoutStyles.priceInput}
+                                  autoFocus
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                                {err && <div className={layoutStyles.priceError}>{err.message}</div>}
+                              </>
+                            ) : (
+                              <button
+                                type="button"
+                                className={layoutStyles.priceDisplay}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingPriceSkuId(sku.id);
+                                  setPriceError(null);
+                                }}
+                                disabled={isSaving}
+                              >
+                                <span>{formatPrice(displayPrice)}</span>
+                                <Pencil size={12} className={layoutStyles.priceEditIcon} aria-hidden />
+                              </button>
+                            )}
+                          </div>
                         </div>
                       </div>
                       <Link
                         href={`/admin/products/${row.id}?tab=skus&skuMode=edit&skuId=${sku.id}`}
-                        className={layoutStyles.actionLink}
+                        className={layoutStyles.skuMetaAction}
                         onClick={(e) => e.stopPropagation()}
+                        aria-label={`Editar SKU ${sku.displayName}`}
                       >
                         Editar
                       </Link>
@@ -363,13 +407,6 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
         }}
         actionsRenderer={(row: ProductRow) => (
           <div className={layoutStyles.actionsCell}>
-            <Link
-              href={`/admin/products/${row.id}`}
-              className={layoutStyles.actionLink}
-              onClick={(e) => e.stopPropagation()}
-            >
-              Ver
-            </Link>
             <div
               className={layoutStyles.menuWrap}
               ref={openMenuProductId === row.id ? menuRef : undefined}
@@ -445,7 +482,6 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
             </div>
           </div>
         )}
-        density="comfortable"
         stickyHeader={true}
         sortable={true}
         onSort={handleSort}

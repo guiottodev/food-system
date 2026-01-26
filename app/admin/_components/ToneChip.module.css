@@ -1,0 +1,41 @@
+.toneChip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.toneChipCompact {
+  padding: 2px 10px;
+  font-size: 11px;
+}
+
+/* Variante: Success */
+.toneChipSuccess {
+  background: var(--state-success-bg);
+  color: var(--state-success-text);
+}
+
+/* Variante: Neutral */
+.toneChipNeutral {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* Variante: Warning */
+.toneChipWarning {
+  background: var(--state-warning-bg);
+  color: var(--state-warning-text);
+}
+
+/* Variante: Danger */
+.toneChipDanger {
+  background: var(--state-error-bg);
+  color: var(--state-error-text);
+}

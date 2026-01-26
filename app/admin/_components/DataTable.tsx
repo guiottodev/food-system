@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, MoreVertical, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import styles from "./DataTable.module.css";
@@ -28,6 +28,7 @@ export interface DataTableProps<T> {
   data: T[];
   rowHref?: (row: T) => string;
   onRowClick?: (row: T) => void;
+  rowAriaLabel?: (row: T) => string;
   expandRenderer?: (row: T) => React.ReactNode;
   actionsRenderer?: (row: T) => React.ReactNode;
   density?: "comfortable" | "compact";
@@ -38,6 +39,8 @@ export interface DataTableProps<T> {
   sortDirection?: "asc" | "desc";
   tableId?: string;
   densityToggle?: React.ReactNode;
+  /** Key que quando muda, reseta expanded rows. Útil para resetar expands ao mudar filtros/busca. */
+  expandStateKey?: string;
 }
 
 export default function DataTable<T extends { id: string }>({
@@ -45,6 +48,7 @@ export default function DataTable<T extends { id: string }>({
   data,
   rowHref,
   onRowClick,
+  rowAriaLabel,
   expandRenderer,
   actionsRenderer,
   density = "comfortable",
@@ -55,12 +59,20 @@ export default function DataTable<T extends { id: string }>({
   sortDirection,
   tableId = "default",
   densityToggle,
+  expandStateKey,
 }: DataTableProps<T>) {
   const router = useRouter();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
+  // Reset expanded rows quando expandStateKey muda (ex: ao mudar filtros/busca)
+  useEffect(() => {
+    if (expandStateKey !== undefined) {
+      setExpandedRows(new Set());
+    }
+  }, [expandStateKey]);
+
   const handleRowClick = useCallback(
-    (row: T, e: React.MouseEvent) => {
+    (row: T, e?: React.MouseEvent) => {
       if (rowHref) {
         router.push(rowHref(row));
       } else if (onRowClick) {
@@ -211,10 +223,13 @@ export default function DataTable<T extends { id: string }>({
                 <tr
                   className={`${styles.tr} ${isExpanded ? styles.trExpanded : ""}`}
                   onClick={(e) => handleRowClick(row, e)}
-                  onKeyDown={(e) => handleKeyDown(e, () => handleRowClick(row, e))}
+                  onKeyDown={(e) => {
+                    if (e.currentTarget !== e.target) return;
+                    handleKeyDown(e, () => handleRowClick(row));
+                  }}
                   role="button"
                   tabIndex={0}
-                  aria-label={`Ver detalhes de ${row.id}`}
+                  aria-label={rowAriaLabel ? rowAriaLabel(row) : `Ver detalhes de ${row.id}`}
                 >
                   {hasExpand && (
                     <td className={styles.tdExpand}>
