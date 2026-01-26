@@ -1,14 +1,21 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Truck, Package } from "lucide-react";
 import DataTable from "../_components/DataTable";
-import OrderStatusStack from "./OrderStatusStack.client";
-import DensityToggle from "../_components/DensityToggle.client";
+import Chip from "../_components/Chip";
 import type { OrderStatus } from "@prisma/client";
 import type { AttentionReason } from "@/lib/domain/attention";
 import layoutStyles from "./orders.module.css";
+
+const STATUS_LABELS: Record<OrderStatus, string> = {
+  RASCUNHO: "Rascunho",
+  CONFIRMADO: "Confirmado",
+  EM_PRODUCAO: "Em Produção",
+  PRONTO: "Pronto",
+  ENTREGUE: "Entregue",
+  CANCELADO: "Cancelado",
+};
 
 type OrderItem = {
   id: string;
@@ -72,7 +79,6 @@ export default function OrdersTableClient({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
 
   const handleSort = (column: string, direction: "asc" | "desc") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -90,9 +96,24 @@ export default function OrdersTableClient({
     {
       key: "orderNumber",
       header: "Pedido",
-      accessor: (row: OrderRow) => (
-        <span className={layoutStyles.orderNumberCell}>{row.orderNumber}</span>
-      ),
+      accessor: (row: OrderRow) => {
+        const alerts = [...row.attention.strongReasons, ...row.attention.weakReasons];
+        return (
+          <div className={layoutStyles.orderCell}>
+            <span className={layoutStyles.orderNumberCell}>{row.orderNumber}</span>
+            {alerts.length > 0 && (
+              <div className={layoutStyles.orderAlertLabels}>
+                {row.attention.strongReasons.map((r, idx) => (
+                  <Chip key={`s-${idx}`} variant="attention-strong" label={r.label} density="compact" />
+                ))}
+                {row.attention.weakReasons.map((r, idx) => (
+                  <Chip key={`w-${idx}`} variant="attention-weak" label={r.label} density="compact" />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      },
       sortable: true,
       visible: true,
     },
@@ -108,7 +129,7 @@ export default function OrdersTableClient({
         </div>
       ),
       sortable: false,
-      visible: (d: "comfortable" | "compact") => d === "comfortable",
+      visible: true,
       mobilePriority: "high" as const,
       truncation: "ellipsis" as const,
     },
@@ -127,21 +148,14 @@ export default function OrdersTableClient({
         );
       },
       sortable: false,
-      visible: (d: "comfortable" | "compact") => d === "comfortable",
+      visible: true,
       mobilePriority: "low" as const,
     },
     {
       key: "status",
       header: "Status",
       accessor: (row: OrderRow) => (
-        <OrderStatusStack
-          status={row.status}
-          strongReasons={row.attention.strongReasons}
-          weakReasons={row.attention.weakReasons}
-          maxChips={2}
-          overflowBehavior="+N"
-          density={density}
-        />
+        <Chip variant="status" status={row.status} label={STATUS_LABELS[row.status]} density="comfortable" />
       ),
       sortable: true,
       visible: true,
@@ -241,20 +255,13 @@ export default function OrdersTableClient({
             </div>
           </div>
         )}
-        density={density}
+        density="comfortable"
         stickyHeader={true}
         sortable={true}
         onSort={handleSort}
         sortColumn={sort === "delivery_asc" || sort === "delivery_desc" ? "delivery" : sort === "created_desc" ? "orderNumber" : undefined}
         sortDirection={sort === "delivery_desc" || sort === "created_desc" ? "desc" : "asc"}
         tableId="orders-table"
-        densityToggle={
-          <DensityToggle
-            currentDensity={density}
-            onChange={setDensity}
-            tableId="orders-table"
-          />
-        }
       />
     </div>
   );

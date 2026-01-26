@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { List, ListChevron } from "lucide-react";
+import { List, Rows3 } from "lucide-react";
 import styles from "./DensityToggle.module.css";
 
 export interface DensityToggleProps {
@@ -42,9 +42,9 @@ export default function DensityToggle({
       title={currentDensity === "comfortable" ? "Compacto" : "Confortável"}
     >
       {currentDensity === "comfortable" ? (
-        <ListChevron size={18} aria-hidden />
-      ) : (
         <List size={18} aria-hidden />
+      ) : (
+        <Rows3 size={18} aria-hidden />
       )}
     </button>
   );

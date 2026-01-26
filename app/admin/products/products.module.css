@@ -165,8 +165,9 @@
 .filtersPanel {
   position: absolute;
   top: calc(100% + var(--space-2));
-  right: 0;
-  width: min(480px, 94vw);
+  right: var(--space-2);
+  width: min(480px, calc(94vw - var(--space-4)));
+  max-height: min(600px, calc(90vh - 120px));
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -174,8 +175,12 @@
     0 10px 40px -10px rgba(0, 0, 0, 0.15),
     0 4px 12px rgba(0, 0, 0, 0.05);
   padding: var(--space-5);
-  z-index: 20;
+  z-index: 50;
   animation: filtersPanelIn 150ms ease;
+  overflow-y: auto;
+  overflow-x: visible;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes filtersPanelIn {
@@ -193,12 +198,15 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-4);
+  position: relative;
 }
 
 .filtersGroup {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  position: relative;
+  overflow: visible;
 }
 
 .filtersGroupHeader {
@@ -303,7 +311,7 @@
   box-shadow: 
     0 10px 40px -10px rgba(0, 0, 0, 0.15),
     0 4px 12px rgba(0, 0, 0, 0.05);
-  z-index: 50;
+  z-index: 60;
   overflow: hidden;
   animation: dropdownIn 150ms ease;
 }
@@ -482,7 +490,7 @@
 }
 
 .productsTable thead th {
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-2) var(--space-5);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -490,6 +498,7 @@
   color: var(--text-muted);
   text-align: center;
   border-bottom: 1px solid var(--border);
+  border-top: none;
   white-space: nowrap;
 }
 .productsTable thead th:first-child {
@@ -621,7 +630,7 @@
 }
 
 .productsTable tbody td {
-  padding: var(--space-5);
+  padding: var(--space-2) var(--space-5);
   vertical-align: middle;
 }
 .productsTable tbody td:first-child {
@@ -799,13 +808,125 @@
   border-left: 2px solid var(--action-primary);
 }
 
-.skuCellIndent {
+/* ===== SKUS LIST (expanded) ===== */
+.skusList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) 0 var(--space-4) 0;
+}
+
+.skuRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.skuRow:hover {
+  background: rgba(var(--action-primary-rgb), 0.03);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.skuRow:not(:last-child) {
+  margin-bottom: 0;
+}
+
+/* SKU Header: Nome + subline + chip */
+.skuHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.skuNameSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
   min-width: 0;
 }
+
+.skuName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  display: block;
+}
+
 .skuSubline {
   font-size: var(--text-xs);
   color: var(--text-muted);
-  margin-top: 2px;
+  line-height: 1.4;
+  margin-top: 0;
+}
+
+/* SKU Meta: Linha com labels (Unidade, Disponível, Preço, Editar) */
+.skuMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.skuMetaItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.skuMetaLabel {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.skuMetaValue {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.skuMetaValue.stockZero {
+  color: var(--state-warning-text);
+}
+
+/* Price input e error dentro do meta */
+.skuMetaValue .priceInput {
+  width: auto;
+  min-width: 70px;
+  max-width: 200px;
+}
+
+.skuMetaValue .priceError {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+/* Responsivo: empilhar meta em telas pequenas */
+@media (max-width: 640px) {
+  .skuMeta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+  }
+
+  .skuMetaItem {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 /* ===== PRECO (inline edit) ===== */

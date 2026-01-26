@@ -161,17 +161,21 @@
 .filtersPanel {
   position: absolute;
   top: calc(100% + var(--space-2));
-  right: 0;
-  width: min(400px, 94vw);
+  right: var(--space-2);
+  width: min(400px, calc(94vw - var(--space-4)));
+  max-height: min(600px, calc(90vh - 120px));
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow:
     0 10px 40px -10px rgba(0, 0, 0, 0.15),
     0 4px 12px rgba(0, 0, 0, 0.05);
-  z-index: 20;
-  overflow: hidden;
+  z-index: 50;
+  overflow-y: auto;
+  overflow-x: visible;
   animation: filtersPanelIn 150ms ease;
+  display: flex;
+  flex-direction: column;
 }
 
 @keyframes filtersPanelIn {

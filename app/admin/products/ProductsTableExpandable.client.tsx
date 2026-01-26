@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MoreVertical, Pencil } from "lucide-react";
 import DataTable from "../_components/DataTable";
-import DensityToggle from "../_components/DensityToggle.client";
 import ProductThumb from "./ProductThumb.client";
 import Chip from "../_components/Chip";
 import {
@@ -81,7 +80,6 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
   const [editingPriceSkuId, setEditingPriceSkuId] = useState<string | null>(null);
   const [savingPriceSkuId, setSavingPriceSkuId] = useState<string | null>(null);
   const [skusPriceCache, setSkusPriceCache] = useState<Record<string, number>>({});
@@ -174,7 +172,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
               variant={row.isActive ? "status" : "attention-weak"}
               status={row.isActive ? "CONFIRMADO" : "CANCELADO"}
               label={row.isActive ? "Ativo" : "Inativo"}
-              density={density}
+              density="comfortable"
             />
           </div>
         </div>
@@ -234,7 +232,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
         );
       },
       sortable: false,
-      visible: (d: "comfortable" | "compact") => d === "comfortable",
+      visible: true,
       mobilePriority: "high" as const,
     },
     {
@@ -286,63 +284,69 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
 
                 return (
                   <div key={sku.id} className={layoutStyles.skuRow}>
-                    <div className={layoutStyles.skuCellIndent}>
-                      <strong>{sku.displayName}</strong>
-                      {skuSubline(sku) ? (
-                        <div className={layoutStyles.skuSubline}>{skuSubline(sku)}</div>
-                      ) : null}
+                    <div className={layoutStyles.skuHeader}>
+                      <div className={layoutStyles.skuNameSection}>
+                        <strong className={layoutStyles.skuName}>{sku.displayName}</strong>
+                        {skuSubline(sku) ? (
+                          <span className={layoutStyles.skuSubline}>{skuSubline(sku)}</span>
+                        ) : null}
+                      </div>
                       {!sku.isActive && (
-                        <Chip variant="attention-weak" label="Inativo" density={density} />
+                        <Chip variant="attention-weak" label="Inativo" density="compact" />
                       )}
                     </div>
-                    <div className={layoutStyles.categoryName} title="Categoria do produto">
-                      {row.categoryLabel}
-                    </div>
-                    <div className={layoutStyles.colNumeric}>{sku.unitLabel}</div>
-                    <div
-                      className={`${layoutStyles.colDisponivel} ${sku.stockQuantity === 0 ? layoutStyles.stockZero : ""}`}
-                    >
-                      {formatAvailable(sku)}
-                    </div>
-                    <div className={layoutStyles.colPreco}>
-                      <div className={layoutStyles.priceCell}>
-                        {isEditing ? (
-                          <>
-                            <input
-                              ref={priceInputRef}
-                              type="text"
-                              inputMode="decimal"
-                              size={inputSize}
-                              defaultValue={initialFormattedValue}
-                              onChange={handlePriceChange}
-                              onBlur={() => handlePriceBlur(sku, row.id)}
-                              onKeyDown={(e) => handlePriceKeyDown(e, sku, row.id)}
-                              placeholder="0,00"
-                              aria-label={`Editar preço de ${sku.displayName}`}
-                              className={layoutStyles.priceInput}
-                              autoFocus
-                              onClick={(e) => e.stopPropagation()}
-                            />
-                            {err && <div className={layoutStyles.priceError}>{err.message}</div>}
-                          </>
-                        ) : (
-                          <button
-                            type="button"
-                            className={layoutStyles.priceDisplay}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingPriceSkuId(sku.id);
-                              setPriceError(null);
-                            }}
-                            disabled={isSaving}
-                          >
-                            <span>{formatPrice(displayPrice)}</span>
-                            <Pencil size={12} className={layoutStyles.priceEditIcon} aria-hidden />
-                          </button>
-                        )}
+                    <div className={layoutStyles.skuMeta}>
+                      <div className={layoutStyles.skuMetaItem}>
+                        <span className={layoutStyles.skuMetaLabel}>Unidade:</span>
+                        <span className={layoutStyles.skuMetaValue}>{sku.unitLabel}</span>
                       </div>
-                    </div>
-                    <div className={layoutStyles.colActions}>
+                      <div className={layoutStyles.skuMetaItem}>
+                        <span className={layoutStyles.skuMetaLabel}>Disponível:</span>
+                        <span
+                          className={`${layoutStyles.skuMetaValue} ${sku.stockQuantity === 0 ? layoutStyles.stockZero : ""}`}
+                        >
+                          {formatAvailable(sku)}
+                        </span>
+                      </div>
+                      <div className={layoutStyles.skuMetaItem}>
+                        <span className={layoutStyles.skuMetaLabel}>Preço:</span>
+                        <div className={layoutStyles.skuMetaValue}>
+                          {isEditing ? (
+                            <>
+                              <input
+                                ref={priceInputRef}
+                                type="text"
+                                inputMode="decimal"
+                                size={inputSize}
+                                defaultValue={initialFormattedValue}
+                                onChange={handlePriceChange}
+                                onBlur={() => handlePriceBlur(sku, row.id)}
+                                onKeyDown={(e) => handlePriceKeyDown(e, sku, row.id)}
+                                placeholder="0,00"
+                                aria-label={`Editar preço de ${sku.displayName}`}
+                                className={layoutStyles.priceInput}
+                                autoFocus
+                                onClick={(e) => e.stopPropagation()}
+                              />
+                              {err && <div className={layoutStyles.priceError}>{err.message}</div>}
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className={layoutStyles.priceDisplay}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingPriceSkuId(sku.id);
+                                setPriceError(null);
+                              }}
+                              disabled={isSaving}
+                            >
+                              <span>{formatPrice(displayPrice)}</span>
+                              <Pencil size={12} className={layoutStyles.priceEditIcon} aria-hidden />
+                            </button>
+                          )}
+                        </div>
+                      </div>
                       <Link
                         href={`/admin/products/${row.id}?tab=skus&skuMode=edit&skuId=${sku.id}`}
                         className={layoutStyles.actionLink}
@@ -441,20 +445,13 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
             </div>
           </div>
         )}
-        density={density}
+        density="comfortable"
         stickyHeader={true}
         sortable={true}
         onSort={handleSort}
         sortColumn={sort}
         sortDirection={dir}
         tableId="products-table"
-        densityToggle={
-          <DensityToggle
-            currentDensity={density}
-            onChange={setDensity}
-            tableId="products-table"
-          />
-        }
       />
     </div>
   );

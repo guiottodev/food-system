@@ -3,10 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import DataTable from "../_components/DataTable";
-import DensityToggle from "../_components/DensityToggle.client";
 import type { CapacityRow } from "@/lib/domain/production";
 import layoutStyles from "./capacidade.module.css";
-import { useState } from "react";
 
 export type SortKey = "productName" | "categoryName" | "available" | "demand" | "gap";
 export type SortDir = "asc" | "desc";
@@ -29,7 +27,6 @@ export default function CapacityTable({ rows, sort, dir }: CapacityTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
 
   const handleSort = (column: string, direction: "asc" | "desc") => {
     const params = new URLSearchParams(searchParams.toString());
@@ -64,7 +61,7 @@ export default function CapacityTable({ rows, sort, dir }: CapacityTableProps) {
         <span className={layoutStyles.categoryName}>{row.categoryName}</span>
       ),
       sortable: true,
-      visible: (d: "comfortable" | "compact") => d === "comfortable",
+      visible: true,
       mobilePriority: "low" as const,
     },
     {
@@ -120,20 +117,13 @@ export default function CapacityTable({ rows, sort, dir }: CapacityTableProps) {
       <DataTable
         columns={columns}
         data={rows.map((row) => ({ ...row, id: row.productId }))}
-        density={density}
+        density="comfortable"
         stickyHeader={true}
         sortable={true}
         onSort={handleSort}
         sortColumn={sort}
         sortDirection={dir}
         tableId="capacity-table"
-        densityToggle={
-          <DensityToggle
-            currentDensity={density}
-            onChange={setDensity}
-            tableId="capacity-table"
-          />
-        }
       />
     </div>
   );

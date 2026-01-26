@@ -40,6 +40,13 @@ export default function FilterSelect({
 
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
+      // Scroll para mostrar o dropdown quando abrir
+      setTimeout(() => {
+        const trigger = containerRef.current?.querySelector('button');
+        if (trigger) {
+          trigger.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }, 100);
     }
 
     return () => {

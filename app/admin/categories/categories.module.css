@@ -132,8 +132,9 @@
 .filtersPanel {
   position: absolute;
   top: calc(100% + var(--space-2));
-  right: 0;
-  width: min(520px, 92vw);
+  right: var(--space-2);
+  width: min(520px, calc(92vw - var(--space-4)));
+  max-height: min(600px, calc(90vh - 120px));
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -141,8 +142,12 @@
     0 10px 40px -10px rgba(0, 0, 0, 0.15),
     0 4px 12px rgba(0, 0, 0, 0.05);
   padding: var(--space-4);
-  z-index: 20;
+  z-index: 50;
   animation: filtersPanelIn 150ms ease;
+  overflow-y: auto;
+  overflow-x: visible;
+  display: flex;
+  flex-direction: column;
 }
 
 .filtersHeader {

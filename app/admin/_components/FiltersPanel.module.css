@@ -20,8 +20,10 @@
 
 .panelPopover {
   position: absolute;
-  min-width: min(480px, 94vw);
-  max-width: min(480px, 94vw);
+  min-width: min(480px, calc(94vw - var(--space-4)));
+  max-width: min(480px, calc(94vw - var(--space-4)));
+  max-height: min(600px, calc(90vh - 120px));
+  right: var(--space-2);
   margin-top: var(--space-2);
 }
 
@@ -92,9 +94,11 @@
 .panelBody {
   padding: var(--space-5);
   overflow-y: auto;
+  overflow-x: visible;
   flex: 1;
   display: grid;
   gap: var(--space-4);
+  min-height: 0;
 }
 
 .panelFooter {

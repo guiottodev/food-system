@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
 import DataTable from "../_components/DataTable";
-import DensityToggle from "../_components/DensityToggle.client";
 import type { CustomerListEntry } from "@/lib/domain/customer";
 import layoutStyles from "./clientes.module.css";
 
@@ -14,8 +12,6 @@ function formatDate(value?: Date | null) {
 }
 
 export default function CustomersTable({ entries }: { entries: CustomerListEntry[] }) {
-  const [density, setDensity] = useState<"comfortable" | "compact">("comfortable");
-
   const columns = [
     {
       key: "name",
@@ -46,7 +42,7 @@ export default function CustomersTable({ entries }: { entries: CustomerListEntry
         <span className={layoutStyles.dateValue}>{formatDate(row.lastOrderDate)}</span>
       ),
       sortable: false,
-      visible: (d: "comfortable" | "compact") => d === "comfortable",
+      visible: true,
       mobilePriority: "high" as const,
     },
     {
@@ -69,17 +65,10 @@ export default function CustomersTable({ entries }: { entries: CustomerListEntry
         columns={columns}
         data={entries}
         rowHref={(row) => `/admin/clientes/${row.id}`}
-        density={density}
+        density="comfortable"
         stickyHeader={true}
         sortable={false}
         tableId="customers-table"
-        densityToggle={
-          <DensityToggle
-            currentDensity={density}
-            onChange={setDensity}
-            tableId="customers-table"
-          />
-        }
       />
     </div>
   );
