@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, SlidersHorizontal, X, Calendar, Package, Truck, ArrowUpDown, ListFilter, AlertCircle, ClipboardList } from "lucide-react";
+import { Search, Calendar, Package, Truck, ArrowUpDown, AlertCircle } from "lucide-react";
+import FiltersPanel from "../_components/FiltersPanel.client";
+import FilterSelect from "./FilterSelect.client";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./orders.module.css";
-import FilterSelect from "./FilterSelect.client";
 
 type StatusOption = {
   value: string;
@@ -54,7 +55,6 @@ type FiltersState = {
   pageSize: number;
 };
 
-
 const attentionOptions: Array<{ value: AttentionValue; label: string }> = [
   { value: "all", label: "Todas" },
   { value: "with", label: "Com pendencias" },
@@ -64,16 +64,6 @@ const attentionOptions: Array<{ value: AttentionValue; label: string }> = [
   { value: "MISSING_ADDRESS", label: "Endereco nao informado" },
   { value: "MISSING_TIME", label: "Horario a confirmar" },
 ];
-
-const attentionSummaryLabels: Record<AttentionValue, string> = {
-  all: "Todas",
-  with: "Com pendencias",
-  PRECISA_PRODUZIR: "Precisa produzir",
-  INCOMPLETE: "Pedido incompleto",
-  ALTERADO_APOS_CONFIRMACAO: "Alterado apos confirmacao",
-  MISSING_ADDRESS: "Endereco nao informado",
-  MISSING_TIME: "Horario a confirmar",
-};
 
 const orderTypeOptions = [
   { value: "all", label: "Todos" },
@@ -121,7 +111,7 @@ function normalizeSort(value?: string): SortValue {
 
 function normalizeAttention(value?: string): AttentionValue {
   if (value === "with") return "with";
-  if (attentionSummaryLabels[value as AttentionValue]) {
+  if (attentionOptions.some((opt) => opt.value === value)) {
     return value as AttentionValue;
   }
   return "all";
@@ -164,7 +154,6 @@ function addDays(date: Date, days: number) {
   return d;
 }
 
-
 export default function OrdersFilters({
   statusOptions,
   pageSizes,
@@ -188,7 +177,6 @@ export default function OrdersFilters({
   const searchParamsString = searchParams.toString();
   const [isPending, startTransition] = useTransition();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<number | null>(null);
 
   const viewParam = searchParams.get("view") ?? initialView;
@@ -389,18 +377,6 @@ export default function OrdersFilters({
     }
   }, [currentFilters, filtersOpen]);
 
-  useEffect(() => {
-    if (!filtersOpen) return;
-    const handleClick = (event: MouseEvent) => {
-      if (!panelRef.current) return;
-      if (!panelRef.current.contains(event.target as Node)) {
-        setFiltersOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [filtersOpen]);
-
   const handleApplyFilters = () => {
     const statusValue =
       draftFilters.period === "history" ? "ENTREGUE" : draftFilters.status;
@@ -469,7 +445,7 @@ export default function OrdersFilters({
       <div className={layoutStyles.toolbar}>
         <div className={layoutStyles.toolbarMain}>
           <div className={layoutStyles.searchWrap}>
-            <Search size={18} className={layoutStyles.searchIcon} />
+            <Search size={18} className={layoutStyles.searchIcon} aria-hidden />
             <input
               type="text"
               name="q"
@@ -504,261 +480,211 @@ export default function OrdersFilters({
               Limpar
             </button>
           ) : null}
-          <div className={layoutStyles.filtersWrap} ref={panelRef}>
-            <button
-              type="button"
-              className={`${styles.button} ${layoutStyles.filtersButton} ${
-                filtersOpen || hasActiveFilters ? layoutStyles.filtersButtonActive : ""
-              }`}
-              onClick={() => {
+          <div className={layoutStyles.filtersWrap}>
+            <FiltersPanel
+              activeCount={activeFilterCount}
+              onApply={handleApplyFilters}
+              onClear={handleClearFilters}
+              syncMode="url"
+              isOpen={filtersOpen}
+              onClose={() => setFiltersOpen(false)}
+              onToggle={() => {
                 setDraftFilters(currentFilters);
-                setFiltersOpen((open) => !open);
+                setFiltersOpen((o) => !o);
               }}
-              aria-expanded={filtersOpen}
-              aria-controls="orders-filters-panel"
             >
-              <SlidersHorizontal size={16} />
-              <span>Filtros</span>
-              {activeFilterCount > 0 && (
-                <span className={layoutStyles.filtersBadge}>{activeFilterCount}</span>
-              )}
-            </button>
-            {filtersOpen ? (
-              <div
-                id="orders-filters-panel"
-                className={layoutStyles.filtersPanel}
-                role="dialog"
-                aria-label="Filtros de pedidos"
-              >
-                {/* Header */}
-                <div className={layoutStyles.filtersPanelHeader}>
-                  <h3 className={layoutStyles.filtersPanelTitle}>
-                    <ListFilter size={18} />
-                    <span>Filtros</span>
-                  </h3>
-                  <button
-                    type="button"
-                    className={layoutStyles.filtersPanelClose}
-                    onClick={() => setFiltersOpen(false)}
-                    aria-label="Fechar filtros"
-                  >
-                    <X size={18} />
-                  </button>
+              {/* Grupo: Período */}
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <Calendar size={16} aria-hidden />
+                  <span>Período</span>
                 </div>
-
-                {/* Body */}
-                <div className={layoutStyles.filtersPanelBody}>
-                  {/* Grupo: Período */}
-                  <div className={layoutStyles.filtersGroup}>
-                    <div className={layoutStyles.filtersGroupHeader}>
-                      <Calendar size={14} />
-                      <span>Período</span>
-                    </div>
-                    <div className={layoutStyles.filtersGroupContent}>
-                      <FilterSelect
-                        options={periodOptions}
-                        value={draftFilters.period}
-                        onChange={(value) => {
-                          const normalized = normalizePeriod(value);
+                <div className={layoutStyles.filtersGroupContent}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Período</span>
+                    <FilterSelect
+                      options={periodOptions}
+                      value={draftFilters.period}
+                      onChange={(value) => {
+                        const normalized = normalizePeriod(value);
+                        setDraftFilters((current) => ({
+                          ...current,
+                          period: normalized,
+                          status: normalized === "history" ? "ENTREGUE" : current.status,
+                        }));
+                      }}
+                      disabled={isPending}
+                      aria-label="Periodo"
+                    />
+                  </div>
+                  {draftFilters.period === "range" && (
+                    <div className={layoutStyles.rangeRow}>
+                      <input
+                        type="date"
+                        name="deliveryStart"
+                        value={draftFilters.deliveryStart}
+                        onChange={(event) =>
                           setDraftFilters((current) => ({
                             ...current,
-                            period: normalized,
-                            status: normalized === "history" ? "ENTREGUE" : current.status,
-                          }));
-                        }}
-                        disabled={isPending}
-                        aria-label="Periodo"
+                            deliveryStart: event.target.value,
+                          }))
+                        }
+                        className={layoutStyles.filterInputStyled}
+                        aria-label="Data inicial"
                       />
-                      {draftFilters.period === "range" && (
-                        <div className={layoutStyles.rangeRow}>
-                          <input
-                            type="date"
-                            name="deliveryStart"
-                            value={draftFilters.deliveryStart}
-                            onChange={(event) =>
-                              setDraftFilters((current) => ({
-                                ...current,
-                                deliveryStart: event.target.value,
-                              }))
-                            }
-                            className={layoutStyles.filterInputStyled}
-                            aria-label="Data inicial"
-                          />
-                          <span className={layoutStyles.rangeSeparator}>até</span>
-                          <input
-                            type="date"
-                            name="deliveryEnd"
-                            value={draftFilters.deliveryEnd}
-                            onChange={(event) =>
-                              setDraftFilters((current) => ({
-                                ...current,
-                                deliveryEnd: event.target.value,
-                              }))
-                            }
-                            className={layoutStyles.filterInputStyled}
-                            aria-label="Data final"
-                          />
-                        </div>
-                      )}
-                      {draftFilters.period === "history" && (
-                        <span className={layoutStyles.filtersHint}>
-                          Histórico exibe apenas pedidos entregues.
-                        </span>
-                      )}
+                      <span className={layoutStyles.rangeSeparator}>até</span>
+                      <input
+                        type="date"
+                        name="deliveryEnd"
+                        value={draftFilters.deliveryEnd}
+                        onChange={(event) =>
+                          setDraftFilters((current) => ({
+                            ...current,
+                            deliveryEnd: event.target.value,
+                          }))
+                        }
+                        className={layoutStyles.filterInputStyled}
+                        aria-label="Data final"
+                      />
                     </div>
-                  </div>
-
-                  <div className={layoutStyles.filtersDivider} />
-
-                  {/* Grupo: Status e Pendências */}
-                  <div className={layoutStyles.filtersGroup}>
-                    <div className={layoutStyles.filtersGroupHeader}>
-                      <AlertCircle size={14} />
-                      <span>Status e Pendências</span>
+                  )}
+                  {draftFilters.period === "history" && (
+                    <div className={layoutStyles.filtersHint}>
+                      Histórico exibe apenas pedidos entregues.
                     </div>
-                    <div className={layoutStyles.filtersRow}>
-                      <div className={layoutStyles.filterField}>
-                        <span className={layoutStyles.filterFieldLabel}>Status</span>
-                        <FilterSelect
-                          options={statusOptions}
-                          value={draftFilters.status}
-                          onChange={(value) =>
-                            setDraftFilters((current) => ({
-                              ...current,
-                              status: value,
-                            }))
-                          }
-                          disabled={isPending || draftFilters.period === "history"}
-                          aria-label="Status do pedido"
-                        />
-                      </div>
-                      <div className={layoutStyles.filterField}>
-                        <span className={layoutStyles.filterFieldLabel}>Pendências</span>
-                        <FilterSelect
-                          options={attentionOptions}
-                          value={draftFilters.attention}
-                          onChange={(value) =>
-                            setDraftFilters((current) => ({
-                              ...current,
-                              attention: normalizeAttention(value),
-                            }))
-                          }
-                          disabled={isPending}
-                          aria-label="Pendencias"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={layoutStyles.filtersDivider} />
-
-                  {/* Grupo: Tipo e Logística */}
-                  <div className={layoutStyles.filtersGroup}>
-                    <div className={layoutStyles.filtersGroupHeader}>
-                      <Package size={14} />
-                      <span>Tipo e Logística</span>
-                    </div>
-                    <div className={layoutStyles.filtersRow}>
-                      <div className={layoutStyles.filterField}>
-                        <span className={layoutStyles.filterFieldLabel}>Tipo</span>
-                        <FilterSelect
-                          options={orderTypeOptions}
-                          value={draftFilters.orderType}
-                          onChange={(value) =>
-                            setDraftFilters((current) => ({
-                              ...current,
-                              orderType: normalizeOrderType(value),
-                            }))
-                          }
-                          disabled={isPending}
-                          aria-label="Tipo de pedido"
-                        />
-                      </div>
-                      <div className={layoutStyles.filterField}>
-                        <span className={layoutStyles.filterFieldLabel}>Logística</span>
-                        <FilterSelect
-                          options={deliveryMethodOptions}
-                          value={draftFilters.deliveryMethod}
-                          onChange={(value) =>
-                            setDraftFilters((current) => ({
-                              ...current,
-                              deliveryMethod: normalizeDeliveryMethod(value),
-                            }))
-                          }
-                          disabled={isPending}
-                          aria-label="Logistica"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={layoutStyles.filtersDivider} />
-
-                  {/* Grupo: Ordenação */}
-                  <div className={layoutStyles.filtersGroup}>
-                    <div className={layoutStyles.filtersGroupHeader}>
-                      <ArrowUpDown size={14} />
-                      <span>Ordenação</span>
-                    </div>
-                    <div className={layoutStyles.filtersRow}>
-                      <div className={layoutStyles.filterField}>
-                        <span className={layoutStyles.filterFieldLabel}>Ordenar por</span>
-                        <FilterSelect
-                          options={sortOptions}
-                          value={draftFilters.sort}
-                          onChange={(value) =>
-                            setDraftFilters((current) => ({
-                              ...current,
-                              sort: normalizeSort(value),
-                            }))
-                          }
-                          disabled={isPending}
-                          aria-label="Ordenacao"
-                        />
-                      </div>
-                      <div className={layoutStyles.filterField}>
-                        <span className={layoutStyles.filterFieldLabel}>Itens/página</span>
-                        <FilterSelect
-                          options={pageSizes.map((size) => ({
-                            value: String(size),
-                            label: `${size} itens`,
-                          }))}
-                          value={String(draftFilters.pageSize)}
-                          onChange={(value) =>
-                            setDraftFilters((current) => ({
-                              ...current,
-                              pageSize: Number(value),
-                            }))
-                          }
-                          disabled={isPending}
-                          aria-label="Itens por pagina"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className={layoutStyles.filtersPanelFooter}>
-                  <button
-                    type="button"
-                    className={layoutStyles.filtersBtnClear}
-                    onClick={handleClearFilters}
-                    disabled={isPending}
-                  >
-                    Limpar tudo
-                  </button>
-                  <button
-                    type="button"
-                    className={layoutStyles.filtersBtnApply}
-                    onClick={handleApplyFilters}
-                    disabled={isPending}
-                  >
-                    Aplicar filtros
-                  </button>
+                  )}
                 </div>
               </div>
-            ) : null}
+
+              <div className={layoutStyles.filtersDivider} />
+
+              {/* Grupo: Status e Pendências */}
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <AlertCircle size={16} aria-hidden />
+                  <span>Status e Pendências</span>
+                </div>
+                <div className={layoutStyles.filtersRow}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Status</span>
+                    <FilterSelect
+                      options={statusOptions}
+                      value={draftFilters.status}
+                      onChange={(value) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          status: value,
+                        }))
+                      }
+                      disabled={isPending || draftFilters.period === "history"}
+                      aria-label="Status do pedido"
+                    />
+                  </div>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Pendências</span>
+                    <FilterSelect
+                      options={attentionOptions}
+                      value={draftFilters.attention}
+                      onChange={(value) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          attention: normalizeAttention(value),
+                        }))
+                      }
+                      disabled={isPending}
+                      aria-label="Pendencias"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className={layoutStyles.filtersDivider} />
+
+              {/* Grupo: Tipo e Logística */}
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <Package size={16} aria-hidden />
+                  <span>Tipo e Logística</span>
+                </div>
+                <div className={layoutStyles.filtersRow}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Tipo</span>
+                    <FilterSelect
+                      options={orderTypeOptions}
+                      value={draftFilters.orderType}
+                      onChange={(value) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          orderType: normalizeOrderType(value),
+                        }))
+                      }
+                      disabled={isPending}
+                      aria-label="Tipo de pedido"
+                    />
+                  </div>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Logística</span>
+                    <FilterSelect
+                      options={deliveryMethodOptions}
+                      value={draftFilters.deliveryMethod}
+                      onChange={(value) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          deliveryMethod: normalizeDeliveryMethod(value),
+                        }))
+                      }
+                      disabled={isPending}
+                      aria-label="Logistica"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className={layoutStyles.filtersDivider} />
+
+              {/* Grupo: Ordenação */}
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <ArrowUpDown size={16} aria-hidden />
+                  <span>Ordenação</span>
+                </div>
+                <div className={layoutStyles.filtersRow}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Ordenar por</span>
+                    <FilterSelect
+                      options={sortOptions}
+                      value={draftFilters.sort}
+                      onChange={(value) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          sort: normalizeSort(value),
+                        }))
+                      }
+                      disabled={isPending}
+                      aria-label="Ordenacao"
+                    />
+                  </div>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Itens/página</span>
+                    <FilterSelect
+                      options={pageSizes.map((size) => ({
+                        value: String(size),
+                        label: `${size} itens`,
+                      }))}
+                      value={String(draftFilters.pageSize)}
+                      onChange={(value) =>
+                        setDraftFilters((current) => ({
+                          ...current,
+                          pageSize: Number(value),
+                        }))
+                      }
+                      disabled={isPending}
+                      aria-label="Itens por pagina"
+                    />
+                  </div>
+                </div>
+              </div>
+            </FiltersPanel>
           </div>
           <Link
             href="/admin/orders/new"
@@ -771,4 +697,3 @@ export default function OrdersFilters({
     </div>
   );
 }
-

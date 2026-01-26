@@ -2,11 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, Package, Filter } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import FiltersPanel from "../_components/FiltersPanel.client";
+import FilterSelect from "./FilterSelect.client";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./products.module.css";
-import FilterSelect from "./FilterSelect.client";
 
 type CategoryOption = {
   id: string;
@@ -41,7 +42,6 @@ export default function ProductsFilters({
   const searchParamsString = searchParams.toString();
   const [isPending, startTransition] = useTransition();
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<number | null>(null);
 
   const categoryLookup = useMemo(() => {
@@ -53,20 +53,11 @@ export default function ProductsFilters({
   const currentActive = searchParams.get("active") ?? initialActive ?? "all";
   const currentStock = searchParams.get("stock") ?? initialStock ?? "";
   const currentSemSkuAtivo = searchParams.get("semSkuAtivo") ?? initialSemSkuAtivo ?? "";
-  const hasActiveFilters =
-    Boolean(currentQuery) ||
-    Boolean(currentCategory) ||
-    currentActive !== "all" ||
-    Boolean(currentStock) ||
-    currentSemSkuAtivo === "1";
 
-  const activeFilterCount = [
-    Boolean(currentQuery),
-    Boolean(currentCategory),
-    currentActive !== "all",
-    Boolean(currentStock),
-    currentSemSkuAtivo === "1",
-  ].filter(Boolean).length;
+  const [draftCategory, setDraftCategory] = useState(currentCategory);
+  const [draftActive, setDraftActive] = useState(currentActive);
+  const [draftStock, setDraftStock] = useState(currentStock);
+  const [draftSemSkuAtivo, setDraftSemSkuAtivo] = useState(currentSemSkuAtivo);
 
   const applyParams = useCallback(
     (updates: Record<string, string | null>) => {
@@ -100,21 +91,44 @@ export default function ProductsFilters({
   }, []);
 
   useEffect(() => {
-    if (!filtersOpen) return;
-    const handleClick = (event: MouseEvent) => {
-      if (!panelRef.current) return;
-      if (!panelRef.current.contains(event.target as Node)) {
-        setFiltersOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [filtersOpen]);
+    if (!filtersOpen) {
+      setDraftCategory(currentCategory);
+      setDraftActive(currentActive);
+      setDraftStock(currentStock);
+      setDraftSemSkuAtivo(currentSemSkuAtivo);
+    }
+  }, [filtersOpen, currentCategory, currentActive, currentStock, currentSemSkuAtivo]);
+
+  const handleApplyFilters = () => {
+    applyParams({
+      categoryId: draftCategory || "",
+      active: draftActive !== "all" ? draftActive : "",
+      stock: draftStock || "",
+      semSkuAtivo: draftSemSkuAtivo || "",
+    });
+    setFiltersOpen(false);
+  };
 
   const handleClearFilters = useCallback(() => {
     applyParams({ q: "", categoryId: "", active: "all", stock: "", semSkuAtivo: "", page: "1" });
     setFiltersOpen(false);
   }, [applyParams]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (currentCategory) count++;
+    if (currentActive !== "all") count++;
+    if (currentStock) count++;
+    if (currentSemSkuAtivo === "1") count++;
+    return count;
+  }, [currentCategory, currentActive, currentStock, currentSemSkuAtivo]);
+
+  const hasActiveFilters =
+    Boolean(currentQuery) ||
+    Boolean(currentCategory) ||
+    currentActive !== "all" ||
+    Boolean(currentStock) ||
+    currentSemSkuAtivo === "1";
 
   const chips = [
     currentQuery
@@ -192,31 +206,24 @@ export default function ProductsFilters({
               Limpar
             </button>
           ) : null}
-          <div className={layoutStyles.filtersWrap} ref={panelRef}>
-            <button
-              type="button"
-              className={`${styles.button} ${layoutStyles.filtersButton} ${
-                filtersOpen || hasActiveFilters ? layoutStyles.filtersButtonActive : ""
-              }`}
-              onClick={() => setFiltersOpen((open) => !open)}
-              aria-expanded={filtersOpen}
-              aria-controls="products-filters-panel"
+          <div className={layoutStyles.filtersWrap}>
+            <FiltersPanel
+              activeCount={activeFilterCount}
+              onApply={handleApplyFilters}
+              onClear={handleClearFilters}
+              syncMode="url"
+              isOpen={filtersOpen}
+              onClose={() => setFiltersOpen(false)}
+              onToggle={() => setFiltersOpen((o) => !o)}
             >
-              Filtros
-              {activeFilterCount > 0 ? (
-                <span className={layoutStyles.filtersBadge}>{activeFilterCount}</span>
-              ) : null}
-            </button>
-            {filtersOpen ? (
-              <div
-                id="products-filters-panel"
-                className={layoutStyles.filtersPanel}
-                role="dialog"
-                aria-label="Filtros de produtos"
-              >
-                <div className={layoutStyles.filtersGrid}>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Categoria</span>
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <Package size={16} aria-hidden />
+                  <span>Categoria</span>
+                </div>
+                <div className={layoutStyles.filtersGroupContent}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Categoria</span>
                     <FilterSelect
                       options={[
                         { value: "", label: "Todas categorias" },
@@ -225,60 +232,82 @@ export default function ProductsFilters({
                           label: category.label,
                         })),
                       ]}
-                      value={currentCategory}
-                      onChange={(value) => applyParams({ categoryId: value })}
+                      value={draftCategory}
+                      onChange={setDraftCategory}
                       disabled={isPending}
                       placeholder="Todas categorias"
                       aria-label="Categoria"
                     />
-                  </label>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Status</span>
+                  </div>
+                </div>
+              </div>
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <Filter size={16} aria-hidden />
+                  <span>Status</span>
+                </div>
+                <div className={layoutStyles.filtersGroupContent}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Status</span>
                     <FilterSelect
                       options={[
                         { value: "all", label: "Ativos e inativos" },
                         { value: "active", label: "Somente ativos" },
                         { value: "inactive", label: "Somente inativos" },
                       ]}
-                      value={currentActive}
-                      onChange={(value) => applyParams({ active: value })}
+                      value={draftActive}
+                      onChange={setDraftActive}
                       disabled={isPending}
                       placeholder="Ativos e inativos"
                       aria-label="Status"
                     />
-                  </label>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Estoque</span>
+                  </div>
+                </div>
+              </div>
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <span>Estoque</span>
+                </div>
+                <div className={layoutStyles.filtersGroupContent}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Estoque</span>
                     <FilterSelect
                       options={[
                         { value: "", label: "Todas" },
                         { value: "in", label: "Em estoque" },
                         { value: "out", label: "Fora de estoque" },
                       ]}
-                      value={currentStock}
-                      onChange={(value) => applyParams({ stock: value })}
+                      value={draftStock}
+                      onChange={setDraftStock}
                       disabled={isPending}
                       placeholder="Todas"
                       aria-label="Estoque"
                     />
-                  </label>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>SKU ativo</span>
+                  </div>
+                </div>
+              </div>
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <span>SKU ativo</span>
+                </div>
+                <div className={layoutStyles.filtersGroupContent}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>SKU ativo</span>
                     <FilterSelect
                       options={[
                         { value: "", label: "Todas" },
                         { value: "1", label: "Somente sem SKU ativo" },
                       ]}
-                      value={currentSemSkuAtivo}
-                      onChange={(value) => applyParams({ semSkuAtivo: value })}
+                      value={draftSemSkuAtivo}
+                      onChange={setDraftSemSkuAtivo}
                       disabled={isPending}
                       placeholder="Todas"
                       aria-label="SKU ativo"
                     />
-                  </label>
+                  </div>
                 </div>
               </div>
-            ) : null}
+            </FiltersPanel>
           </div>
         </div>
         <Link

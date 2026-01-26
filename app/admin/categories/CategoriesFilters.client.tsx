@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search, Filter, Layers, Package } from "lucide-react";
+import FiltersPanel from "../_components/FiltersPanel.client";
+import FilterSelect from "../orders/FilterSelect.client";
 import { createCategoryAction } from "./actions";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./categories.module.css";
@@ -41,14 +43,17 @@ export default function CategoriesFilters({
   const [modalError, setModalError] = useState(
     error === "nome" && openModalOnLoad ? "Informe o nome da categoria." : ""
   );
-  const panelRef = useRef<HTMLDivElement | null>(null);
   const debounceRef = useRef<number | null>(null);
 
   const currentQuery = searchParams.get("q") ?? initialQuery;
-  const currentParentId = searchParams.get("parentId") ?? initialParentId ?? "";
   const currentActive = searchParams.get("active") ?? initialActive ?? "all";
   const currentKind = searchParams.get("kind") ?? initialKind ?? "all";
   const currentHas = searchParams.get("has") ?? initialHas ?? "all";
+
+  const [draftActive, setDraftActive] = useState(currentActive);
+  const [draftKind, setDraftKind] = useState(currentKind);
+  const [draftHas, setDraftHas] = useState(currentHas);
+
   const activeFilterCount =
     (currentQuery.trim() ? 1 : 0) +
     (currentActive !== "all" ? 1 : 0) +
@@ -77,7 +82,6 @@ export default function CategoriesFilters({
   const closeModal = useCallback(() => {
     setModalOpen(false);
     setModalError("");
-    // Se o modal foi aberto via URL (?modal=1&parentId=...), limpe a URL ao fechar.
     applyParams({ modal: "", parentId: "", error: "" });
   }, [applyParams]);
 
@@ -90,16 +94,12 @@ export default function CategoriesFilters({
   }, []);
 
   useEffect(() => {
-    if (!filtersOpen) return;
-    const handleClick = (event: MouseEvent) => {
-      if (!panelRef.current) return;
-      if (!panelRef.current.contains(event.target as Node)) {
-        setFiltersOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [filtersOpen]);
+    if (!filtersOpen) {
+      setDraftActive(currentActive);
+      setDraftKind(currentKind);
+      setDraftHas(currentHas);
+    }
+  }, [filtersOpen, currentActive, currentKind, currentHas]);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -115,7 +115,7 @@ export default function CategoriesFilters({
   useEffect(() => {
     if (openModalOnLoad) {
       setModalOpen(true);
-      // Se o modal abriu via URL (ex.: + Subcategoria), pré-selecionar o pai.
+      const currentParentId = searchParams.get("parentId") ?? initialParentId ?? "";
       setModalParentId(currentParentId);
       if (error === "nome") setModalError("Informe o nome da categoria.");
       if (error === "duplicado")
@@ -125,14 +125,36 @@ export default function CategoriesFilters({
       if (error === "pai_inativo")
         setModalError("Não é possível ativar: a categoria pai está inativa.");
     }
-  }, [currentParentId, error, openModalOnLoad]);
+  }, [error, openModalOnLoad, initialParentId, searchParams]);
+
+  const handleApplyFilters = () => {
+    applyParams({
+      active: draftActive !== "all" ? draftActive : "",
+      kind: draftKind !== "all" ? draftKind : "",
+      has: draftHas !== "all" ? draftHas : "",
+    });
+    setFiltersOpen(false);
+  };
+
+  const handleClearFilters = () => {
+    applyParams({ q: "", active: "all", kind: "all", has: "all" });
+    setFiltersOpen(false);
+  };
+
+  const filterActiveCount = useMemo(() => {
+    let count = 0;
+    if (currentActive !== "all") count++;
+    if (currentKind !== "all") count++;
+    if (currentHas !== "all") count++;
+    return count;
+  }, [currentActive, currentKind, currentHas]);
 
   return (
     <div className={layoutStyles.toolbarBlock}>
       <div className={layoutStyles.toolbar}>
         <div className={layoutStyles.toolbarMain}>
           <div className={layoutStyles.searchWrap}>
-            <Search size={18} className={layoutStyles.searchIcon} />
+            <Search size={18} className={layoutStyles.searchIcon} aria-hidden />
             <input
               type="text"
               name="q"
@@ -158,107 +180,95 @@ export default function CategoriesFilters({
               className={layoutStyles.searchInput}
             />
           </div>
-          <div className={layoutStyles.filtersWrap} ref={panelRef}>
+          {hasActiveFilters ? (
             <button
               type="button"
-              className={`${styles.button} ${layoutStyles.filtersButton} ${
-                filtersOpen || hasActiveFilters ? layoutStyles.filtersButtonActive : ""
-              }`}
-              onClick={() => setFiltersOpen((open) => !open)}
-              aria-expanded={filtersOpen}
-              aria-controls="categories-filters-panel"
+              className={`${styles.button} ${layoutStyles.clearButton}`}
+              onClick={handleClearFilters}
             >
-              Filtros
-              {activeFilterCount > 0 ? (
-                <span className={layoutStyles.filtersCountBadge}>
-                  {activeFilterCount}
-                </span>
-              ) : null}
+              Limpar
             </button>
-            {filtersOpen ? (
-              <div
-                id="categories-filters-panel"
-                className={layoutStyles.filtersPanel}
-                role="dialog"
-                aria-label="Filtros de categorias"
-              >
-                <div className={layoutStyles.filtersHeader}>
-                  <div className={layoutStyles.filtersHeaderTitle}>Filtros</div>
-                  <button
-                    type="button"
-                    className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-                    onClick={() => setFiltersOpen(false)}
-                  >
-                    Fechar
-                  </button>
+          ) : null}
+          <div className={layoutStyles.filtersWrap}>
+            <FiltersPanel
+              activeCount={filterActiveCount}
+              onApply={handleApplyFilters}
+              onClear={handleClearFilters}
+              syncMode="url"
+              isOpen={filtersOpen}
+              onClose={() => setFiltersOpen(false)}
+              onToggle={() => setFiltersOpen((o) => !o)}
+            >
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <Filter size={16} aria-hidden />
+                  <span>Status</span>
                 </div>
-
-                <div className={layoutStyles.filtersGrid}>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Status</span>
-                    <select
-                      name="active"
-                      value={currentActive}
-                      onChange={(e) => applyParams({ active: e.target.value })}
-                      className={styles.control}
+                <div className={layoutStyles.filtersGroupContent}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Status</span>
+                    <FilterSelect
+                      options={[
+                        { value: "all", label: "Ativas e inativas" },
+                        { value: "active", label: "Somente ativas" },
+                        { value: "inactive", label: "Somente inativas" },
+                      ]}
+                      value={draftActive}
+                      onChange={setDraftActive}
                       disabled={isPending}
-                    >
-                      <option value="all">Ativas e inativas</option>
-                      <option value="active">Somente ativas</option>
-                      <option value="inactive">Somente inativas</option>
-                    </select>
-                  </label>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Tipo</span>
-                    <select
-                      name="kind"
-                      value={currentKind}
-                      onChange={(e) => applyParams({ kind: e.target.value })}
-                      className={styles.control}
-                      disabled={isPending}
-                    >
-                      <option value="all">Todas</option>
-                      <option value="root">Somente raiz</option>
-                      <option value="leaf">Somente folhas</option>
-                    </select>
-                  </label>
-                  <label className={styles.field}>
-                    <span className={styles.fieldLabel}>Produtos</span>
-                    <select
-                      name="has"
-                      value={currentHas}
-                      onChange={(e) => applyParams({ has: e.target.value })}
-                      className={styles.control}
-                      disabled={isPending}
-                    >
-                      <option value="all">Todas</option>
-                      <option value="direct">Com produtos diretos</option>
-                      <option value="any">Com produtos (total)</option>
-                    </select>
-                  </label>
-                </div>
-
-                <div className={layoutStyles.filtersFooter}>
-                  <button
-                    type="button"
-                    className={`${styles.button} ${styles.buttonGhost}`}
-                    onClick={() =>
-                      applyParams({ q: "", active: "all", kind: "all", has: "all" })
-                    }
-                    disabled={!hasActiveFilters || isPending}
-                  >
-                    Limpar
-                  </button>
-                  <button
-                    type="button"
-                    className={`${styles.button} ${styles.buttonSecondary}`}
-                    onClick={() => setFiltersOpen(false)}
-                  >
-                    Aplicar
-                  </button>
+                      placeholder="Ativas e inativas"
+                      aria-label="Status"
+                    />
+                  </div>
                 </div>
               </div>
-            ) : null}
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <Layers size={16} aria-hidden />
+                  <span>Tipo</span>
+                </div>
+                <div className={layoutStyles.filtersGroupContent}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Tipo</span>
+                    <FilterSelect
+                      options={[
+                        { value: "all", label: "Todas" },
+                        { value: "root", label: "Somente raiz" },
+                        { value: "leaf", label: "Somente folhas" },
+                      ]}
+                      value={draftKind}
+                      onChange={setDraftKind}
+                      disabled={isPending}
+                      placeholder="Todas"
+                      aria-label="Tipo"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
+                  <Package size={16} aria-hidden />
+                  <span>Produtos</span>
+                </div>
+                <div className={layoutStyles.filtersGroupContent}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Produtos</span>
+                    <FilterSelect
+                      options={[
+                        { value: "all", label: "Todas" },
+                        { value: "direct", label: "Com produtos diretos" },
+                        { value: "any", label: "Com produtos (total)" },
+                      ]}
+                      value={draftHas}
+                      onChange={setDraftHas}
+                      disabled={isPending}
+                      placeholder="Todas"
+                      aria-label="Produtos"
+                    />
+                  </div>
+                </div>
+              </div>
+            </FiltersPanel>
           </div>
         </div>
         <button
@@ -266,10 +276,8 @@ export default function CategoriesFilters({
           className={`${styles.button} ${styles.buttonPrimary}`}
           onClick={() => {
             setModalError("");
-            // Ao abrir pelo botão "Nova categoria", começar como categoria raiz.
             setModalParentId("");
             setModalOpen(true);
-            // Também garante que a URL não ficou presa em parentId/modal anteriores.
             applyParams({ modal: "", parentId: "", error: "" });
           }}
         >
@@ -377,7 +385,7 @@ export default function CategoriesFilters({
                 onClick={() => applyParams({ q: "" })}
                 aria-label="Remover filtro de busca"
               >
-                x
+                ×
               </button>
             </span>
           ) : null}
@@ -390,7 +398,7 @@ export default function CategoriesFilters({
                 onClick={() => applyParams({ active: "all" })}
                 aria-label="Remover filtro de status"
               >
-                x
+                ×
               </button>
             </span>
           ) : null}
@@ -403,7 +411,7 @@ export default function CategoriesFilters({
                 onClick={() => applyParams({ kind: "all" })}
                 aria-label="Remover filtro de tipo"
               >
-                x
+                ×
               </button>
             </span>
           ) : null}
@@ -416,7 +424,7 @@ export default function CategoriesFilters({
                 onClick={() => applyParams({ has: "all" })}
                 aria-label="Remover filtro de produtos"
               >
-                x
+                ×
               </button>
             </span>
           ) : null}

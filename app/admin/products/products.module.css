@@ -195,6 +195,45 @@
   gap: var(--space-4);
 }
 
+.filtersGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.filtersGroupHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.filtersGroupHeader svg {
+  opacity: 0.7;
+}
+
+.filtersGroupContent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.filterField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filterFieldLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
 /* ===== CUSTOM SELECT ===== */
 .customSelect {
   position: relative;
