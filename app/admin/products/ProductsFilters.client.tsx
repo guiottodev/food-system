@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./products.module.css";
+import FilterSelect from "./FilterSelect.client";
 
 type CategoryOption = {
   id: string;
@@ -17,6 +18,8 @@ type ProductsFiltersProps = {
   initialQuery: string;
   initialCategoryId: string;
   initialActive: string;
+  initialStock?: string;
+  initialSemSkuAtivo?: string;
 };
 
 const ACTIVE_LABELS: Record<string, string> = {
@@ -29,6 +32,8 @@ export default function ProductsFilters({
   initialQuery,
   initialCategoryId,
   initialActive,
+  initialStock = "",
+  initialSemSkuAtivo = "",
 }: ProductsFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -44,23 +49,34 @@ export default function ProductsFilters({
   }, [categories]);
 
   const currentQuery = searchParams.get("q") ?? initialQuery;
-  const currentCategory = searchParams.get("categoryId") ?? initialCategoryId;
-  const currentActive = searchParams.get("active") ?? initialActive;
+  const currentCategory = searchParams.get("categoryId") ?? initialCategoryId ?? "";
+  const currentActive = searchParams.get("active") ?? initialActive ?? "all";
+  const currentStock = searchParams.get("stock") ?? initialStock ?? "";
+  const currentSemSkuAtivo = searchParams.get("semSkuAtivo") ?? initialSemSkuAtivo ?? "";
   const hasActiveFilters =
     Boolean(currentQuery) ||
     Boolean(currentCategory) ||
-    currentActive !== "all";
+    currentActive !== "all" ||
+    Boolean(currentStock) ||
+    currentSemSkuAtivo === "1";
 
   const activeFilterCount = [
     Boolean(currentQuery),
     Boolean(currentCategory),
     currentActive !== "all",
+    Boolean(currentStock),
+    currentSemSkuAtivo === "1",
   ].filter(Boolean).length;
 
   const applyParams = useCallback(
     (updates: Record<string, string | null>) => {
+      const filterKeys = ["q", "categoryId", "active", "stock", "semSkuAtivo"];
+      if (Object.keys(updates).some((k) => filterKeys.includes(k))) {
+        updates = { ...updates, page: "1" };
+      }
       const params = new URLSearchParams(searchParamsString);
       Object.entries(updates).forEach(([key, value]) => {
+        if (value === undefined || value === null) return;
         if (!value || value === "all") {
           params.delete(key);
         } else {
@@ -96,7 +112,7 @@ export default function ProductsFilters({
   }, [filtersOpen]);
 
   const handleClearFilters = useCallback(() => {
-    applyParams({ q: "", categoryId: "", active: "all" });
+    applyParams({ q: "", categoryId: "", active: "all", stock: "", semSkuAtivo: "", page: "1" });
     setFiltersOpen(false);
   }, [applyParams]);
 
@@ -121,6 +137,14 @@ export default function ProductsFilters({
           label: `Status: ${ACTIVE_LABELS[currentActive] ?? "Selecionado"}`,
           onRemove: () => applyParams({ active: "all" }),
         }
+      : null,
+    currentStock === "in"
+      ? { key: "stock", label: "Em estoque", onRemove: () => applyParams({ stock: "" }) }
+      : currentStock === "out"
+      ? { key: "stock", label: "Fora de estoque", onRemove: () => applyParams({ stock: "" }) }
+      : null,
+    currentSemSkuAtivo === "1"
+      ? { key: "semSkuAtivo", label: "Sem SKU ativo", onRemove: () => applyParams({ semSkuAtivo: "" }) }
       : null,
   ].filter(Boolean) as Array<{
     key: string;
@@ -193,38 +217,64 @@ export default function ProductsFilters({
                 <div className={layoutStyles.filtersGrid}>
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>Categoria</span>
-                    <select
-                      name="categoryId"
+                    <FilterSelect
+                      options={[
+                        { value: "", label: "Todas categorias" },
+                        ...categories.map((category) => ({
+                          value: category.id,
+                          label: category.label,
+                        })),
+                      ]}
                       value={currentCategory}
-                      onChange={(event) =>
-                        applyParams({ categoryId: event.target.value })
-                      }
-                      className={styles.control}
+                      onChange={(value) => applyParams({ categoryId: value })}
                       disabled={isPending}
-                    >
-                      <option value="">Todas categorias</option>
-                      {categories.map((category) => (
-                        <option key={category.id} value={category.id}>
-                          {category.label}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Todas categorias"
+                      aria-label="Categoria"
+                    />
                   </label>
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>Status</span>
-                    <select
-                      name="active"
+                    <FilterSelect
+                      options={[
+                        { value: "all", label: "Ativos e inativos" },
+                        { value: "active", label: "Somente ativos" },
+                        { value: "inactive", label: "Somente inativos" },
+                      ]}
                       value={currentActive}
-                      onChange={(event) =>
-                        applyParams({ active: event.target.value })
-                      }
-                      className={styles.control}
+                      onChange={(value) => applyParams({ active: value })}
                       disabled={isPending}
-                    >
-                      <option value="all">Ativos e inativos</option>
-                      <option value="active">Somente ativos</option>
-                      <option value="inactive">Somente inativos</option>
-                    </select>
+                      placeholder="Ativos e inativos"
+                      aria-label="Status"
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>Estoque</span>
+                    <FilterSelect
+                      options={[
+                        { value: "", label: "Todas" },
+                        { value: "in", label: "Em estoque" },
+                        { value: "out", label: "Fora de estoque" },
+                      ]}
+                      value={currentStock}
+                      onChange={(value) => applyParams({ stock: value })}
+                      disabled={isPending}
+                      placeholder="Todas"
+                      aria-label="Estoque"
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span className={styles.fieldLabel}>SKU ativo</span>
+                    <FilterSelect
+                      options={[
+                        { value: "", label: "Todas" },
+                        { value: "1", label: "Somente sem SKU ativo" },
+                      ]}
+                      value={currentSemSkuAtivo}
+                      onChange={(value) => applyParams({ semSkuAtivo: value })}
+                      disabled={isPending}
+                      placeholder="Todas"
+                      aria-label="SKU ativo"
+                    />
                   </label>
                 </div>
               </div>
@@ -233,8 +283,9 @@ export default function ProductsFilters({
         </div>
         <Link
           href="/admin/products/new"
-          className={`${styles.button} ${styles.buttonPrimary}`}
+          className={`${styles.button} ${styles.buttonPrimary} ${layoutStyles.buttonWithIcon}`}
         >
+          <Plus size={18} aria-hidden />
           Novo produto
         </Link>
       </div>

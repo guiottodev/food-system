@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
@@ -177,4 +178,119 @@ export async function updateSkuPriceAction(
     data: { priceCurrent: price },
   });
   return { ok: true };
+}
+
+export async function toggleProductAction(productId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireAdminSession();
+  if (!productId || typeof productId !== "string" || !productId.trim()) {
+    return { ok: false, error: "Produto inválido" };
+  }
+  const product = await prisma.product.findUnique({
+    where: { id: productId.trim() },
+    select: { id: true, isActive: true },
+  });
+  if (!product) {
+    return { ok: false, error: "Produto não encontrado" };
+  }
+  await prisma.product.update({
+    where: { id: productId.trim() },
+    data: { isActive: !product.isActive },
+  });
+  revalidatePath("/admin/products");
+  return { ok: true };
+}
+
+export async function duplicateProductAction(productId: string): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
+  await requireAdminSession();
+  if (!productId || typeof productId !== "string" || !productId.trim()) {
+    return { ok: false, error: "Produto inválido" };
+  }
+  const product = await prisma.product.findUnique({
+    where: { id: productId.trim() },
+    include: {
+      skus: true,
+      images: { orderBy: { sortOrder: "asc" } },
+    },
+  });
+  if (!product) {
+    return { ok: false, error: "Produto não encontrado" };
+  }
+  const newProduct = await prisma.$transaction(async (tx) => {
+    const created = await tx.product.create({
+      data: {
+        name: product.name + " (cópia)",
+        categoryId: product.categoryId,
+        descriptionLong: product.descriptionLong,
+        leadTime: product.leadTime,
+        isActive: product.isActive,
+        imageMainUrl: product.imageMainUrl,
+      },
+    });
+    if (product.images.length) {
+      await tx.productImage.createMany({
+        data: product.images.map((img) => ({
+          productId: created.id,
+          url: img.url,
+          sortOrder: img.sortOrder,
+        })),
+      });
+    }
+    for (const sku of product.skus) {
+      await tx.sku.create({
+        data: {
+          productId: created.id,
+          displayName: sku.displayName,
+          sizeText: sku.sizeText,
+          flavorText: sku.flavorText,
+          isFrozen: sku.isFrozen,
+          unitLabel: sku.unitLabel,
+          unitType: sku.unitType,
+          quantityStep: sku.quantityStep,
+          minQty: sku.minQty,
+          priceCurrent: sku.priceCurrent,
+          cost: sku.cost,
+          attributesJson: sku.attributesJson,
+          isActive: sku.isActive,
+        },
+      });
+    }
+    return created;
+  });
+  revalidatePath("/admin/products");
+  redirect(`/admin/products/${newProduct.id}`);
+}
+
+export async function deleteProductAction(productId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireAdminSession();
+  if (!productId || typeof productId !== "string" || !productId.trim()) {
+    return { ok: false, error: "Produto inválido" };
+  }
+  const product = await prisma.product.findUnique({
+    where: { id: productId.trim() },
+    select: { id: true, skus: { select: { id: true } } },
+  });
+  if (!product) {
+    return { ok: false, error: "Produto não encontrado" };
+  }
+  const skuIds = product.skus.map((s) => s.id);
+  if (skuIds.length) {
+    const inUse = await prisma.orderItem.count({
+      where: { skuId: { in: skuIds } },
+    });
+    if (inUse > 0) {
+      return { ok: false, error: "Produto em uso em pedidos" };
+    }
+  }
+  await prisma.$transaction(async (tx) => {
+    for (const sku of product.skus) {
+      await tx.productionConsumption.deleteMany({ where: { skuId: sku.id } });
+      await tx.productionSessionItem.deleteMany({ where: { skuId: sku.id } });
+      await tx.inventoryMovement.deleteMany({ where: { skuId: sku.id } });
+      await tx.capacityRule.deleteMany({ where: { skuId: sku.id } });
+      await tx.sku.delete({ where: { id: sku.id } });
+    }
+    await tx.product.delete({ where: { id: productId.trim() } });
+  });
+  revalidatePath("/admin/products");
+  redirect("/admin/products");
 }
