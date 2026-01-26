@@ -6,7 +6,7 @@ import {
   updateSkuAction,
 } from "./actions";
 import ProductTabs from "./ProductTabs";
-import ProductDetailsForm from "./ProductDetailsForm";
+import ProductDetailsForm from "./ProductDetailsForm.client";
 import ProductImagesForm from "./ProductImagesForm";
 import ProductSkusSection from "./ProductSkusSection.client";
 import styles from "../../_styles/adminPrimitives.module.css";

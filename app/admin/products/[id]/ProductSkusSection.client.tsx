@@ -8,11 +8,12 @@ import {
   type SkuAttributeInput,
 } from "@/lib/validation/skuAttributes";
 import {
-  formatSkuPriceInput,
   validateSkuFormValues,
   type SkuFormErrors,
   type SkuFormValues,
 } from "@/lib/skuFormValidation";
+import Select, { type SelectOption } from "../../_components/Select";
+import Switch from "../../_components/Switch";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "./productDetail.module.css";
 import { InlineNotice } from "../../design-system/InlineNotice.client";
@@ -129,13 +130,35 @@ export default function ProductSkusSection({
   const [unitTypeValue, setUnitTypeValue] = useState(
     () => initialSku?.unitType ?? "UNIDADE"
   );
+  // Formatar preço para exibição (formato brasileiro: "10,50")
+  const formatPriceForDisplay = (value: number): string => {
+    return value.toFixed(2).replace(".", ",");
+  };
+
+  // Formatar entrada de preço (máscara monetária brasileira)
+  // Aceita digitação natural: "10" → "0,10", "100" → "1,00", "1000" → "10,00"
+  const formatPriceInput = (value: string): string => {
+    const numbers = value.replace(/\D/g, "");
+    if (!numbers) return "";
+    const num = Number(numbers) / 100;
+    return num.toFixed(2).replace(".", ",");
+  };
+
+  // Converter string formatada para número
+  const parsePriceFromDisplay = (value: string): number => {
+    const normalized = value.replace(",", ".");
+    const parsed = parseFloat(normalized);
+    return isNaN(parsed) ? 0 : parsed;
+  };
+
   const [priceValue, setPriceValue] = useState(() =>
-    initialSku ? initialSku.priceCurrent.toFixed(2) : ""
+    initialSku ? formatPriceForDisplay(initialSku.priceCurrent) : ""
   );
   const [isActiveValue, setIsActiveValue] = useState(
     () => initialSku?.isActive ?? true
   );
   const [fieldErrors, setFieldErrors] = useState<SkuFormErrors>({});
+  const unitTypeSelectRef = useRef<HTMLDivElement | null>(null);
   const [attributeRows, setAttributeRows] = useState<SkuAttributeInput[]>(
     () => getInitialAttributes(initialSku)
   );
@@ -145,7 +168,6 @@ export default function ProductSkusSection({
     "all" | "active" | "inactive"
   >("all");
   const nameInputRef = useRef<HTMLInputElement | null>(null);
-  const unitTypeRef = useRef<HTMLSelectElement | null>(null);
   const priceRef = useRef<HTMLInputElement | null>(null);
   const valueInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
@@ -188,7 +210,7 @@ export default function ProductSkusSection({
     setDisplayName(nextSku?.displayName ?? "");
     setUnitTypeValue(nextSku?.unitType ?? "UNIDADE");
     setPriceValue(
-      nextSku?.priceCurrent ? nextSku.priceCurrent.toFixed(2) : ""
+      nextSku?.priceCurrent ? formatPriceForDisplay(nextSku.priceCurrent) : ""
     );
     setIsActiveValue(nextSku?.isActive ?? true);
     setFieldErrors({});
@@ -296,7 +318,7 @@ export default function ProductSkusSection({
       return;
     }
     if (nextErrors.unitType) {
-      unitTypeRef.current?.focus();
+      unitTypeSelectRef.current?.querySelector('button')?.focus();
       return;
     }
     if (nextErrors.price) {
@@ -638,25 +660,24 @@ export default function ProductSkusSection({
               <div className={detailStyles.skuRequiredRow}>
                 <label className={styles.field}>
                   Tipo de venda
-                  <select
-                    ref={unitTypeRef}
+                  <Select
                     name="unitType"
+                    options={unitTypeOptions.map((opt) => ({
+                      value: opt.value,
+                      label: opt.label,
+                    }))}
                     value={unitTypeValue}
-                    onChange={(event) => {
-                      setUnitTypeValue(event.target.value);
+                    onChange={(value) => {
+                      setUnitTypeValue(value);
                       if (fieldErrors.unitType) {
                         setFieldErrors((prev) => ({ ...prev, unitType: "" }));
                       }
                     }}
-                    className={styles.control}
+                    variant={fieldErrors.unitType ? "error" : "default"}
                     aria-invalid={Boolean(fieldErrors.unitType)}
-                  >
-                    {unitTypeOptions.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                    aria-label="Tipo de venda"
+                    containerRef={unitTypeSelectRef}
+                  />
                   {fieldErrors.unitType ? (
                     <span className={styles.textError}>
                       {fieldErrors.unitType}
@@ -665,24 +686,33 @@ export default function ProductSkusSection({
                 </label>
                 <label className={styles.field}>
                   Preco atual
-                  <input
-                    ref={priceRef}
-                    name="priceCurrent"
-                    inputMode="decimal"
-                    required
-                    value={priceValue}
-                    onChange={(event) => {
-                      setPriceValue(event.target.value);
-                      if (fieldErrors.price) {
-                        setFieldErrors((prev) => ({ ...prev, price: "" }));
-                      }
-                    }}
+                  <div className={styles.moneyInputWrapper}>
+                    <span className={styles.moneyPrefix}>R$</span>
+                    <input
+                      ref={priceRef}
+                      type="text"
+                      inputMode="decimal"
+                      required
+                      value={priceValue}
+                      onChange={(event) => {
+                        const formatted = formatPriceInput(event.target.value);
+                        setPriceValue(formatted);
+                        if (fieldErrors.price) {
+                          setFieldErrors((prev) => ({ ...prev, price: "" }));
+                        }
+                      }}
                     onBlur={(event) => {
-                      const formatted = formatSkuPriceInput(event.target.value);
+                      const formatted = formatPriceInput(event.target.value);
                       setPriceValue(formatted);
                     }}
-                    className={styles.control}
-                    aria-invalid={Boolean(fieldErrors.price)}
+                      className={`${styles.control} ${styles.moneyInput}`}
+                      aria-invalid={Boolean(fieldErrors.price)}
+                    />
+                  </div>
+                  <input
+                    type="hidden"
+                    name="priceCurrent"
+                    value={priceValue ? parsePriceFromDisplay(priceValue).toFixed(2) : ""}
                   />
                   {fieldErrors.price ? (
                     <span className={styles.textError}>
@@ -691,15 +721,22 @@ export default function ProductSkusSection({
                   ) : null}
                 </label>
               </div>
-              <label className={`${styles.choiceRow} ${detailStyles.skuActiveRow}`}>
-                <input
-                  type="checkbox"
-                  name="isActive"
+              <div className={`${styles.switchRow} ${detailStyles.skuActiveRow}`}>
+                <Switch
                   checked={isActiveValue}
-                  onChange={(event) => setIsActiveValue(event.target.checked)}
+                  onChange={setIsActiveValue}
+                  label="Ativo"
+                  aria-label="SKU ativo"
+                  id={`sku-active-switch-${initialSkuId || "new"}`}
                 />
-                <span className={styles.choiceLabel}>Ativo</span>
-              </label>
+                {isActiveValue ? (
+                  <input
+                    type="hidden"
+                    name="isActive"
+                    value="on"
+                  />
+                ) : null}
+              </div>
               <details className={detailStyles.skuAdvanced}>
                 <summary className={detailStyles.skuAdvancedSummary}>
                   Avancado (opcional)

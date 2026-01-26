@@ -256,6 +256,11 @@
   color: var(--text-primary);
 }
 
+.filtersPanelClose:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 /* Body */
 .filtersPanelBody {
   padding: var(--space-4);

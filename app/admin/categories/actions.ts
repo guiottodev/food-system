@@ -126,3 +126,46 @@ export async function updateCategoryAction(formData: FormData) {
 
   redirect("/admin/categories?notice=updated");
 }
+
+export async function createCategoryActionJson(formData: FormData) {
+  await requireAdminSession();
+  const name = parseText(formData.get("name"));
+  const description = parseText(formData.get("description"));
+  const parentId = parseText(formData.get("parentId"));
+  const isActive = formData.get("isActive") === "true";
+
+  if (!name) {
+    return { error: "Informe o nome da categoria." };
+  }
+
+  try {
+    if (parentId) {
+      const parent = await prisma.category.findUnique({
+        where: { id: parentId },
+        select: { id: true, isActive: true },
+      });
+      if (!parent || !parent.isActive) {
+        return { error: "Categoria pai inválida (ou inativa)." };
+      }
+    }
+
+    const category = await prisma.category.create({
+      data: {
+        name,
+        description: description || null,
+        parentId: parentId || null,
+        isActive,
+      },
+      select: {
+        id: true,
+        name: true,
+        parentId: true,
+        isActive: true,
+      },
+    });
+
+    return { category };
+  } catch {
+    return { error: "Já existe uma categoria com esse nome nesse nível." };
+  }
+}

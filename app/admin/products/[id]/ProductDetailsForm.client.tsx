@@ -1,3 +1,8 @@
+"use client";
+
+import { useState } from "react";
+import Switch from "../../_components/Switch";
+import Select, { type SelectOption } from "../../_components/Select";
 import { updateProductAction } from "./actions";
 import styles from "../../_styles/adminPrimitives.module.css";
 
@@ -23,6 +28,14 @@ export default function ProductDetailsForm({
   categories,
   errorMessage,
 }: ProductDetailsFormProps) {
+  const [isActive, setIsActive] = useState(product.isActive);
+  const [categoryId, setCategoryId] = useState(product.categoryId);
+
+  const categoryOptions: SelectOption[] = categories.map((category) => ({
+    value: category.id,
+    label: category.label,
+  }));
+
   return (
     <section className={styles.panel}>
       <div className={styles.panelHeader}>
@@ -40,32 +53,36 @@ export default function ProductDetailsForm({
             required
             className={styles.control}
           />
-          <select
+          <Select
             name="categoryId"
-            defaultValue={product.categoryId}
+            options={categoryOptions}
+            value={categoryId}
+            onChange={setCategoryId}
             required
-            className={styles.control}
-          >
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.label}
-              </option>
-            ))}
-          </select>
+            aria-label="Categoria"
+          />
           <textarea
             name="descriptionLong"
             defaultValue={product.descriptionLong || ""}
             placeholder="Descricao longa"
             className={`${styles.control} ${styles.controlTextarea} ${styles.fieldFull}`}
           ></textarea>
-          <label className={styles.choiceRow}>
-            <input
-              type="checkbox"
-              name="isActive"
-              defaultChecked={product.isActive}
+          <div className={styles.switchRow}>
+            <Switch
+              checked={isActive}
+              onChange={setIsActive}
+              label="Ativo"
+              aria-label="Produto ativo"
+              id="product-active-switch-edit"
             />
-            <span className={styles.choiceLabel}>Ativo</span>
-          </label>
+            {isActive ? (
+              <input
+                type="hidden"
+                name="isActive"
+                value="on"
+              />
+            ) : null}
+          </div>
           <button
             type="submit"
             className={`${styles.button} ${styles.buttonPrimary}`}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createProductAction } from "../actions";
 import { buildCategoryOptions } from "@/lib/domain/categoryHierarchy";
+import ProductsNewForm from "./ProductsNewForm.client";
 import styles from "../../_styles/adminPrimitives.module.css";
 
 type ProductsNewSearchParams = {
@@ -18,10 +19,19 @@ export default async function ProductsNewPage({
     orderBy: [{ parentId: "asc" }, { name: "asc" }],
     select: { id: true, name: true, parentId: true, isActive: true },
   });
+  
+  // Categorias folha para o select (apenas para produtos)
   const leafOptions = buildCategoryOptions({
     categories,
     includeInactive: false,
     leavesOnly: true,
+  });
+  
+  // Todas as categorias ativas para usar como pais na modal
+  const allActiveCategories = buildCategoryOptions({
+    categories,
+    includeInactive: false,
+    leavesOnly: false,
   });
 
   return (
@@ -49,96 +59,13 @@ export default async function ProductsNewPage({
         </p>
       ) : null}
 
-      <form action={createProductAction} className={styles.stackMd}>
-        <section className={`${styles.panel} ${styles.panelPrimary}`}>
-          <div className={styles.panelHeader}>
-            <h2>Essencial</h2>
-          </div>
-          <div className={styles.panelBody}>
-            <div className={styles.formGrid}>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Nome</span>
-                <input
-                  name="name"
-                  placeholder="Nome do produto"
-                  required
-                  className={styles.control}
-                />
-              </label>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Categoria</span>
-                <select name="categoryId" required className={styles.control}>
-                  <option value="">Selecione a categoria</option>
-                  {leafOptions.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-            <label className={styles.choiceRow}>
-              <input type="checkbox" name="isActive" defaultChecked />
-              <span className={styles.choiceLabel}>Ativo</span>
-            </label>
-            <p className={styles.textMuted}>
-              Cadastre o primeiro SKU agora (obrigatorio para vender).
-            </p>
-          </div>
-        </section>
-
-        <section className={`${styles.panel} ${styles.panelSecondary}`}>
-          <div className={styles.panelHeader}>
-            <h2>Primeiro SKU (obrigatorio)</h2>
-          </div>
-          <div className={styles.panelBody}>
-            <div className={styles.formGrid}>
-              <label className={`${styles.field} ${styles.fieldFull}`}>
-                <span className={styles.fieldLabel}>Nome exibido</span>
-                <input
-                  name="skuDisplayName"
-                  placeholder="Nome do SKU"
-                  required
-                  className={styles.control}
-                />
-              </label>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Tipo de venda</span>
-                <select name="skuUnitType" required className={styles.control}>
-                  <option value="UNIDADE">UNIDADE</option>
-                  <option value="KG">KG</option>
-                </select>
-              </label>
-              <label className={styles.field}>
-                <span className={styles.fieldLabel}>Preco atual</span>
-                <input
-                  name="skuPriceCurrent"
-                  placeholder="0,00"
-                  inputMode="decimal"
-                  required
-                  className={styles.control}
-                />
-              </label>
-            </div>
-            <label className={styles.choiceRow}>
-              <input type="checkbox" name="skuIsActive" defaultChecked />
-              <span className={styles.choiceLabel}>Ativo</span>
-            </label>
-            <p className={styles.textMuted}>
-              Voce podera editar mais detalhes do SKU depois de criar o produto.
-            </p>
-          </div>
-        </section>
-
-        <div className={styles.panelFooter}>
-          <button
-            type="submit"
-            className={`${styles.button} ${styles.buttonPrimary}`}
-          >
-            Criar produto
-          </button>
-        </div>
-      </form>
+      <ProductsNewForm
+        categories={leafOptions}
+        parentCategories={allActiveCategories}
+        allCategories={categories}
+        error={sp?.error}
+        createProductAction={createProductAction}
+      />
     </main>
   );
 }

@@ -1035,6 +1035,87 @@
   cursor: pointer;
 }
 
+/* Switch Row */
+.switchRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+}
+
+/* Select Styled */
+.selectStyled {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right var(--space-3) center;
+  background-size: 16px;
+  padding-right: calc(var(--space-3) + 16px + var(--space-2));
+  cursor: pointer;
+  border-radius: var(--radius-sm) !important;
+}
+
+.selectStyled:hover:not(:disabled) {
+  border-color: var(--border-strong);
+}
+
+.selectStyled:focus-visible {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
+}
+
+/* Estilização das opções do select (limitado pelo navegador) */
+.selectStyled option {
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-regular);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+}
+
+.selectStyled option:hover,
+.selectStyled option:focus,
+.selectStyled option:checked {
+  background: rgba(var(--action-primary-rgb), 0.08);
+  color: var(--action-primary);
+}
+
+.selectStyled option:disabled {
+  color: var(--text-muted);
+  background: var(--bg-subtle);
+}
+
+/* Money Input */
+.moneyInputWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.moneyPrefix {
+  position: absolute;
+  left: var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  color: var(--text-secondary);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.moneyInput {
+  padding-left: calc(var(--space-3) + 32px);
+  font-variant-numeric: tabular-nums;
+}
+
+.moneyInput::placeholder {
+  color: var(--text-muted);
+}
+
 .choiceLabel {
   font-size: var(--text-sm);
   color: var(--text-secondary);
