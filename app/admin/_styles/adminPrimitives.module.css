@@ -918,8 +918,17 @@
 }
 
 /* ===== DEPRECATED: Use Chip component from app/admin/_components/Chip.tsx ===== */
-/* Estas classes são mantidas apenas para compatibilidade durante a migração. */
-/* Novos componentes devem usar Chip, não estas classes. */
+/* 
+ * ⚠️ DEPRECATED: Estas classes são mantidas apenas para compatibilidade durante a migração.
+ * 
+ * STATUS: Design System v2 migrado (PR10 completo)
+ * - Novos componentes devem usar Chip de app/admin/_components/Chip.tsx
+ * - Classes abaixo serão removidas em versão futura
+ * - Se você está criando novo código, NÃO use estas classes
+ * 
+ * Classes mantidas temporariamente:
+ * - .badge, .badgeNeutral, .badgeSuccess, .badgeWarning, .badgeDanger, .badgeInfo
+ */
 .badge {
   display: inline-flex;
   align-items: center;
@@ -962,8 +971,17 @@
 }
 
 /* ===== DEPRECATED: Use Input component from app/admin/_components/Input.tsx ===== */
-/* Estas classes são mantidas apenas para compatibilidade durante a migração. */
-/* Novos componentes devem usar Input, não estas classes. */
+/* 
+ * ⚠️ DEPRECATED: Estas classes são mantidas apenas para compatibilidade durante a migração.
+ * 
+ * STATUS: Design System v2 migrado (PR10 completo)
+ * - Novos componentes devem usar Input de app/admin/_components/Input.tsx
+ * - Classes abaixo serão removidas em versão futura
+ * - Se você está criando novo código, NÃO use estas classes
+ * 
+ * Classes mantidas temporariamente:
+ * - .control, .controlTextarea, .choiceRow, .choiceLabel, .choiceHelp
+ */
 .control {
   height: 44px;
   padding: 0 var(--space-4);
@@ -1028,8 +1046,18 @@
 }
 
 /* ===== DEPRECATED: Use Button component from app/admin/_components/Button.tsx ===== */
-/* Estas classes são mantidas apenas para compatibilidade durante a migração. */
-/* Novos componentes devem usar Button, não estas classes. */
+/* 
+ * ⚠️ DEPRECATED: Estas classes são mantidas apenas para compatibilidade durante a migração.
+ * 
+ * STATUS: Design System v2 migrado (PR10 completo)
+ * - Novos componentes devem usar Button de app/admin/_components/Button.tsx
+ * - Classes abaixo serão removidas em versão futura
+ * - Se você está criando novo código, NÃO use estas classes
+ * 
+ * Classes mantidas temporariamente:
+ * - .button, .buttonPrimary, .buttonSecondary, .buttonOutline, .buttonGhost, .buttonDanger
+ * - .buttonSm, .buttonLg
+ */
 .button {
   display: inline-flex;
   align-items: center;

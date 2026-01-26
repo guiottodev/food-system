@@ -109,6 +109,8 @@ export default function OrdersTableClient({
       ),
       sortable: false,
       visible: (d: "comfortable" | "compact") => d === "comfortable",
+      mobilePriority: "high" as const,
+      truncation: "ellipsis" as const,
     },
     {
       key: "method",
@@ -126,6 +128,7 @@ export default function OrdersTableClient({
       },
       sortable: false,
       visible: (d: "comfortable" | "compact") => d === "comfortable",
+      mobilePriority: "low" as const,
     },
     {
       key: "status",
@@ -142,6 +145,7 @@ export default function OrdersTableClient({
       ),
       sortable: true,
       visible: true,
+      mobilePriority: "high" as const,
     },
     {
       key: "delivery",
@@ -157,6 +161,7 @@ export default function OrdersTableClient({
       },
       sortable: true,
       visible: true,
+      mobilePriority: "high" as const,
     },
     {
       key: "total",
@@ -167,6 +172,8 @@ export default function OrdersTableClient({
       align: "right" as const,
       sortable: false,
       visible: true,
+      mobilePriority: "low" as const,
+      numeric: true,
     },
   ];
 

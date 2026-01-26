@@ -181,6 +181,8 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
       ),
       sortable: true,
       visible: true,
+      mobilePriority: "high" as const,
+      truncation: "line-clamp-2" as const,
     },
     {
       key: "category",
@@ -233,6 +235,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
       },
       sortable: false,
       visible: (d: "comfortable" | "compact") => d === "comfortable",
+      mobilePriority: "high" as const,
     },
     {
       key: "price",
@@ -248,6 +251,8 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
       },
       sortable: false,
       visible: true,
+      mobilePriority: "low" as const,
+      numeric: true,
     },
   ];
 

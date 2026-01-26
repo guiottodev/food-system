@@ -25,6 +25,8 @@ export default function CustomersTable({ entries }: { entries: CustomerListEntry
       ),
       sortable: false,
       visible: true,
+      mobilePriority: "high" as const,
+      truncation: "ellipsis" as const,
     },
     {
       key: "phone",
@@ -34,6 +36,8 @@ export default function CustomersTable({ entries }: { entries: CustomerListEntry
       ),
       sortable: false,
       visible: true,
+      mobilePriority: "high" as const,
+      numeric: true,
     },
     {
       key: "lastOrder",
@@ -43,6 +47,7 @@ export default function CustomersTable({ entries }: { entries: CustomerListEntry
       ),
       sortable: false,
       visible: (d: "comfortable" | "compact") => d === "comfortable",
+      mobilePriority: "high" as const,
     },
     {
       key: "orderCount",
@@ -53,6 +58,8 @@ export default function CustomersTable({ entries }: { entries: CustomerListEntry
       align: "right" as const,
       sortable: false,
       visible: true,
+      mobilePriority: "low" as const,
+      numeric: true,
     },
   ];
 

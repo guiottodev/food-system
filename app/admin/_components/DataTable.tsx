@@ -15,6 +15,12 @@ export interface ColumnDef<T> {
   align?: "left" | "right" | "center";
   width?: string;
   visible?: boolean | ((density: "comfortable" | "compact") => boolean);
+  /** Prioridade para mobile: "high" sempre visível, "low" colapsa no expand */
+  mobilePriority?: "high" | "low";
+  /** Classe CSS para truncation: "ellipsis" ou "line-clamp-2" ou "line-clamp-3" */
+  truncation?: "ellipsis" | "line-clamp-2" | "line-clamp-3";
+  /** Se true, usa tabular-nums para alinhamento numérico */
+  numeric?: boolean;
 }
 
 export interface DataTableProps<T> {
@@ -102,9 +108,21 @@ export default function DataTable<T extends { id: string }>({
     []
   );
 
+  // Em mobile, mostrar apenas colunas de alta prioridade (ou todas se não especificado)
+  const [isMobile, setIsMobile] = React.useState(false);
+  
+  React.useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
   const visibleColumns = columns.filter((col) => {
     if (col.visible === false) return false;
     if (typeof col.visible === "function") return col.visible(density);
+    // Em mobile, mostrar apenas colunas de alta prioridade
+    if (isMobile && col.mobilePriority === "low") return false;
     return true;
   });
 
@@ -216,16 +234,27 @@ export default function DataTable<T extends { id: string }>({
                       </button>
                     </td>
                   )}
-                  {visibleColumns.map((column) => (
-                    <td
-                      key={column.key}
-                      className={`${styles.td} ${
-                        column.align === "right" ? styles.tdRight : column.align === "center" ? styles.tdCenter : ""
-                      }`}
-                    >
-                      {column.accessor ? column.accessor(row) : String((row as any)[column.key] ?? "")}
-                    </td>
-                  ))}
+                  {visibleColumns.map((column) => {
+                    const truncationClass = column.truncation === "ellipsis" 
+                      ? styles.textEllipsis 
+                      : column.truncation === "line-clamp-2"
+                      ? styles.textLineClamp2
+                      : column.truncation === "line-clamp-3"
+                      ? styles.textLineClamp3
+                      : "";
+                    const numericClass = column.numeric ? styles.tabularNums : "";
+                    
+                    return (
+                      <td
+                        key={column.key}
+                        className={`${styles.td} ${
+                          column.align === "right" ? styles.tdRight : column.align === "center" ? styles.tdCenter : ""
+                        } ${truncationClass} ${numericClass}`}
+                      >
+                        {column.accessor ? column.accessor(row) : String((row as any)[column.key] ?? "")}
+                      </td>
+                    );
+                  })}
                   {hasActions && (
                     <td className={styles.tdActions}>
                       <div

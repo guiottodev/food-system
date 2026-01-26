@@ -54,6 +54,8 @@ export default function CapacityTable({ rows, sort, dir }: CapacityTableProps) {
       ),
       sortable: true,
       visible: true,
+      mobilePriority: "high" as const,
+      truncation: "ellipsis" as const,
     },
     {
       key: "categoryName",
@@ -63,6 +65,7 @@ export default function CapacityTable({ rows, sort, dir }: CapacityTableProps) {
       ),
       sortable: true,
       visible: (d: "comfortable" | "compact") => d === "comfortable",
+      mobilePriority: "low" as const,
     },
     {
       key: "available",
@@ -75,6 +78,8 @@ export default function CapacityTable({ rows, sort, dir }: CapacityTableProps) {
       align: "right" as const,
       sortable: true,
       visible: true,
+      mobilePriority: "low" as const,
+      numeric: true,
     },
     {
       key: "demand",
@@ -87,6 +92,8 @@ export default function CapacityTable({ rows, sort, dir }: CapacityTableProps) {
       align: "right" as const,
       sortable: true,
       visible: true,
+      mobilePriority: "low" as const,
+      numeric: true,
     },
     {
       key: "gap",
@@ -103,6 +110,8 @@ export default function CapacityTable({ rows, sort, dir }: CapacityTableProps) {
       align: "right" as const,
       sortable: true,
       visible: true,
+      mobilePriority: "high" as const,
+      numeric: true,
     },
   ];
 

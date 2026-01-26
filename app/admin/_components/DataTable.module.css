@@ -220,20 +220,64 @@
   }
 }
 
-/* Responsividade Mobile */
+/* Responsividade Mobile - Responsive Table Spec */
 @media (max-width: 640px) {
   .tableContainer {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   .th,
   .td {
     padding: 12px var(--space-3);
     font-size: var(--text-xs);
+    min-height: 44px; /* Touch target mínimo */
   }
 
   .tableCompact .th,
   .tableCompact .td {
     padding: 8px var(--space-3);
+    min-height: 44px; /* Touch target mínimo mesmo em compact */
   }
+
+  /* Garantir touch targets de 44px para botões */
+  .expandButton {
+    min-width: 44px;
+    min-height: 44px;
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Espaçamento mínimo entre elementos */
+  .td > * + * {
+    margin-left: var(--space-2);
+  }
+}
+
+/* Classes de Truncation */
+.textEllipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.textLineClamp2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+.textLineClamp3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/* Números nunca truncam, usam tabular-nums */
+.tabularNums {
+  font-variant-numeric: tabular-nums;
 }

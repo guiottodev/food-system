@@ -874,6 +874,14 @@
   gap: 2px;
 }
 
+/* Responsive Table Spec: Cliente truncado em mobile */
+@media (max-width: 640px) {
+  .customerName {
+    max-width: 120px;
+    display: block;
+  }
+}
+
 .customerName {
   font-weight: 600;
   color: var(--text-primary);
