@@ -1,76 +1,143 @@
 :root {
-  /* Typography */
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+  /* ============================================
+     TYPOGRAPHY
+     ============================================ */
+  
+  /* Font Families */
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+  
+  /* Font Sizes */
   --text-xs: 12px;
   --text-sm: 14px;
-  --text-md: 15px;
   --text-base: 16px;
   --text-lg: 18px;
   --text-xl: 20px;
   --text-2xl: 24px;
   --text-3xl: 30px;
+  
+  /* Font Weights */
   --fw-regular: 400;
   --fw-medium: 500;
   --fw-semibold: 600;
   --fw-bold: 700;
-  --lh-tight: 1.3;
+  
+  /* Line Heights */
+  --lh-tight: 1.2;
   --lh-normal: 1.5;
   --lh-relaxed: 1.65;
-  --tracking-tight: -0.02em;
-
-  /* Colors - Base */
-  --bg-app: #f8fafc;
-  --bg-surface: #ffffff;
-  --bg-subtle: #f1f5f9;
-  --bg-muted: #e2e8f0;
-  --bg-elevated: #ffffff;
-
-  /* Colors - Text */
-  --text-primary: #0f172a;
-  --text-secondary: #475569;
-  --text-muted: #94a3b8;
-  --text-inverse: #ffffff;
-
-  /* Colors - Border */
-  --border: #e2e8f0;
-  --border-strong: #cbd5e1;
-  --border-subtle: #f1f5f9;
-
-  /* Colors - Focus */
-  --focus-ring: #2563eb;
-  --focus-ring-alpha: rgba(37, 99, 235, 0.15);
-
-  /* Colors - Action */
-  --action-primary: #2563eb;
-  --action-primary-hover: #1d4ed8;
-  --action-secondary: #f1f5f9;
-  --action-secondary-hover: #e2e8f0;
-
-  /* Colors - State */
-  --state-success: #16a34a;
-  --state-success-bg: #dcfce7;
-  --state-success-text: #166534;
-  --state-success-border: #bbf7d0;
-
-  --state-warning: #d97706;
-  --state-warning-bg: #fef3c7;
-  --state-warning-text: #92400e;
-  --state-warning-border: #fde68a;
-
-  --state-error: #dc2626;
-  --state-error-bg: #fee2e2;
-  --state-error-text: #991b1b;
-  --state-error-border: #fecaca;
-
-  --state-info: #0284c7;
-  --state-info-bg: #e0f2fe;
+  
+  /* Letter Spacing */
+  --tracking-tight: -0.01em;
+  
+  /* ============================================
+     COLORS - BASE
+     ============================================ */
+  
+  --bg-app: #FBFAF8;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F5F5F4;
+  --bg-muted: #EDEAE6;
+  
+  /* ============================================
+     COLORS - TEXT
+     ============================================ */
+  
+  --text-primary: #1C1917;
+  --text-secondary: #4A4A4A;
+  --text-muted: #78716C;
+  --text-inverse: #FFFFFF;
+  
+  /* ============================================
+     COLORS - BORDERS
+     ============================================ */
+  
+  --border: #E7E5E4;
+  --border-strong: #D6D3D1;
+  --border-focus: #B45309;
+  
+  /* ============================================
+     COLORS - ACTION (CTA)
+     ============================================ */
+  
+  /* CTA Real (botões primários, ações críticas) */
+  --action-primary: #B45309;
+  --action-primary-hover: #92400E;
+  --action-primary-active: #78350F;
+  --action-primary-disabled: #D6D3D1;
+  --action-primary-rgb: 180, 83, 9;
+  --action-primary-text: #FFFFFF;
+  
+  /* Brand Âmbar (assinatura visual, acentos, não-CTAs) */
+  --brand-amber: #D97706;
+  --brand-amber-light: #F59E0B;
+  --brand-amber-rgb: 217, 119, 6;
+  
+  /* Botões secundários */
+  --action-secondary: #FFFFFF;
+  --action-secondary-hover: #F5F5F4;
+  --action-ghost: transparent;
+  
+  /* ============================================
+     COLORS - STATES
+     ============================================ */
+  
+  --state-success: #059669;
+  --state-success-bg: #ECFDF5;
+  --state-success-text: #047857;
+  
+  --state-warning: #CA8A04;
+  --state-warning-bg: #FFFBEB;
+  --state-warning-text: #92400E;
+  
+  --state-error: #DC2626;
+  --state-error-bg: #FEF2F2;
+  --state-error-text: #991B1B;
+  
+  --state-info: #0EA5E9;
+  --state-info-bg: #F0F9FF;
   --state-info-text: #075985;
-  --state-info-border: #bae6fd;
-
+  
   --opacity-disabled: 0.5;
-
-  /* Spacing (8pt grid) */
+  
+  /* ============================================
+     COLORS - STATUS DE PEDIDO
+     ============================================ */
+  
+  --status-rascunho-bg: #F1F5F9;
+  --status-rascunho-text: #64748B;
+  
+  --status-confirmado-bg: #FFF7ED;
+  --status-confirmado-text: #B45309;
+  
+  --status-em_producao-bg: #FEF3C7;
+  --status-em_producao-text: #B45309;
+  
+  --status-pronto-bg: #D1FAE5;
+  --status-pronto-text: #047857;
+  
+  --status-entregue-bg: #DCFCE7;
+  --status-entregue-text: #15803D;
+  
+  --status-cancelado-bg: #FEE2E2;
+  --status-cancelado-text: #B91C1C;
+  
+  /* ============================================
+     COLORS - PENDÊNCIAS E ALERTAS
+     ============================================ */
+  
+  /* Pendências fortes (bloqueios) */
+  --attention-strong-bg: var(--state-error-bg);
+  --attention-strong-text: var(--state-error);
+  
+  /* Alertas fracos (atenções) */
+  --attention-weak-bg: var(--state-warning-bg);
+  --attention-weak-text: var(--state-warning);
+  
+  /* ============================================
+     SPACING (8pt grid)
+     ============================================ */
+  
   --space-0: 0;
   --space-1: 4px;
   --space-2: 8px;
@@ -81,33 +148,40 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
-
-  /* Radius */
-  --radius-xs: 4px;
+  --space-16: 64px;
+  
+  /* ============================================
+     RADIUS (4 níveis apenas)
+     ============================================ */
+  
   --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
   --radius-full: 9999px;
-
-  /* Shadows */
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.04);
-  --shadow-focus: 0 0 0 3px var(--focus-ring-alpha);
-
-  /* Motion */
-  --duration-fast: 150ms;
+  
+  /* ============================================
+     SHADOWS (4 níveis apenas)
+     ============================================ */
+  
+  --shadow-xs: 0 1px 1px rgba(0, 0, 0, 0.04);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 6px 12px rgba(0, 0, 0, 0.08);
+  --shadow-focus: 0 0 0 3px rgba(217, 119, 6, 0.3);
+  
+  /* ============================================
+     MOTION
+     ============================================ */
+  
+  --duration-fast: 100ms;
   --duration-normal: 200ms;
   --duration-slow: 300ms;
   --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
-  --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-out: cubic-bezier(0, 0, 0.2, 1);
-
-  /* Layout */
+  
+  /* ============================================
+     LAYOUT
+     ============================================ */
+  
   --content-max: 1200px;
   --sidebar-width: 240px;
   --header-height: 64px;

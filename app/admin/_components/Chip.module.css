@@ -1,0 +1,63 @@
+.chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 12px;
+  border-radius: var(--radius-full);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-medium);
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.chipCompact {
+  padding: 2px 10px;
+  font-size: 11px;
+}
+
+/* Variante: Status */
+.chipStatus {
+  /* Cores serão aplicadas via classes específicas de status */
+}
+
+.chipStatusRASCUNHO {
+  background: var(--status-rascunho-bg);
+  color: var(--status-rascunho-text);
+}
+
+.chipStatusCONFIRMADO {
+  background: var(--status-confirmado-bg);
+  color: var(--status-confirmado-text);
+}
+
+.chipStatusEM_PRODUCAO {
+  background: var(--status-em_producao-bg);
+  color: var(--status-em_producao-text);
+}
+
+.chipStatusPRONTO {
+  background: var(--status-pronto-bg);
+  color: var(--status-pronto-text);
+}
+
+.chipStatusENTREGUE {
+  background: var(--status-entregue-bg);
+  color: var(--status-entregue-text);
+}
+
+.chipStatusCANCELADO {
+  background: var(--status-cancelado-bg);
+  color: var(--status-cancelado-text);
+}
+
+/* Variante: Attention Strong */
+.chipAttentionStrong {
+  background: var(--attention-strong-bg);
+  color: var(--attention-strong-text);
+}
+
+/* Variante: Attention Weak */
+.chipAttentionWeak {
+  background: var(--attention-weak-bg);
+  color: var(--attention-weak-text);
+}
