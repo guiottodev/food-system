@@ -1,6 +1,7 @@
 # Inventário do Sistema - Design System v2 Premium
 
 **Data**: Janeiro 2026  
+**Última atualização**: 26 de Janeiro de 2026  
 **Objetivo**: Mapear completamente o repositório para criar um DESIGN_SYSTEM.md v2 premium e implementável
 
 > **Nota**: Este inventário foi criado para informar o DESIGN_SYSTEM.md v2, que incorpora a proposta "Design System v2 – Friendly Pro SaaS". Consulte também [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) para a especificação completa do design system.
@@ -15,7 +16,7 @@ Este inventário mapeia completamente o repositório para informar o DESIGN_SYST
 - **Stack de UI**: Next.js 16 + React 19 + CSS Modules (sem Tailwind/shadcn/Radix)
 - **14 inconsistências visuais** identificadas entre telas (seção 12.2)
 - **11 telas principais** mapeadas com seus componentes (seção 3)
-- **10 componentes base** existentes (Botões, Badges, Inputs, Cards, Tabelas, Modal, Drawer, Popover, Toast, Select)
+- **13 componentes base** existentes (Botões, Badges, Inputs, Cards, Tabelas, Modal, Drawer, Popover, Toast, Select reutilizável, Switch, Campo Monetário, CategoryModal)
 - **Sistema de estados** de pedido e pendências documentado (seção 5)
 - **Padrões de tabela e filtros** analisados (seções 6-7)
 - **Acessibilidade** parcialmente implementada (foco, ARIA, teclado) - seção 8
@@ -382,36 +383,55 @@ app/
 
 ### 2.10 Select Customizado
 
-**Localização**: 
-- [`app/admin/orders/FilterSelect.client.tsx`](app/admin/orders/FilterSelect.client.tsx)
-- [`app/admin/products/FilterSelect.client.tsx`](app/admin/products/FilterSelect.client.tsx)
+**Componente Reutilizável (NOVO - Janeiro 2026)**:
+- [`app/admin/_components/Select.tsx`](app/admin/_components/Select.tsx) - Componente reutilizável
+- [`app/admin/_components/Select.module.css`](app/admin/_components/Select.module.css) - Estilos
 
 **Componente React**:
 ```tsx
-<FilterSelect
+import Select, { type SelectOption } from "../../_components/Select";
+
+<Select
   options={Array<{value: string, label: string}>}
   value={string}
   onChange={(value: string) => void}
+  name?: string
   disabled?: boolean
+  required?: boolean
   placeholder?: string
   "aria-label"?: string
+  "aria-invalid"?: boolean
+  variant?: "default" | "error"
+  density?: "comfortable" | "compact"
 />
 ```
 
-**Estilos**: 
-- Orders: [`app/admin/orders/orders.module.css`](app/admin/orders/orders.module.css) (linhas 456-579)
-- Products: [`app/admin/products/products.module.css`](app/admin/products/products.module.css) (linhas 196-319)
-
 **Especificações**:
-- Altura: 36px (orders) vs 38px (products) - **INCONSISTÊNCIA**
-- Padding-right: `var(--space-8)` (32px) para seta
-- Dropdown: Sombra `--shadow-lg`, z-index 50
-- Animação: `dropdownIn` 150ms ease
+- Altura: 44px (comfortable) / 36px (compact)
+- Border-radius: `var(--radius-sm)` (6px)
+- Dropdown: Border-radius `var(--radius-md)` (10px), sombra `--shadow-md`, z-index 60
+- Animação: `selectDropdownIn` 150ms ease
+- Ícone: ChevronDown (lucide-react), posicionado absolutamente à direita
+- Visual: Bordas arredondadas, lista dropdown estilizada
 
 **Acessibilidade**:
 - `aria-haspopup="listbox"`, `aria-expanded`, `role="listbox"`, `role="option"`, `aria-selected`
-- Fecha com Escape
+- Navegação por teclado: Enter/Space (abrir), Arrow Up/Down (navegar), Escape (fechar)
 - Fecha ao clicar fora
+- Hidden input para formulários (com `name` e `required`)
+
+**Uso Atual**:
+- Formulários de produtos (categoria, tipo de venda)
+- Formulários de edição de produto e SKU
+- Substitui selects nativos para manter consistência visual
+
+**Componentes Específicos (Legacy)**:
+- [`app/admin/orders/FilterSelect.client.tsx`](app/admin/orders/FilterSelect.client.tsx) - Para filtros
+- [`app/admin/products/FilterSelect.client.tsx`](app/admin/products/FilterSelect.client.tsx) - Para filtros
+
+**Estilos Legacy**: 
+- Orders: [`app/admin/orders/orders.module.css`](app/admin/orders/orders.module.css) (linhas 456-579)
+- Products: [`app/admin/products/products.module.css`](app/admin/products/products.module.css) (linhas 246-369)
 
 ---
 
@@ -523,7 +543,8 @@ app/
 **Componentes**:
 - `ProductTabs` - [`app/admin/products/[id]/ProductTabs.tsx`](app/admin/products/[id]/ProductTabs.tsx)
 - `ProductSkusSection` - [`app/admin/products/[id]/ProductSkusSection.client.tsx`](app/admin/products/[id]/ProductSkusSection.client.tsx)
-- `ProductDetailsForm` - [`app/admin/products/[id]/ProductDetailsForm.tsx`](app/admin/products/[id]/ProductDetailsForm.tsx)
+- `ProductDetailsForm` - [`app/admin/products/[id]/ProductDetailsForm.client.tsx`](app/admin/products/[id]/ProductDetailsForm.client.tsx) (client-side com Switch e Select)
+- `ProductsNewForm` - [`app/admin/products/new/ProductsNewForm.client.tsx`](app/admin/products/new/ProductsNewForm.client.tsx) (client-side com Switch, Select e campo monetário)
 - `ProductImagesForm` - [`app/admin/products/[id]/ProductImagesForm.tsx`](app/admin/products/[id]/ProductImagesForm.tsx)
 
 **Estilos**: [`app/admin/products/[id]/productDetail.module.css`](app/admin/products/[id]/productDetail.module.css)
@@ -1094,6 +1115,22 @@ const attentionOptions = [
 **Paginação**:
 - Similar a pedidos
 - Inclui PageSizeSelect
+
+**Criação de Produto (`/admin/products/new`)**:
+- **Componentes premium**:
+  - Switch para ativo/inativo (produto e SKU)
+  - Select customizado para categoria e tipo de venda
+  - Campo monetário com máscara brasileira (R$ 0,00) para preço
+- **Modal de categoria**: Botão "Nova" ao lado do select permite criar categoria diretamente
+- **Atualização automática**: Após criar categoria, lista é atualizada e categoria selecionada automaticamente
+- **Formulário client-side**: `ProductsNewForm.client.tsx` para suportar componentes interativos
+
+**Edição de Produto (`/admin/products/[id]`)**:
+- **Componentes premium**:
+  - Switch para ativo/inativo
+  - Select customizado para categoria
+- **Formulário client-side**: `ProductDetailsForm.client.tsx`
+- **Seção de SKUs**: Switch para ativo/inativo, Select para tipo de venda, campo monetário para preço
 
 ### 9.3 Categorias (`/admin/categories`)
 

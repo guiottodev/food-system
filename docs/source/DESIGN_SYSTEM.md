@@ -3,6 +3,7 @@
 
 **Versão**: 2.0 Final  
 **Data**: Janeiro 2026  
+**Última atualização**: 26 de Janeiro de 2026  
 **Status**: Aprovado e em implementação
 
 > Este documento é a **constituição** do design system. Todas as decisões aqui são **obrigatórias** e **não negociáveis** sem revisão formal. O objetivo não é "deixar bonito": é criar uma base que torne o sistema previsível, reduza erros e ansiedade, e deixe cada tela coerente e comercialmente premium.
@@ -538,10 +539,15 @@ Todos os valores abaixo são **obrigatórios**. Não criar variações.
 - Inputs de busca têm ícone à esquerda com `padding-left: 40px`
 - Ícone: 18px, cor `--text-muted`
 
-#### Select Customizado
-- Opções: Mesmo tamanho que inputs
-- Menu: Sombra `--shadow-md`, radius `--radius-md`
+#### Select Customizado (Componente Reutilizável)
+- **Localização**: `app/admin/_components/Select.tsx`
+- Opções: Mesmo tamanho que inputs (44px comfortable / 36px compact)
+- Menu: Sombra `--shadow-md`, radius `--radius-md` (10px), z-index 60
+- Visual: Bordas arredondadas, lista dropdown totalmente estilizada
 - Comportamento: `aria-selected`, teclado completo (setas, Enter, Escape)
+- Integração: Hidden input para formulários (com `name` e `required`)
+- Variantes: `default`, `error` (para validação)
+- Densidades: `comfortable` (padrão), `compact` (apenas tabelas)
 
 ### 5.3 Badge / Chip
 
@@ -967,6 +973,78 @@ interface DataTableProps<T> {
 
 #### Acessibilidade
 - `aria-live="polite"` para que screen readers anunciem a mensagem
+
+### 5.9 Switch (Toggle Premium)
+
+**Localização**: `app/admin/_components/Switch.tsx`
+
+#### Especificações
+- **Track**: 44px largura × 24px altura
+- **Thumb**: 20px × 20px (com sombra `--shadow-xs`)
+- **Motion**: `var(--duration-normal)` (200ms), `var(--ease-out)`
+- **Cores**:
+  - Checked: `--action-primary` (#B45309)
+  - Unchecked: `--bg-subtle` (#F5F5F4)
+  - Focus: `--border-focus` + `--shadow-focus`
+
+#### Props
+```typescript
+interface SwitchProps {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label?: string;
+  aria-label: string;
+  id?: string;
+  disabled?: boolean;
+}
+```
+
+#### Acessibilidade
+- `role="switch"`, `aria-checked`, `aria-label`
+- Navegação por teclado: Enter/Space para alternar
+- Focus visível com anel âmbar (`--shadow-focus`)
+
+#### Uso
+- Substitui checkboxes nativos em formulários
+- Ativo/inativo de produtos e SKUs
+- Sempre usa visual premium (não checkbox nativo)
+
+### 5.10 Campo Monetário
+
+**Localização**: `app/admin/_styles/adminPrimitives.module.css`
+
+#### Estrutura
+```tsx
+<div className={styles.moneyInputWrapper}>
+  <span className={styles.moneyPrefix}>R$</span>
+  <input
+    type="text"
+    inputMode="decimal"
+    className={`${styles.control} ${styles.moneyInput}`}
+    value={priceValue}
+    onChange={handlePriceChange}
+  />
+</div>
+```
+
+#### Especificações
+- **Prefixo "R$"**: Posicionado absolutamente à esquerda
+- **Padding-left**: `calc(var(--space-3) + 32px)` para acomodar prefixo
+- **Formatação**: Máscara brasileira (vírgula como separador decimal)
+- **Digitação natural**: 
+  - "10" → "0,10"
+  - "100" → "1,00"
+  - "1000" → "10,00"
+- **Font**: `font-variant-numeric: tabular-nums` para alinhamento numérico
+
+#### Validação
+- Aceita apenas números
+- Converte automaticamente para formato brasileiro
+- Envia valor numérico (ponto como separador) via hidden input
+
+#### Uso
+- Preço de SKU em formulários de produto
+- Sempre com prefixo "R$" visível
 
 ---
 
