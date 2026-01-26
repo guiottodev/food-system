@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { Truck, Package } from "lucide-react";
-import DataTable from "../../_components/DataTable";
+import DataTable from "../_components/DataTable";
 import OrderStatusStack from "./OrderStatusStack.client";
-import DensityToggle from "../../_components/DensityToggle.client";
+import DensityToggle from "../_components/DensityToggle.client";
 import type { OrderStatus } from "@prisma/client";
 import type { AttentionReason } from "@/lib/domain/attention";
 import layoutStyles from "./orders.module.css";

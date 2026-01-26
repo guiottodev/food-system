@@ -4,10 +4,10 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MoreVertical, Pencil } from "lucide-react";
-import DataTable from "../../_components/DataTable";
-import DensityToggle from "../../_components/DensityToggle.client";
+import DataTable from "../_components/DataTable";
+import DensityToggle from "../_components/DensityToggle.client";
 import ProductThumb from "./ProductThumb.client";
-import Chip from "../../_components/Chip";
+import Chip from "../_components/Chip";
 import {
   deleteProductAction,
   duplicateProductAction,

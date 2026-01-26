@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { OrderStatus } from "@prisma/client";
 import type { AttentionReason } from "@/lib/domain/attention";
-import Chip from "../../_components/Chip";
+import Chip from "../_components/Chip";
 import styles from "./OrderStatusStack.module.css";
 
 export interface OrderStatusStackProps {

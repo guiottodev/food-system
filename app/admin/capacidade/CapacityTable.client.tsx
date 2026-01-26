@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import DataTable from "../../_components/DataTable";
-import DensityToggle from "../../_components/DensityToggle.client";
+import DataTable from "../_components/DataTable";
+import DensityToggle from "../_components/DensityToggle.client";
 import type { CapacityRow } from "@/lib/domain/production";
 import layoutStyles from "./capacidade.module.css";
 import { useState } from "react";

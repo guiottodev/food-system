@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import DataTable from "../../_components/DataTable";
-import DensityToggle from "../../_components/DensityToggle.client";
+import DataTable from "../_components/DataTable";
+import DensityToggle from "../_components/DensityToggle.client";
 import type { CustomerListEntry } from "@/lib/domain/customer";
 import layoutStyles from "./clientes.module.css";
 
