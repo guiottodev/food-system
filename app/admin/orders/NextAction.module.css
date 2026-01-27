@@ -14,6 +14,22 @@
   z-index: 10;
 }
 
+.nextActionStickyMobile {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  box-shadow: var(--shadow-md);
+  max-height: 40vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
 .summary {
   display: grid;
   gap: var(--space-2);
@@ -189,17 +205,52 @@
     padding: var(--space-4);
   }
 
+  .nextActionSticky {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    z-index: 20;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    box-shadow: var(--shadow-md);
+    max-height: 40vh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nextActionSticky .summary,
+  .nextActionSticky .nextActionSection,
+  .nextActionSticky .checklist {
+    flex-shrink: 0;
+  }
+
   .actions {
     flex-direction: column;
     align-items: stretch;
+    flex-shrink: 0;
   }
 
   .primaryActionButton {
     width: 100%;
+    min-height: 44px;
   }
 
   .secondaryActions {
     width: 100%;
     flex-direction: column;
+  }
+
+  .secondaryActions button {
+    min-height: 44px;
+  }
+
+  /* Garantir que o conteúdo principal não fique escondido pelo sticky bottom */
+  .pageMain {
+    padding-bottom: calc(40vh + var(--space-4));
   }
 }

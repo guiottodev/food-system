@@ -12,6 +12,46 @@ import type { ChecklistItem } from "../NextAction.client";
 
 const DRAFT_KEY = "order-new-draft-v1";
 
+// ErrorMap centralizado - 12 mensagens MVP
+type ErrorKey =
+  | "customer.required"
+  | "customer.phone.invalid"
+  | "customer.phone.exists"
+  | "items.empty"
+  | "items.quantity.invalid"
+  | "items.quantity.min"
+  | "schedule.date.required"
+  | "schedule.date.past"
+  | "address.required"
+  | "address.city.required"
+  | "delivery.fee.invalid"
+  | "deposit.amount.invalid";
+
+const ERROR_MESSAGES: Record<ErrorKey, string> = {
+  "customer.required": "Selecione ou cadastre um cliente",
+  "customer.phone.invalid": "Telefone deve ter 10 ou 11 dígitos",
+  "customer.phone.exists": "Telefone já cadastrado. Use cliente existente",
+  "items.empty": "Adicione pelo menos 1 item",
+  "items.quantity.invalid": "Quantidade inválida",
+  "items.quantity.min": "Quantidade mínima: {minQty} {unit}",
+  "schedule.date.required": "Informe a data de entrega",
+  "schedule.date.past": "Data deve ser no futuro",
+  "address.required": "Informe o endereço de entrega",
+  "address.city.required": "Informe a cidade",
+  "delivery.fee.invalid": "Taxa deve ser um número (use 0 se não houver)",
+  "deposit.amount.invalid": "Valor do sinal deve ser maior que zero",
+};
+
+function getErrorMessage(key: ErrorKey, params?: Record<string, string>): string {
+  let message = ERROR_MESSAGES[key];
+  if (params) {
+    Object.entries(params).forEach(([k, v]) => {
+      message = message.replace(`{${k}}`, v);
+    });
+  }
+  return message;
+}
+
 type CustomerOption = {
   id: string;
   name: string;
@@ -359,6 +399,7 @@ export default function OrderForm({
   const formRef = useRef<HTMLFormElement | null>(null);
   const availabilityBypassInputRef = useRef<HTMLInputElement | null>(null);
   const forceDraftRef = useRef(false);
+  const [fieldTouched, setFieldTouched] = useState<Record<string, boolean>>({});
 
   const [finalEditConfirmed, setFinalEditConfirmed] = useState(false);
   const [finalEditReason, setFinalEditReason] = useState("");
@@ -946,59 +987,79 @@ export default function OrderForm({
     const errors: Record<string, string> = {};
     const itemErrors: Record<string, string> = {};
 
+    // Cliente
     if (customerMode === "existing") {
       if (!customerId) {
-        errors.customerId = "Selecione um cliente.";
+        errors.customerId = getErrorMessage("customer.required");
       }
     } else {
       if (!customerName.trim()) {
-        errors.customerName = "Informe um cliente valido.";
+        errors.customerName = getErrorMessage("customer.required");
       }
       const normalizedPhone = normalizePhoneBR(customerPhone);
       if (!normalizedPhone) {
-        errors.customerPhone = "Informe um telefone valido.";
+        errors.customerPhone = getErrorMessage("customer.phone.invalid");
       }
     }
 
-    if (deliveryMethod === "ENTREGA") {
-      const feeCheck = parseFeeValue(deliveryFee);
-      if (!feeCheck.ok) {
-        errors.deliveryFee = feeCheck.error;
-      }
+    // Itens
+    if (items.length === 0) {
+      errors.items = getErrorMessage("items.empty");
     }
 
-    if (hasDeposit) {
-      const depositCheck = parseDepositValue(depositAmount);
-      if (!depositCheck.ok) {
-        errors.depositAmount = depositCheck.error;
-      }
-    }
-
-    if (orderType === "ENCOMENDA" && scheduleDate) {
-      const checkTime = scheduleTime || "00:00";
-      const schedule = buildLocalDate(scheduleDate, checkTime);
-      if (!schedule) {
-        errors.scheduleDate = "Informe uma data valida.";
-      } else if (scheduleTime && schedule.getTime() <= Date.now()) {
-        errors.scheduleTime = "Selecione uma data e horario no futuro.";
-      } else if (!scheduleTime) {
-        const today = new Date();
-        const startToday = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate()
-        );
-        const startSchedule = new Date(
-          schedule.getFullYear(),
-          schedule.getMonth(),
-          schedule.getDate()
-        );
-        if (startSchedule.getTime() < startToday.getTime()) {
-          errors.scheduleDate = "Selecione uma data futura.";
+    // Data (encomenda)
+    if (orderType === "ENCOMENDA") {
+      if (!scheduleDate) {
+        errors.scheduleDate = getErrorMessage("schedule.date.required");
+      } else {
+        const checkTime = scheduleTime || "00:00";
+        const schedule = buildLocalDate(scheduleDate, checkTime);
+        if (!schedule) {
+          errors.scheduleDate = getErrorMessage("schedule.date.required");
+        } else if (scheduleTime && schedule.getTime() <= Date.now()) {
+          errors.scheduleTime = getErrorMessage("schedule.date.past");
+        } else if (!scheduleTime) {
+          const today = new Date();
+          const startToday = new Date(
+            today.getFullYear(),
+            today.getMonth(),
+            today.getDate()
+          );
+          const startSchedule = new Date(
+            schedule.getFullYear(),
+            schedule.getMonth(),
+            schedule.getDate()
+          );
+          if (startSchedule.getTime() < startToday.getTime()) {
+            errors.scheduleDate = getErrorMessage("schedule.date.past");
+          }
         }
       }
     }
 
+    // Endereço (bloqueante se entrega)
+    if (deliveryMethod === "ENTREGA") {
+      if (!addressText.trim()) {
+        errors.addressText = getErrorMessage("address.required");
+      }
+      if (!addressCity.trim()) {
+        errors.addressCity = getErrorMessage("address.city.required");
+      }
+      const feeCheck = parseFeeValue(deliveryFee);
+      if (!feeCheck.ok) {
+        errors.deliveryFee = getErrorMessage("delivery.fee.invalid");
+      }
+    }
+
+    // Sinal
+    if (hasDeposit) {
+      const depositCheck = parseDepositValue(depositAmount);
+      if (!depositCheck.ok) {
+        errors.depositAmount = getErrorMessage("deposit.amount.invalid");
+      }
+    }
+
+    // Itens - quantidade
     for (const item of items) {
       const error = getItemError(item);
       if (error) {
@@ -1006,6 +1067,7 @@ export default function OrderForm({
       }
     }
 
+    // Edição de pedido finalizado
     if (isFinalOrder) {
       if (!finalEditConfirmed) {
         errors.finalEditReason = "Confirme a edicao de pedido finalizado.";
@@ -1213,7 +1275,8 @@ export default function OrderForm({
       event.preventDefault();
       setSubmitAttempted(true);
       setFormError("Revise os campos destacados.");
-      // Scroll para primeiro erro
+      
+      // Scroll para primeiro erro com offset para não esconder com sticky
       const firstErrorField = Object.keys(validation.errors)[0] || Object.keys(validation.itemErrors)[0];
       if (firstErrorField) {
         const fieldRef = {
@@ -1227,9 +1290,40 @@ export default function OrderForm({
           deliveryFee: deliveryFeeRef,
           depositAmount: depositAmountRef,
         }[firstErrorField] as React.RefObject<HTMLElement> | undefined;
+        
         if (fieldRef?.current) {
-          fieldRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
-          setTimeout(() => fieldRef.current?.focus(), 300);
+          // Marcar campo como tocado para mostrar erro
+          setFieldTouched((prev) => ({ ...prev, [firstErrorField]: true }));
+          
+          // Scroll com offset
+          const headerOffset = 80;
+          const elementPosition = fieldRef.current.getBoundingClientRect().top;
+          const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+          
+          window.scrollTo({
+            top: offsetPosition,
+            behavior: "smooth",
+          });
+          
+          // Focar após scroll
+          setTimeout(() => {
+            fieldRef.current?.focus();
+          }, 300);
+        } else {
+          // Se for erro de item, scroll até seção de itens
+          const firstItemError = Object.keys(validation.itemErrors)[0];
+          if (firstItemError) {
+            const itemsSection = document.getElementById("order-items");
+            if (itemsSection) {
+              const headerOffset = 80;
+              const elementPosition = itemsSection.getBoundingClientRect().top;
+              const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+              window.scrollTo({
+                top: offsetPosition,
+                behavior: "smooth",
+              });
+            }
+          }
         }
       }
       return;
@@ -1420,7 +1514,7 @@ export default function OrderForm({
                 rows={3}
               />
               {showErrors && validation.errors.finalEditReason ? (
-                <span className={styles.fieldError}>
+                <span className={styles.fieldError} role="alert" aria-live="polite">
                   {validation.errors.finalEditReason}
                 </span>
               ) : null}
@@ -1641,7 +1735,7 @@ export default function OrderForm({
                     </div>
                   </label>
                   {showErrors && validation.errors.customerId ? (
-                    <div id="customer-error" className={styles.fieldError}>
+                    <div id="customer-error" className={styles.fieldError} role="alert" aria-live="polite">
                       {validation.errors.customerId}
                     </div>
                   ) : null}
@@ -1670,20 +1764,27 @@ export default function OrderForm({
                       placeholder="Nome do cliente"
                       value={customerName}
                       onChange={(event) => setCustomerName(event.target.value)}
+                      onBlur={() => {
+                        if (submitAttempted) {
+                          setFieldTouched((prev) => ({ ...prev, customerName: true }));
+                        }
+                      }}
                       aria-invalid={
-                        showErrors && Boolean(validation.errors.customerName)
+                        (showErrors || fieldTouched.customerName) && Boolean(validation.errors.customerName)
                       }
                       aria-describedby={
-                        showErrors && validation.errors.customerName
+                        (showErrors || fieldTouched.customerName) && validation.errors.customerName
                           ? "customer-name-error"
                           : undefined
                       }
                       className={styles.control}
                     />
-                    {showErrors && validation.errors.customerName ? (
+                    {(showErrors || fieldTouched.customerName) && validation.errors.customerName ? (
                       <span
                         id="customer-name-error"
                         className={styles.fieldError}
+                        role="alert"
+                        aria-live="polite"
                       >
                         {validation.errors.customerName}
                       </span>
@@ -1699,20 +1800,27 @@ export default function OrderForm({
                       onChange={(event) =>
                         setCustomerPhone(normalizePhoneDigits(event.target.value))
                       }
+                      onBlur={() => {
+                        if (submitAttempted) {
+                          setFieldTouched((prev) => ({ ...prev, customerPhone: true }));
+                        }
+                      }}
                       aria-invalid={
-                        showErrors && Boolean(validation.errors.customerPhone)
+                        (showErrors || fieldTouched.customerPhone) && Boolean(validation.errors.customerPhone)
                       }
                       aria-describedby={
-                        showErrors && validation.errors.customerPhone
+                        (showErrors || fieldTouched.customerPhone) && validation.errors.customerPhone
                           ? "customer-phone-error"
                           : undefined
                       }
                       className={styles.control}
                     />
-                    {showErrors && validation.errors.customerPhone ? (
+                    {(showErrors || fieldTouched.customerPhone) && validation.errors.customerPhone ? (
                       <span
                         id="customer-phone-error"
                         className={styles.fieldError}
+                        role="alert"
+                        aria-live="polite"
                       >
                         {validation.errors.customerPhone}
                       </span>
@@ -1872,7 +1980,9 @@ export default function OrderForm({
               </div>
 
               {showErrors && validation.errors.items ? (
-                <div className={styles.fieldError}>{validation.errors.items}</div>
+                <div className={styles.fieldError} role="alert" aria-live="polite">
+                  {validation.errors.items}
+                </div>
               ) : null}
 
               {items.length === 0 ? (
@@ -1928,6 +2038,8 @@ export default function OrderForm({
                             <div
                               id={`qty-error-${item.lineId}`}
                               className={styles.fieldError}
+                              role="alert"
+                              aria-live="polite"
                             >
                               {itemError}
                             </div>
@@ -1944,6 +2056,7 @@ export default function OrderForm({
                           <button
                             type="button"
                             onClick={() => removeItem(item.lineId)}
+                            aria-label={`Remover ${item.productName}`}
                             className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm} ${styles.itemsRemoveButton}`}
                           >
                             Remover
@@ -1971,6 +2084,16 @@ export default function OrderForm({
                   className={styles.segmented}
                   role="radiogroup"
                   aria-label="Tipo de pedido"
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                      e.preventDefault();
+                      if (e.key === "ArrowLeft" && orderType === "ENCOMENDA") {
+                        setOrderType("PRONTA_ENTREGA");
+                      } else if (e.key === "ArrowRight" && orderType === "PRONTA_ENTREGA") {
+                        setOrderType("ENCOMENDA");
+                      }
+                    }
+                  }}
                 >
                   <label
                     className={`${styles.segmentedOption} ${
@@ -2010,28 +2133,35 @@ export default function OrderForm({
               </label>
 
               {orderType === "ENCOMENDA" ? (
-                <div className={styles.formGrid}>
+                <div className={`${styles.formGrid} ${styles.conditionalField}`}>
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>Data</span>
-                    <input
-                      ref={scheduleDateRef}
-                      type="date"
-                      value={scheduleDate}
-                      onChange={(event) => setScheduleDate(event.target.value)}
-                      aria-invalid={
-                        showErrors && Boolean(validation.errors.scheduleDate)
-                      }
-                      aria-describedby={
-                        showErrors && validation.errors.scheduleDate
-                          ? "schedule-date-error"
-                          : undefined
-                      }
-                      className={styles.control}
-                    />
-                    {showErrors && validation.errors.scheduleDate ? (
+                      <input
+                        ref={scheduleDateRef}
+                        type="date"
+                        value={scheduleDate}
+                        onChange={(event) => setScheduleDate(event.target.value)}
+                        onBlur={() => {
+                          if (submitAttempted) {
+                            setFieldTouched((prev) => ({ ...prev, scheduleDate: true }));
+                          }
+                        }}
+                        aria-invalid={
+                          (showErrors || fieldTouched.scheduleDate) && Boolean(validation.errors.scheduleDate)
+                        }
+                        aria-describedby={
+                          (showErrors || fieldTouched.scheduleDate) && validation.errors.scheduleDate
+                            ? "schedule-date-error"
+                            : undefined
+                        }
+                        className={styles.control}
+                      />
+                    {(showErrors || fieldTouched.scheduleDate) && validation.errors.scheduleDate ? (
                       <span
                         id="schedule-date-error"
                         className={styles.fieldError}
+                        role="alert"
+                        aria-live="polite"
                       >
                         {validation.errors.scheduleDate}
                       </span>
@@ -2068,6 +2198,8 @@ export default function OrderForm({
                       <span
                         id="schedule-time-error"
                         className={styles.fieldError}
+                        role="alert"
+                        aria-live="polite"
                       >
                         {validation.errors.scheduleTime}
                       </span>
@@ -2086,6 +2218,16 @@ export default function OrderForm({
                   className={styles.segmented}
                   role="radiogroup"
                   aria-label="Metodo"
+                  onKeyDown={(e) => {
+                    if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                      e.preventDefault();
+                      if (e.key === "ArrowLeft" && deliveryMethod === "ENTREGA") {
+                        setDeliveryMethod("RETIRADA");
+                      } else if (e.key === "ArrowRight" && deliveryMethod === "RETIRADA") {
+                        setDeliveryMethod("ENTREGA");
+                      }
+                    }
+                  }}
                 >
                   <label
                     className={`${styles.segmentedOption} ${
@@ -2126,7 +2268,7 @@ export default function OrderForm({
               </label>
 
               {deliveryMethod === "ENTREGA" ? (
-                <div className={styles.stackSm}>
+                <div className={`${styles.stackSm} ${styles.conditionalField}`}>
                   {addressAutofillHint ? (
                     <div className={styles.textMuted}>{addressAutofillHint}</div>
                   ) : null}
@@ -2138,18 +2280,23 @@ export default function OrderForm({
                         type="text"
                         value={addressText}
                         onChange={(event) => setAddressText(event.target.value)}
+                        onBlur={() => {
+                          if (submitAttempted) {
+                            setFieldTouched((prev) => ({ ...prev, addressText: true }));
+                          }
+                        }}
                         aria-invalid={
-                          showErrors && Boolean(validation.errors.addressText)
+                          (showErrors || fieldTouched.addressText) && Boolean(validation.errors.addressText)
                         }
                         aria-describedby={
-                          showErrors && validation.errors.addressText
+                          (showErrors || fieldTouched.addressText) && validation.errors.addressText
                             ? "address-error"
                             : undefined
                         }
                         className={styles.control}
                       />
-                      {showErrors && validation.errors.addressText ? (
-                        <span id="address-error" className={styles.fieldError}>
+                      {(showErrors || fieldTouched.addressText) && validation.errors.addressText ? (
+                        <span id="address-error" className={styles.fieldError} role="alert" aria-live="polite">
                           {validation.errors.addressText}
                         </span>
                       ) : null}
@@ -2161,18 +2308,23 @@ export default function OrderForm({
                       type="text"
                       value={addressCity}
                       onChange={(event) => setAddressCity(event.target.value)}
+                      onBlur={() => {
+                        if (submitAttempted) {
+                          setFieldTouched((prev) => ({ ...prev, addressCity: true }));
+                        }
+                      }}
                       aria-invalid={
-                        showErrors && Boolean(validation.errors.addressCity)
+                        (showErrors || fieldTouched.addressCity) && Boolean(validation.errors.addressCity)
                       }
                       aria-describedby={
-                        showErrors && validation.errors.addressCity
+                        (showErrors || fieldTouched.addressCity) && validation.errors.addressCity
                           ? "city-error"
                           : undefined
                       }
                       className={styles.control}
                     />
-                    {showErrors && validation.errors.addressCity ? (
-                      <span id="city-error" className={styles.fieldError}>
+                    {(showErrors || fieldTouched.addressCity) && validation.errors.addressCity ? (
+                      <span id="city-error" className={styles.fieldError} role="alert" aria-live="polite">
                         {validation.errors.addressCity}
                       </span>
                     ) : null}
@@ -2199,31 +2351,36 @@ export default function OrderForm({
                   </label>
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>Taxa de entrega</span>
-                    <input
-                      ref={deliveryFeeRef}
-                      type="text"
-                      inputMode="decimal"
-                      placeholder="0"
-                      value={deliveryFee}
-                      onChange={(event) => setDeliveryFee(event.target.value)}
-                      aria-invalid={
-                        showErrors && Boolean(validation.errors.deliveryFee)
-                      }
-                      aria-describedby={
-                        showErrors && validation.errors.deliveryFee
-                          ? "fee-error"
-                          : undefined
-                      }
-                      className={styles.control}
-                    />
-                    <span className={styles.fieldHelp}>
-                      Use 0 se nao houver cobranca.
-                    </span>
-                    {showErrors && validation.errors.deliveryFee ? (
-                      <span id="fee-error" className={styles.fieldError}>
-                        {validation.errors.deliveryFee}
+                      <input
+                        ref={deliveryFeeRef}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="0"
+                        value={deliveryFee}
+                        onChange={(event) => setDeliveryFee(event.target.value)}
+                        onBlur={() => {
+                          if (submitAttempted) {
+                            setFieldTouched((prev) => ({ ...prev, deliveryFee: true }));
+                          }
+                        }}
+                        aria-invalid={
+                          (showErrors || fieldTouched.deliveryFee) && Boolean(validation.errors.deliveryFee)
+                        }
+                        aria-describedby={
+                          (showErrors || fieldTouched.deliveryFee) && validation.errors.deliveryFee
+                            ? "fee-error"
+                            : undefined
+                        }
+                        className={styles.control}
+                      />
+                      <span className={styles.fieldHelp}>
+                        Use 0 se nao houver cobranca.
                       </span>
-                    ) : null}
+                      {(showErrors || fieldTouched.deliveryFee) && validation.errors.deliveryFee ? (
+                        <span id="fee-error" className={styles.fieldError} role="alert" aria-live="polite">
+                          {validation.errors.deliveryFee}
+                        </span>
+                      ) : null}
                   </label>
                 </div>
                 {customerMode === "existing" && customerId ? (
@@ -2255,13 +2412,13 @@ export default function OrderForm({
             className={`${styles.panel} ${styles.panelSecondary}`}
           >
             <div className={styles.panelHeader}>
-              <h2>Pagamento combinado</h2>
+              <h2>Pagamento (informativo)</h2>
             </div>
             <div className={styles.panelBody}>
               <div className={styles.stackSm}>
-                <span className={styles.textMuted}>
-                  Informativo: nao processamos pagamento.
-                </span>
+                <p className={styles.textMuted}>
+                  Este campo é apenas informativo. O sistema não processa pagamento automaticamente.
+                </p>
                 <div className={styles.formGrid}>
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>Forma de pagamento</span>
@@ -2285,6 +2442,16 @@ export default function OrderForm({
                       className={styles.segmented}
                       role="radiogroup"
                       aria-label="Sinal"
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+                          e.preventDefault();
+                          if (e.key === "ArrowLeft" && hasDeposit) {
+                            setHasDeposit(false);
+                          } else if (e.key === "ArrowRight" && !hasDeposit) {
+                            setHasDeposit(true);
+                          }
+                        }
+                      }}
                     >
                       <label
                         className={`${styles.segmentedOption} ${
@@ -2317,7 +2484,7 @@ export default function OrderForm({
                     </div>
                   </label>
                   {hasDeposit ? (
-                    <label className={`${styles.field} ${styles.fieldFull}`}>
+                    <label className={`${styles.field} ${styles.fieldFull} ${styles.conditionalField}`}>
                       <span className={styles.fieldLabel}>Valor do sinal</span>
                       <input
                         ref={depositAmountRef}
@@ -2326,18 +2493,23 @@ export default function OrderForm({
                         placeholder="R$ 0,00"
                         value={depositAmount}
                         onChange={(event) => setDepositAmount(event.target.value)}
+                        onBlur={() => {
+                          if (submitAttempted) {
+                            setFieldTouched((prev) => ({ ...prev, depositAmount: true }));
+                          }
+                        }}
                         aria-invalid={
-                          showErrors && Boolean(validation.errors.depositAmount)
+                          (showErrors || fieldTouched.depositAmount) && Boolean(validation.errors.depositAmount)
                         }
                         aria-describedby={
-                          showErrors && validation.errors.depositAmount
+                          (showErrors || fieldTouched.depositAmount) && validation.errors.depositAmount
                             ? "deposit-error"
                             : undefined
                         }
                         className={styles.control}
                       />
-                      {showErrors && validation.errors.depositAmount ? (
-                        <span id="deposit-error" className={styles.fieldError}>
+                      {(showErrors || fieldTouched.depositAmount) && validation.errors.depositAmount ? (
+                        <span id="deposit-error" className={styles.fieldError} role="alert" aria-live="polite">
                           {validation.errors.depositAmount}
                         </span>
                       ) : null}
