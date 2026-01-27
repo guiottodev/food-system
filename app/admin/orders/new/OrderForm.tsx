@@ -2595,10 +2595,10 @@ export default function OrderForm({
                   label: `Horário: ${timeLabel}`,
                   status:
                     orderType === "PRONTA_ENTREGA"
-                      ? "optional"
+                      ? "complete" // Pronta entrega: horário sempre OK (não é obrigatório)
                       : scheduleTime
-                      ? "complete"
-                      : "optional",
+                      ? "complete" // Encomenda com horário: OK
+                      : "pending", // Encomenda sem horário: pendente (mas permite rascunho)
                 },
                 {
                   label: `Entrega: ${addressLabel}`,
