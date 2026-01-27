@@ -42,6 +42,10 @@
   font-family: var(--font-sans);
 }
 
+.summaryPlaceholder {
+  color: var(--text-muted);
+}
+
 .summaryValue {
   font-family: var(--font-sans);
   font-variant-numeric: tabular-nums;
@@ -52,6 +56,38 @@
   font-weight: var(--fw-semibold);
   font-size: var(--text-lg);
   color: var(--text-primary);
+}
+
+.nextActionSection {
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+.nextActionLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: var(--fw-medium);
+  font-family: var(--font-sans);
+  color: var(--brand-amber-light);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: color var(--duration-normal) var(--ease-out);
+}
+
+.nextActionLink:hover {
+  color: var(--brand-amber);
+}
+
+.nextActionLink:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 .checklist {

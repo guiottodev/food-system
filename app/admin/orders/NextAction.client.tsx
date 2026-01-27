@@ -27,6 +27,11 @@ export interface NextActionProps {
     onClick: () => void;
     variant?: "secondary" | "outline" | "ghost";
   }>;
+  nextAction?: {
+    label: string;
+    href?: string;
+    onClick?: () => void;
+  };
   whenToShow: "always" | "incomplete" | "custom";
   whenNotToShow?: () => boolean;
   summary?: {
@@ -43,6 +48,7 @@ export default function NextAction({
   checklist,
   primaryAction,
   secondaryActions,
+  nextAction,
   whenToShow,
   whenNotToShow,
   summary,
@@ -85,7 +91,7 @@ export default function NextAction({
 
   return (
     <div className={`${styles.nextAction} ${sticky ? styles.nextActionSticky : ""}`}>
-      {summary && (
+      {summary ? (
         <div className={styles.summary}>
           <div className={styles.summaryRow}>
             <span className={styles.summaryLabel}>Subtotal</span>
@@ -101,6 +107,58 @@ export default function NextAction({
             <span className={styles.summaryLabel}>Total</span>
             <span className={styles.summaryValue}>{formatCurrency(summary.total)}</span>
           </div>
+        </div>
+      ) : (
+        <div className={styles.summary}>
+          <div className={styles.summaryRow}>
+            <span className={`${styles.summaryLabel} ${styles.summaryPlaceholder}`}>
+              Resumo disponível após adicionar itens
+            </span>
+          </div>
+        </div>
+      )}
+
+      {nextAction && (
+        <div className={styles.nextActionSection}>
+          {nextAction.href ? (
+            <a
+              href={nextAction.href}
+              onClick={(e) => {
+                e.preventDefault();
+                const element = document.querySelector(nextAction.href!);
+                if (element) {
+                  const headerOffset = 80;
+                  const elementPosition = element.getBoundingClientRect().top;
+                  const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+                  window.scrollTo({
+                    top: offsetPosition,
+                    behavior: "smooth",
+                  });
+                  // Foca o primeiro campo interativo da seção após scroll
+                  setTimeout(() => {
+                    const firstInput = element.querySelector("input, select, textarea") as HTMLElement;
+                    if (firstInput) {
+                      firstInput.focus();
+                    }
+                  }, 300);
+                }
+                if (nextAction.onClick) {
+                  nextAction.onClick();
+                }
+              }}
+              className={styles.nextActionLink}
+            >
+              → {nextAction.label}
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={nextAction.onClick}
+              className={styles.nextActionLink}
+            >
+              → {nextAction.label}
+            </button>
+          )}
         </div>
       )}
 

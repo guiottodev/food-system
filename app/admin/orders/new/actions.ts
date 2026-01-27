@@ -24,6 +24,7 @@ type DeliveryAddressPayload = {
 };
 
 type CreateOrderPayload = {
+  status?: "RASCUNHO" | "CONFIRMADO";
   customerMode: "existing" | "new";
   customerId?: string;
   newCustomer?: {
@@ -345,11 +346,16 @@ export async function createOrderAction(formData: FormData) {
     }
 
     const orderNumber = await generateOrderNumber(tx);
+    // Determinar status: usar do payload se fornecido, senão RASCUNHO
+    const finalStatus = payload.status === "CONFIRMADO" 
+      ? OrderStatus.CONFIRMADO 
+      : OrderStatus.RASCUNHO;
+    
     const order = await tx.order.create({
       data: {
         orderNumber,
         customerId,
-        status: OrderStatus.RASCUNHO,
+        status: finalStatus,
         orderType: finalOrderType,
         deliveryDatetime: scheduledAt,
         deliveryTime,

@@ -281,9 +281,9 @@ export default function OrderForm({
   const isEdit = mode === "edit";
   const initial = initialData ?? {};
   const orderId = initial.orderId ?? "";
-  const orderStatus = initial.orderStatus;
+  const initialOrderStatus = initial.orderStatus;
   const isFinalOrder =
-    isEdit && (orderStatus === "ENTREGUE" || orderStatus === "CANCELADO");
+    isEdit && (initialOrderStatus === "ENTREGUE" || initialOrderStatus === "CANCELADO");
 
   const [customerMode, setCustomerMode] = useState<"existing" | "new">(
     initial.customerMode ?? "existing"
@@ -358,6 +358,7 @@ export default function OrderForm({
   const reconfirmBypassRef = useRef(false);
   const formRef = useRef<HTMLFormElement | null>(null);
   const availabilityBypassInputRef = useRef<HTMLInputElement | null>(null);
+  const forceDraftRef = useRef(false);
 
   const [finalEditConfirmed, setFinalEditConfirmed] = useState(false);
   const [finalEditReason, setFinalEditReason] = useState("");
@@ -511,7 +512,7 @@ export default function OrderForm({
 
   const requiresReconfirmation =
     isEdit &&
-    Boolean(orderStatus && orderStatus !== "RASCUNHO") &&
+    Boolean(initialOrderStatus && initialOrderStatus !== "RASCUNHO") &&
     initialSnapshotRef.current !== null &&
     (initialSnapshotRef.current.orderType !== currentSnapshot.orderType ||
       initialSnapshotRef.current.deliveryMethod !== currentSnapshot.deliveryMethod ||
@@ -722,6 +723,19 @@ export default function OrderForm({
     lastAddedRef.current = null;
   }, [items]);
 
+  // Autofocus na busca se não houver itens e não estiver editando
+  useEffect(() => {
+    if (isEdit) return;
+    if (items.length > 0) return;
+    if (skuInputRef.current && document.activeElement !== skuInputRef.current) {
+      // Pequeno delay para garantir que o componente está montado
+      const timeout = setTimeout(() => {
+        skuInputRef.current?.focus();
+      }, 100);
+      return () => clearTimeout(timeout);
+    }
+  }, [isEdit, items.length]);
+
   useEffect(() => {
     availabilityBypassRef.current = false;
     setAvailabilityWarning(false);
@@ -868,6 +882,21 @@ export default function OrderForm({
 
     setItems((prev) => [...prev, nextItem]);
     lastAddedRef.current = lineId;
+    
+    // Limpar busca após adicionar
+    setSkuQuery("");
+    setSkuResults([]);
+    setSkuOpen(false);
+    setSkuActiveIndex(-1);
+    
+    // Focar na quantidade do item recém-adicionado após renderização
+    setTimeout(() => {
+      const qtyInput = qtyRefs.current[lineId];
+      if (qtyInput) {
+        qtyInput.focus();
+        qtyInput.select();
+      }
+    }, 100);
   }
 
   function updateItemQuantity(lineId: string, value: string) {
@@ -883,6 +912,13 @@ export default function OrderForm({
   }
 
   function getItemError(item: OrderItem) {
+    const qty = item.quantity.trim();
+    
+    // Mensagem 1: Quantidade vazia
+    if (!qty) {
+      return "Informe a quantidade";
+    }
+    
     const result = validateSkuQuantity(
       {
         unitType: item.unitType as "KG" | "UNIDADE",
@@ -891,11 +927,17 @@ export default function OrderForm({
       },
       item.quantity
     );
+    
     if (!result.ok) {
-      if (result.error === "Quantidade invalida.") {
-        return "Quantidade invalida para este SKU.";
+      // Verificar se é erro de mínimo (validateSkuQuantity retorna "Quantidade invalida." quando < minQty)
+      // Mas vamos verificar diretamente para dar mensagem mais clara
+      const parsedQty = parseFloat(qty.replace(",", "."));
+      if (!isNaN(parsedQty) && item.minQty > 0 && parsedQty < item.minQty) {
+        return `Quantidade mínima: ${item.minQty} ${item.unitLabel}`;
       }
-      return result.error;
+      
+      // Mensagem 2: Quantidade inválida (formato ou regras)
+      return "Quantidade inválida";
     }
     return "";
   }
@@ -993,12 +1035,51 @@ export default function OrderForm({
 
   const scheduleReady =
     orderType === "PRONTA_ENTREGA" ? true : Boolean(scheduleDate);
+  
+  // feeValue já foi calculado acima (linha 429-432)
   const addressReady =
     deliveryMethod !== "ENTREGA"
       ? true
-      : Boolean(addressText.trim()) && Boolean(addressCity.trim());
+      : Boolean(addressText.trim()) && 
+        Boolean(addressCity.trim()) && 
+        (deliveryFee.trim() !== "" && feeValue.ok);
 
-  const readyForConfirm = customerReady && itemsReady && scheduleReady;
+  const isReadyForConfirm = 
+    customerReady && 
+    itemsReady && 
+    (orderType === "PRONTA_ENTREGA" || scheduleReady) &&
+    addressReady;
+
+  // Calcular próxima ação (primeira pendência)
+  const nextAction = useMemo(() => {
+    if (isReadyForConfirm) return null;
+    
+    if (!customerReady) {
+      return {
+        label: "Definir cliente",
+        href: "#order-customer",
+      };
+    }
+    if (!itemsReady) {
+      return {
+        label: "Adicionar itens",
+        href: "#order-items",
+      };
+    }
+    if (orderType === "ENCOMENDA" && !scheduleReady) {
+      return {
+        label: "Definir data de entrega",
+        href: "#order-delivery",
+      };
+    }
+    if (deliveryMethod === "ENTREGA" && !addressReady) {
+      return {
+        label: "Informar endereço",
+        href: "#order-delivery",
+      };
+    }
+    return null;
+  }, [isReadyForConfirm, customerReady, itemsReady, orderType, scheduleReady, deliveryMethod, addressReady]);
 
   function formatScheduleDate(value: string) {
     const [year, month, day] = value.split("-").map((part) => Number(part));
@@ -1067,8 +1148,12 @@ export default function OrderForm({
     setCustomerName(existingCustomer.name);
   }
 
+  // Determinar status baseado em isReadyForConfirm
+  const orderStatus = isReadyForConfirm ? "CONFIRMADO" : "RASCUNHO";
+
   const payload = JSON.stringify({
     orderId: isEdit ? orderId : undefined,
+    status: orderStatus,
     customerMode,
     customerId: customerMode === "existing" ? customerId : undefined,
     newCustomer:
@@ -1109,7 +1194,51 @@ export default function OrderForm({
   });
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (validation.isValid) {
+    const isForcingDraft = forceDraftRef.current;
+    
+    // Se forceDraftRef está ativo, forçar status RASCUNHO
+    if (isForcingDraft) {
+      const hiddenInput = formRef.current?.querySelector('input[name="payload"]') as HTMLInputElement;
+      if (hiddenInput) {
+        const currentPayload = JSON.parse(hiddenInput.value);
+        currentPayload.status = "RASCUNHO";
+        hiddenInput.value = JSON.stringify(currentPayload);
+      }
+      forceDraftRef.current = false;
+    }
+
+    // Se isReadyForConfirm E não está forçando rascunho, validar antes de submeter
+    // Se não, permitir salvar como rascunho mesmo com erros
+    if (isReadyForConfirm && !validation.isValid && !isForcingDraft) {
+      event.preventDefault();
+      setSubmitAttempted(true);
+      setFormError("Revise os campos destacados.");
+      // Scroll para primeiro erro
+      const firstErrorField = Object.keys(validation.errors)[0] || Object.keys(validation.itemErrors)[0];
+      if (firstErrorField) {
+        const fieldRef = {
+          customerId: customerSearchRef,
+          customerName: customerNameRef,
+          customerPhone: customerPhoneRef,
+          scheduleDate: scheduleDateRef,
+          scheduleTime: scheduleTimeRef,
+          addressText: addressTextRef,
+          addressCity: addressCityRef,
+          deliveryFee: deliveryFeeRef,
+          depositAmount: depositAmountRef,
+        }[firstErrorField] as React.RefObject<HTMLElement> | undefined;
+        if (fieldRef?.current) {
+          fieldRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+          setTimeout(() => fieldRef.current?.focus(), 300);
+        }
+      }
+      return;
+    }
+
+    // Se for rascunho (não pronto OU forceDraft), permitir salvar mesmo com erros
+    const isDraft = !isReadyForConfirm || forceDraftRef.current;
+    
+    if (validation.isValid || isDraft) {
       if (isEdit && requiresReconfirmation && !reconfirmBypassRef.current) {
         event.preventDefault();
         const accepted = window.confirm(
@@ -1263,7 +1392,7 @@ export default function OrderForm({
           <div className={styles.stackSm}>
             <div>
               <strong>Atencao:</strong> este pedido esta{" "}
-              {orderStatus === "ENTREGUE" ? "ENTREGUE" : "CANCELADO"}.
+              {initialOrderStatus === "ENTREGUE" ? "ENTREGUE" : "CANCELADO"}.
               Voce ainda pode editar, mas precisa confirmar e informar um motivo
               (sera registrado na auditoria).
             </div>
@@ -1347,7 +1476,7 @@ export default function OrderForm({
       ) : null}
       <div className={styles.pageGrid}>
         <div className={styles.pageMain}>
-          <section className={`${styles.panel} ${styles.panelSecondary}`}>
+          <section id="order-customer" className={`${styles.panel} ${styles.panelSecondary}`}>
             <div className={styles.panelHeader}>
               <h2>Cliente</h2>
             </div>
@@ -1611,7 +1740,7 @@ export default function OrderForm({
                     <input
                       ref={skuInputRef}
                       type="text"
-                      placeholder="Digite o nome do produto..."
+                      placeholder="Digite o nome do produto... (ex.: coxinha)"
                       value={skuQuery}
                       onChange={(event) => {
                         setSkuQuery(event.target.value);
@@ -1713,7 +1842,7 @@ export default function OrderForm({
                     ) : null}
                   </div>
                 </label>
-                <label className={styles.field}>
+                <label className={`${styles.field} ${styles.itemsFilterSecondary}`}>
                   <span className={styles.fieldLabel}>Categoria</span>
                   <div className={styles.clusterSm}>
                     <select
@@ -1733,6 +1862,7 @@ export default function OrderForm({
                         type="button"
                         onClick={() => setCategoryId("")}
                         className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                        aria-label="Limpar filtro de categoria"
                       >
                         Limpar
                       </button>
@@ -1749,7 +1879,7 @@ export default function OrderForm({
                 <div className={styles.emptyState}>
                   <div>Nenhum item adicionado.</div>
                   <div className={styles.textMuted}>
-                    Busque um produto acima.
+                    Busque um produto acima para começar.
                   </div>
                 </div>
               ) : (
@@ -2246,7 +2376,11 @@ export default function OrderForm({
               const customerLabel =
                 customerMode === "existing"
                   ? customerName.trim() || "Não informado"
-                  : customerName.trim() || "Não informado";
+                  : customerName.trim()
+                  ? customerPhone.trim()
+                    ? `${customerName.trim()} (${formatPhoneDisplay(customerPhone)})`
+                    : customerName.trim()
+                  : "Não informado";
               const itemsLabel = hasItems
                 ? `${items.length} ${items.length === 1 ? "item" : "itens"}`
                 : "Nenhum item";
@@ -2301,12 +2435,13 @@ export default function OrderForm({
                       ? "complete"
                       : addressReady
                       ? "complete"
-                      : "warning",
+                      : "pending",
                 },
               ];
             }, [
               customerMode,
               customerName,
+              customerPhone,
               customerReady,
               hasItems,
               items.length,
@@ -2318,15 +2453,30 @@ export default function OrderForm({
               deliveryMethod,
               addressReady,
             ])}
-            primaryAction={{
-              label: "Salvar pedido",
-              onClick: () => {
-                if (formRef.current && validation.isValid) {
-                  formRef.current.requestSubmit();
-                }
-              },
-              disabled: !validation.isValid,
-            }}
+            nextAction={nextAction}
+            primaryAction={
+              isReadyForConfirm
+                ? {
+                    label: "Confirmar pedido",
+                    onClick: () => {
+                      if (formRef.current && validation.isValid) {
+                        formRef.current.requestSubmit();
+                      }
+                    },
+                    disabled: !validation.isValid,
+                  }
+                : {
+                    label: "Salvar rascunho",
+                    onClick: () => {
+                      if (formRef.current) {
+                        formRef.current.requestSubmit();
+                      }
+                    },
+                    disabled: false,
+                  }
+            }
+            // Removido secondaryActions quando pronto: se está tudo OK, não precisa de "Salvar como rascunho"
+            secondaryActions={undefined}
             summary={
               items.length > 0
                 ? {
