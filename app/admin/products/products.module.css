@@ -923,6 +923,14 @@
   margin-top: 0;
 }
 
+.skuAttributes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  margin-top: var(--space-1);
+}
+
 /* SKU Meta: Dados (Disponível · Preço) à esquerda, Editar à direita */
 .skuMeta {
   display: flex;

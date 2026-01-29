@@ -16,7 +16,8 @@ import Button from "../_components/Button";
 
 type SearchParams = {
   q?: string;
-  window?: string;
+  window?: string; // demanda (futuro)
+  productionWindow?: string; // produção/consumo (passado) — default 15
   gap?: string;
   sort?: string;
   dir?: string;
@@ -25,6 +26,8 @@ type SearchParams = {
 const SORT_KEYS: SortKey[] = [
   "productName",
   "categoryName",
+  "produced",
+  "consumed",
   "available",
   "demand",
   "gap",
@@ -51,6 +54,12 @@ function sortRows(rows: CapacityRow[], sort: SortKey, dir: SortDir): CapacityRow
       case "categoryName":
         cmp = a.categoryName.localeCompare(b.categoryName);
         break;
+      case "produced":
+        cmp = a.produced - b.produced;
+        break;
+      case "consumed":
+        cmp = a.consumed - b.consumed;
+        break;
       case "available":
         cmp = a.available - b.available;
         break;
@@ -75,12 +84,16 @@ export default async function CapacidadePage({
   const sp = await Promise.resolve(searchParams);
   const query = (sp?.q ?? "").trim();
   const windowKey = normalizeCapacityWindow(sp?.window);
+  const productionWindowKey = sp?.productionWindow
+    ? normalizeCapacityWindow(sp.productionWindow)
+    : ("15" as CapacityWindowKey); // Default: últimos 15 dias
   const gapOnly = sp?.gap === "1";
   const sort = normalizeSort(sp?.sort);
   const dir = normalizeDir(sp?.dir);
 
   const rows = await getCapacityRows(prisma, {
     window: windowKey,
+    productionWindow: productionWindowKey,
     productQuery: query,
     gapOnly,
   });
@@ -124,6 +137,7 @@ export default async function CapacidadePage({
         <ProductionFilters
           initialQuery={query}
           initialWindow={windowKey}
+          initialProductionWindow={productionWindowKey}
           initialGapOnly={gapOnly}
         />
 

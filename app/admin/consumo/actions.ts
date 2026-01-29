@@ -106,16 +106,36 @@ export async function createConsumptionAction(formData: FormData) {
       },
     });
 
+    // Sincronizar stockQuantity com produced - consumed após consumo
+    const [producedItems, consumedItems] = await Promise.all([
+      tx.productionSessionItem.findMany({
+        where: { sku: { id: skuId } },
+        select: { quantity: true },
+      }),
+      tx.productionConsumption.findMany({
+        where: { sku: { id: skuId } },
+        select: { quantity: true },
+      }),
+    ]);
+
+    const produced = producedItems.reduce(
+      (sum, item) => sum + Number(item.quantity),
+      0
+    );
+    const consumed = consumedItems.reduce(
+      (sum, item) => sum + Number(item.quantity),
+      0
+    );
+    const newStockQuantity = Math.max(0, produced - consumed);
     const currentStock = Number(sku.stockQuantity ?? 0);
+    const shortage = Math.max(0, newStockQuantity - currentStock);
     const currentPending = Number(sku.pendingProductionQuantity ?? 0);
-    const shortage = Math.max(normalizedQuantity - currentStock, 0);
-    const nextStock = Math.max(currentStock - normalizedQuantity, 0);
     const nextPending = currentPending + shortage;
 
     await tx.sku.update({
       where: { id: skuId },
       data: {
-        stockQuantity: toDecimal(nextStock),
+        stockQuantity: toDecimal(newStockQuantity),
         pendingProductionQuantity: toDecimal(nextPending),
       },
     });

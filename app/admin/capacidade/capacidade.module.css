@@ -550,6 +550,112 @@
   color: var(--text-muted);
 }
 
+/* ===== SKUS LIST (expanded) ===== */
+.skusList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) 0 var(--space-4) 0;
+}
+
+.skuRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  border-left: 2px solid var(--border);
+  transition: all var(--duration-fast) var(--ease-default);
+}
+
+.skuRow:hover {
+  background: rgba(var(--action-primary-rgb), 0.03);
+  border-color: var(--border);
+  border-left-color: var(--action-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.skuHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.skuNameSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.skuName {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  display: block;
+}
+
+.skuMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.skuMetaData {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.skuMetaSep {
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  user-select: none;
+}
+
+.skuMetaItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.skuMetaLabel {
+  font-size: var(--text-xs);
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.skuMetaValue {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.skuMetaValue.stockZero {
+  color: var(--state-warning-text);
+}
+
+.emptySkus {
+  padding: var(--space-4);
+  text-align: center;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
 /* ===== EMPTY STATE ===== */
 .emptyState {
   display: flex;

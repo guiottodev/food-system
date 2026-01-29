@@ -131,29 +131,59 @@ export async function createProductionSessionAction(formData: FormData) {
       totalsBySku.set(item.skuId, (totalsBySku.get(item.skuId) ?? 0) + item.quantity);
     }
 
-    const skuBalances = await tx.sku.findMany({
-      where: { id: { in: Array.from(totalsBySku.keys()) } },
-      select: { id: true, stockQuantity: true, pendingProductionQuantity: true },
-    });
-    const balanceMap = new Map(skuBalances.map((sku) => [sku.id, sku]));
+    const skuIds = Array.from(totalsBySku.keys());
+    
+    // Sincronizar stockQuantity com produced - consumed após produção
+    const [producedItems, consumedItems] = await Promise.all([
+      tx.productionSessionItem.findMany({
+        where: { sku: { id: { in: skuIds } } },
+        select: { quantity: true, sku: { select: { id: true } } },
+      }),
+      tx.productionConsumption.findMany({
+        where: { sku: { id: { in: skuIds } } },
+        select: { quantity: true, sku: { select: { id: true } } },
+      }),
+    ]);
 
-    for (const [skuId, producedQty] of totalsBySku.entries()) {
-      const current = balanceMap.get(skuId);
-      if (!current) continue;
-      let pending = Number(current.pendingProductionQuantity ?? 0);
-      let stock = Number(current.stockQuantity ?? 0);
-      let remaining = producedQty;
-      if (pending > 0) {
-        const reduce = Math.min(pending, remaining);
-        pending -= reduce;
-        remaining -= reduce;
-      }
-      stock += remaining;
+    const producedBySku = new Map<string, number>();
+    const consumedBySku = new Map<string, number>();
+    
+    for (const item of producedItems) {
+      const skuId = item.sku?.id;
+      if (!skuId) continue;
+      producedBySku.set(skuId, (producedBySku.get(skuId) ?? 0) + Number(item.quantity));
+    }
+    
+    for (const item of consumedItems) {
+      const skuId = item.sku?.id;
+      if (!skuId) continue;
+      consumedBySku.set(skuId, (consumedBySku.get(skuId) ?? 0) + Number(item.quantity));
+    }
+
+    const skuBalances = await tx.sku.findMany({
+      where: { id: { in: skuIds } },
+      select: {
+        id: true,
+        stockQuantity: true,
+        pendingProductionQuantity: true,
+      },
+    });
+
+    for (const sku of skuBalances) {
+      const produced = producedBySku.get(sku.id) ?? 0;
+      const consumed = consumedBySku.get(sku.id) ?? 0;
+      const newStockQuantity = Math.max(0, produced - consumed);
+      const currentStock = Number(sku.stockQuantity ?? 0);
+      const shortage = Math.max(0, newStockQuantity - currentStock);
+      const currentPending = Number(sku.pendingProductionQuantity ?? 0);
+      // Reduzir pending se houver produção suficiente
+      const nextPending = Math.max(0, currentPending - shortage);
+
       await tx.sku.update({
-        where: { id: skuId },
+        where: { id: sku.id },
         data: {
-          pendingProductionQuantity: toDecimal(pending),
-          stockQuantity: toDecimal(stock),
+          stockQuantity: toDecimal(newStockQuantity),
+          pendingProductionQuantity: toDecimal(nextPending),
         },
       });
     }

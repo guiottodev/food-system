@@ -9,6 +9,8 @@ import styles from "../../_styles/adminPrimitives.module.css";
 import { InlineNotice } from "../../design-system/InlineNotice.client";
 import NextAction from "../NextAction.client";
 import type { ChecklistItem } from "../NextAction.client";
+import DatePicker, { type DatePickerHandle } from "../../_components/DatePicker";
+import TimePicker, { type TimePickerHandle } from "../../_components/TimePicker";
 
 const DRAFT_KEY = "order-new-draft-v1";
 
@@ -352,7 +354,7 @@ export default function OrderForm({
   );
   const [addressAutofillHint, setAddressAutofillHint] = useState("");
   const [scheduleDate, setScheduleDate] = useState(initial.scheduleDate ?? "");
-  const [scheduleTime, setScheduleTime] = useState(initial.scheduleTime ?? "");
+  const [scheduleTime, setScheduleTime] = useState(initial.scheduleTime ?? "12:00");
   const [addressText, setAddressText] = useState(initial.addressText ?? "");
   const [addressBairro, setAddressBairro] = useState(
     initial.addressBairro ?? ""
@@ -414,8 +416,8 @@ export default function OrderForm({
   const customerSearchRef = useRef<HTMLInputElement | null>(null);
   const customerNameRef = useRef<HTMLInputElement | null>(null);
   const customerPhoneRef = useRef<HTMLInputElement | null>(null);
-  const scheduleDateRef = useRef<HTMLInputElement | null>(null);
-  const scheduleTimeRef = useRef<HTMLSelectElement | null>(null);
+  const scheduleDateRef = useRef<DatePickerHandle | null>(null);
+  const scheduleTimeRef = useRef<TimePickerHandle | null>(null);
   const addressTextRef = useRef<HTMLInputElement | null>(null);
   const addressCityRef = useRef<HTMLInputElement | null>(null);
   const deliveryFeeRef = useRef<HTMLInputElement | null>(null);
@@ -1378,14 +1380,17 @@ export default function OrderForm({
           hasOutOfStockSkus?: boolean;
         };
         setAvailabilityLoading(false);
-        if (data.hasOutOfStockSkus) {
-          setAvailabilityWarning(true);
-          setAvailabilityWarningMode("out_of_stock");
-          return;
-        }
+        
+        // Priorizar alerta de "precisa produzir" (indisponível) sobre "sem estoque"
+        // Ambos podem aparecer, mas "precisa produzir" é mais informativo
         if (data.hasUnavailableItems) {
           setAvailabilityWarning(true);
           setAvailabilityWarningMode("unavailable");
+          return;
+        }
+        if (data.hasOutOfStockSkus) {
+          setAvailabilityWarning(true);
+          setAvailabilityWarningMode("out_of_stock");
           return;
         }
       } catch {
@@ -1530,12 +1535,11 @@ export default function OrderForm({
               {availabilityWarningMode === "out_of_stock" ? (
                 <>
                   <strong>Atencao:</strong> Alguns itens deste pedido estao sem
-                  estoque suficiente para pronta entrega.
+                  estoque suficiente para pronta entrega. Sera necessario produzir antes de atender.
                 </>
               ) : (
                 <>
-                  <strong>Atencao:</strong> Alguns itens deste pedido nao estao
-                  disponiveis no momento. Sera necessario produzir antes de atender.
+                  <strong>Atencao:</strong> Alguns itens deste pedido precisam ser produzidos antes de atender.
                 </>
               )}
             </div>
@@ -2133,29 +2137,39 @@ export default function OrderForm({
               </label>
 
               {orderType === "ENCOMENDA" ? (
-                <div className={`${styles.formGrid} ${styles.conditionalField}`}>
+                <div className={`${styles.formSection} ${styles.conditionalField}`}>
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>Data</span>
-                      <input
-                        ref={scheduleDateRef}
-                        type="date"
-                        value={scheduleDate}
-                        onChange={(event) => setScheduleDate(event.target.value)}
-                        onBlur={() => {
-                          if (submitAttempted) {
-                            setFieldTouched((prev) => ({ ...prev, scheduleDate: true }));
-                          }
-                        }}
-                        aria-invalid={
-                          (showErrors || fieldTouched.scheduleDate) && Boolean(validation.errors.scheduleDate)
+                    <DatePicker
+                      ref={scheduleDateRef}
+                      value={scheduleDate}
+                      onChange={(value) => {
+                        setScheduleDate(value);
+                        if (submitAttempted) {
+                          setFieldTouched((prev) => ({ ...prev, scheduleDate: true }));
                         }
-                        aria-describedby={
-                          (showErrors || fieldTouched.scheduleDate) && validation.errors.scheduleDate
-                            ? "schedule-date-error"
-                            : undefined
+                      }}
+                      onBlur={() => {
+                        if (submitAttempted) {
+                          setFieldTouched((prev) => ({ ...prev, scheduleDate: true }));
                         }
-                        className={styles.control}
-                      />
+                      }}
+                      aria-invalid={
+                        (showErrors || fieldTouched.scheduleDate) && Boolean(validation.errors.scheduleDate)
+                      }
+                      aria-describedby={
+                        (showErrors || fieldTouched.scheduleDate) && validation.errors.scheduleDate
+                          ? "schedule-date-error"
+                          : undefined
+                      }
+                      variant={
+                        (showErrors || fieldTouched.scheduleDate) && validation.errors.scheduleDate
+                          ? "error"
+                          : "default"
+                      }
+                      placeholder="Selecione a data"
+                      min={new Date().toISOString().split("T")[0]} // Não permitir datas passadas
+                    />
                     {(showErrors || fieldTouched.scheduleDate) && validation.errors.scheduleDate ? (
                       <span
                         id="schedule-date-error"
@@ -2169,32 +2183,34 @@ export default function OrderForm({
                   </label>
                   <label className={styles.field}>
                     <span className={styles.fieldLabel}>Horario (opcional)</span>
-                    <select
+                    <TimePicker
                       ref={scheduleTimeRef}
                       value={scheduleTime}
-                      onChange={(event) => setScheduleTime(event.target.value)}
+                      onChange={(value) => setScheduleTime(value)}
+                      onBlur={() => {
+                        if (submitAttempted) {
+                          setFieldTouched((prev) => ({ ...prev, scheduleTime: true }));
+                        }
+                      }}
                       disabled={!scheduleDate}
                       aria-invalid={
-                        showErrors && Boolean(validation.errors.scheduleTime)
+                        (showErrors || fieldTouched.scheduleTime) && Boolean(validation.errors.scheduleTime)
                       }
                       aria-describedby={
-                        showErrors && validation.errors.scheduleTime
+                        (showErrors || fieldTouched.scheduleTime) && validation.errors.scheduleTime
                           ? "schedule-time-error"
                           : undefined
                       }
-                      className={styles.control}
-                    >
-                      <option value="">Selecione o horario</option>
-                      {TIME_OPTIONS.map((option) => (
-                        <option key={option} value={option}>
-                          {option}
-                        </option>
-                      ))}
-                    </select>
+                      variant={
+                        (showErrors || fieldTouched.scheduleTime) && validation.errors.scheduleTime ? "error" : "default"
+                      }
+                      placeholder="Selecione o horário"
+                      interval={30}
+                    />
                     <span className={styles.fieldHelp}>
                       Informe quando souber. Horarios de 30 em 30 minutos.
                     </span>
-                    {showErrors && validation.errors.scheduleTime ? (
+                    {(showErrors || fieldTouched.scheduleTime) && validation.errors.scheduleTime ? (
                       <span
                         id="schedule-time-error"
                         className={styles.fieldError}

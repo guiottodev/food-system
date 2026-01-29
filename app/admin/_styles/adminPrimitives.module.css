@@ -350,6 +350,12 @@
   overflow: hidden;
 }
 
+/* Permitir que dropdowns de DatePicker/TimePicker escapem do overflow */
+.conditionalField .datePicker,
+.conditionalField .timePicker {
+  overflow: visible;
+}
+
 @keyframes slideDown {
   from {
     opacity: 0;

@@ -14,9 +14,15 @@ import {
   updateSkuPriceAction,
 } from "./actions";
 import layoutStyles from "./products.module.css";
+import primitivesStyles from "../_styles/adminPrimitives.module.css";
 
 type SortKey = "name" | "category";
 type SortDir = "asc" | "desc";
+
+type SkuAttribute = {
+  key: string;
+  value: string;
+};
 
 type SkuRow = {
   id: string;
@@ -29,6 +35,7 @@ type SkuRow = {
   unitLabel: string;
   priceCurrent: number;
   stockQuantity: number;
+  attributes: SkuAttribute[];
 };
 
 type ProductRow = {
@@ -329,6 +336,19 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
                         {skuSubline(sku) ? (
                           <span className={layoutStyles.skuSubline}>{skuSubline(sku)}</span>
                         ) : null}
+                        {sku.attributes.length > 0 && (
+                          <div className={layoutStyles.skuAttributes}>
+                            {sku.attributes.map((attr, index) => (
+                              <span
+                                key={`${sku.id}-attr-${index}`}
+                                className={`${primitivesStyles.badge} ${primitivesStyles.badgeNeutral}`}
+                                title={`${attr.key}: ${attr.value}`}
+                              >
+                                {attr.key}: {attr.value}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       {!sku.isActive && (
                         <div className={layoutStyles.skuHeaderChips}>

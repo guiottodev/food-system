@@ -62,6 +62,22 @@ function parseDir(value: string | undefined): "asc" | "desc" {
   return "asc";
 }
 
+function parseAttributesJson(value: string | null): Array<{ key: string; value: string }> {
+  if (!value) return [];
+  try {
+    const parsed = JSON.parse(value);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => ({
+        key: String(item?.key ?? ""),
+        value: String(item?.value ?? ""),
+      }))
+      .filter((item) => item.key && item.value);
+  } catch {
+    return [];
+  }
+}
+
 export default async function ProductsPage({
   searchParams,
 }: {
@@ -146,6 +162,7 @@ export default async function ProductsPage({
             unitLabel: true,
             priceCurrent: true,
             stockQuantity: true,
+            attributesJson: true,
           },
           orderBy: { displayName: "asc" },
         },
@@ -209,6 +226,7 @@ export default async function ProductsPage({
       unitLabel: s.unitLabel,
       priceCurrent: Number(s.priceCurrent),
       stockQuantity: Number(s.stockQuantity),
+      attributes: parseAttributesJson(s.attributesJson),
     })),
   }));
 

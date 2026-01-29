@@ -38,10 +38,12 @@ export async function POST(request: Request) {
       quantity: item.quantity,
     }));
 
+
   const [productionAvailability, outOfStock] = await Promise.all([
     // “Precisa produzir / indisponível agora” (baseado em produção vs consumo por produto).
     computeUnavailableItemsForDraft(prisma, normalizedItems),
     // “Sem estoque” (apenas para PRONTA_ENTREGA, baseado em sku.stockQuantity).
+    // Agora stockQuantity sempre reflete produced - consumed (sincronizado)
     (async () => {
       if (orderType !== "PRONTA_ENTREGA") {
         return { hasOutOfStockSkus: false, outOfStockSkus: [] as Array<{ skuId: string; requiredQty: number; availableQty: number }> };
@@ -53,7 +55,7 @@ export async function POST(request: Request) {
             select: { id: true, stockQuantity: true },
           })
         : [];
-      const stockMap = new Map(skus.map((s) => [s.id, Number(s.stockQuantity)]));
+      const stockMap = new Map(skus.map((s) => [s.id, Number(s.stockQuantity ?? 0)]));
 
       const requiredMap = new Map<string, number>();
       for (const item of normalizedItems) {
@@ -73,6 +75,7 @@ export async function POST(request: Request) {
       return { hasOutOfStockSkus: outOfStockSkus.length > 0, outOfStockSkus };
     })(),
   ]);
+
 
   return NextResponse.json({
     hasUnavailableItems: productionAvailability.hasUnavailableItems,

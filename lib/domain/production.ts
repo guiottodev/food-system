@@ -1,13 +1,27 @@
 import { OrderStatus, PrismaClient } from "@prisma/client";
 import { buildCategoryIndex, buildCategoryPathLabel } from "@/lib/domain/categoryHierarchy";
 
-export type CapacityWindowKey = "today" | "7" | "14" | "30";
+export type CapacityWindowKey = "today" | "7" | "14" | "15" | "30";
 
 const WINDOW_DAYS: Record<CapacityWindowKey, number> = {
   today: 1,
   "7": 7,
   "14": 14,
+  "15": 15,
   "30": 30,
+};
+
+export type CapacitySkuRow = {
+  skuId: string;
+  skuName: string;
+  unitLabel: string;
+  unitType: string;
+  stockQuantity: number;
+  produced: number;
+  consumed: number;
+  available: number;
+  demand: number;
+  gap: number;
 };
 
 export type CapacityRow = {
@@ -21,10 +35,12 @@ export type CapacityRow = {
   available: number;
   demand: number;
   gap: number;
+  skus: CapacitySkuRow[];
 };
 
 type CapacityOptions = {
-  window: CapacityWindowKey;
+  window: CapacityWindowKey; // Demanda (futuro)
+  productionWindow?: CapacityWindowKey; // Produção/Consumo (passado) — aplicar default "15"
   productQuery?: string;
   gapOnly?: boolean;
 };
@@ -78,7 +94,7 @@ function asNumber(value: unknown) {
 }
 
 export function normalizeCapacityWindow(value?: string): CapacityWindowKey {
-  if (value === "today" || value === "7" || value === "14" || value === "30") {
+  if (value === "today" || value === "7" || value === "14" || value === "15" || value === "30") {
     return value;
   }
   return "7";
@@ -92,6 +108,15 @@ export function getWindowRange(window: CapacityWindowKey, now = new Date()) {
   const start = startOfDay(now);
   const days = WINDOW_DAYS[window];
   const end = endOfDay(addDays(start, days - 1));
+  return { start, end };
+}
+
+// Range de CALENDÁRIO para "últimos X dias" (passado)
+// Usado para filtrar produção/consumo por período histórico
+export function getPastWindowRange(window: CapacityWindowKey, now = new Date()) {
+  const end = endOfDay(now); // Fim: hoje (inclusive)
+  const days = WINDOW_DAYS[window];
+  const start = startOfDay(addDays(now, -days + 1)); // Início: X dias atrás
   return { start, end };
 }
 
@@ -154,7 +179,12 @@ export async function getCapacityRows(
   options: CapacityOptions
 ) {
   const productQuery = options.productQuery?.trim() ?? "";
-  const { start, end } = getWindowRange(options.window);
+  const { start, end } = getWindowRange(options.window); // Demanda (futuro)
+
+  // Determinar effectiveProductionWindow (default "15")
+  const effectiveProductionWindow = options.productionWindow ?? ("15" as CapacityWindowKey);
+  // Calcular productionRange usando range de CALENDÁRIO para "últimos X dias"
+  const productionRange = getPastWindowRange(effectiveProductionWindow);
 
   const products = await prisma.product.findMany({
     where: {
@@ -166,10 +196,12 @@ export async function getCapacityRows(
       skus: {
         where: { isActive: true },
         orderBy: { createdAt: "asc" },
-        take: 1,
         select: {
+          id: true,
+          displayName: true,
           unitLabel: true,
           unitType: true,
+          stockQuantity: true,
         },
       },
     },
@@ -186,14 +218,29 @@ export async function getCapacityRows(
   });
   const { byId } = buildCategoryIndex(categoryList);
 
+  // TODO: Se volume crescer, considerar groupBy por skuId no Prisma para agregar no banco
   const [producedItems, consumedItems, demandItems] = await Promise.all([
     prisma.productionSessionItem.findMany({
-      where: { sku: { productId: { in: productIds } } },
-      select: { quantity: true, sku: { select: { productId: true } } },
+      where: {
+        sku: { productId: { in: productIds } },
+        session: {
+          producedAt: {
+            gte: productionRange.start,
+            lt: productionRange.end, // IMPORTANTE: lt, não lte
+          },
+        },
+      },
+      select: { quantity: true, sku: { select: { id: true, productId: true } } },
     }),
     prisma.productionConsumption.findMany({
-      where: { sku: { productId: { in: productIds } } },
-      select: { quantity: true, sku: { select: { productId: true } } },
+      where: {
+        sku: { productId: { in: productIds } },
+        consumedAt: {
+          gte: productionRange.start,
+          lt: productionRange.end, // IMPORTANTE: lt, não lte
+        },
+      },
+      select: { quantity: true, sku: { select: { id: true, productId: true } } },
     }),
     prisma.orderItem.findMany({
       where: {
@@ -208,38 +255,97 @@ export async function getCapacityRows(
       },
       select: {
         quantity: true,
-        sku: { select: { productId: true } },
+        sku: { select: { id: true, productId: true } },
       },
     }),
   ]);
 
+  // Maps por produto (agregado)
   const producedMap = new Map<string, number>();
+  const consumedMap = new Map<string, number>();
+  const demandMap = new Map<string, number>();
+  
+  // Maps por SKU (individual)
+  const producedBySku = new Map<string, number>();
+  const consumedBySku = new Map<string, number>();
+  const demandBySku = new Map<string, number>();
+  
   for (const item of producedItems) {
     const productId = item.sku?.productId;
+    const skuId = item.sku?.id;
     if (!productId) continue;
-    producedMap.set(productId, (producedMap.get(productId) ?? 0) + asNumber(item.quantity));
+    // Garantir NUMBER para evitar problemas com Decimal/string em sort
+    const qty = Number(asNumber(item.quantity));
+    producedMap.set(productId, (producedMap.get(productId) ?? 0) + qty);
+    if (skuId) {
+      producedBySku.set(skuId, (producedBySku.get(skuId) ?? 0) + qty);
+    }
   }
-  const consumedMap = new Map<string, number>();
+  
   for (const item of consumedItems) {
     const productId = item.sku?.productId;
+    const skuId = item.sku?.id;
     if (!productId) continue;
-    consumedMap.set(productId, (consumedMap.get(productId) ?? 0) + asNumber(item.quantity));
+    // Garantir NUMBER para evitar problemas com Decimal/string em sort
+    const qty = Number(asNumber(item.quantity));
+    consumedMap.set(productId, (consumedMap.get(productId) ?? 0) + qty);
+    if (skuId) {
+      consumedBySku.set(skuId, (consumedBySku.get(skuId) ?? 0) + qty);
+    }
   }
-  const demandMap = new Map<string, number>();
+  
   for (const item of demandItems) {
     const productId = item.sku?.productId;
+    const skuId = item.sku?.id;
     if (!productId) continue;
-    const current = demandMap.get(productId) ?? 0;
-    demandMap.set(productId, current + asNumber(item.quantity));
+    const qty = asNumber(item.quantity);
+    demandMap.set(productId, (demandMap.get(productId) ?? 0) + qty);
+    if (skuId) {
+      demandBySku.set(skuId, (demandBySku.get(skuId) ?? 0) + qty);
+    }
   }
 
   const rows = products.map((product) => {
-    const produced = producedMap.get(product.id) ?? 0;
-    const consumed = consumedMap.get(product.id) ?? 0;
-    const demand = demandMap.get(product.id) ?? 0;
+    // Garantir NUMBER para evitar problemas com Decimal/string em sort
+    const produced = Number(producedMap.get(product.id) ?? 0);
+    const consumed = Number(consumedMap.get(product.id) ?? 0);
+    const demand = Number(demandMap.get(product.id) ?? 0);
     const available = produced - consumed;
     const gap = Math.max(demand - available, 0);
     const sku = product.skus[0];
+    
+    // Calcular SKUs individuais
+    const skuRows: CapacitySkuRow[] = product.skus.map((sku) => {
+      // Garantir NUMBER para evitar problemas com Decimal/string em sort
+      const skuProduced = Number(producedBySku.get(sku.id) ?? 0);
+      const skuConsumed = Number(consumedBySku.get(sku.id) ?? 0);
+      const skuDemand = Number(demandBySku.get(sku.id) ?? 0);
+      const skuStockQty = Number(sku.stockQuantity ?? 0);
+      // Disponibilidade = Produzido - Consumido (disponibilidade de produção)
+      // stockQuantity é o estoque atual (usado para PRONTA_ENTREGA)
+      const skuAvailable = skuProduced - skuConsumed;
+      // Gap considera o maior entre stockQuantity e disponibilidade de produção
+      const skuEffectiveAvailable = Math.max(skuStockQty, skuAvailable);
+      const skuGap = Math.max(skuDemand - skuEffectiveAvailable, 0);
+      
+      return {
+        skuId: sku.id,
+        skuName: sku.displayName,
+        unitLabel: sku.unitLabel,
+        unitType: sku.unitType,
+        stockQuantity: skuStockQty,
+        produced: skuProduced,
+        consumed: skuConsumed,
+        available: skuAvailable,
+        demand: skuDemand,
+        gap: skuGap,
+      };
+    });
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/3e265bb7-e841-4942-a08a-d26ddc44c778',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'production.ts:280',message:'Capacity row calculated with SKUs',data:{productId:product.id,productName:product.name,produced,consumed,available,demand,gap,skusCount:skuRows.length,skus:skuRows.map(s=>({skuId:s.skuId,skuName:s.skuName,stockQuantity:s.stockQuantity,available:s.available}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+    // #endregion
+    
     return {
       productId: product.id,
       productName: product.name,
@@ -251,6 +357,7 @@ export async function getCapacityRows(
       available,
       demand,
       gap,
+      skus: skuRows,
     };
   });
 
@@ -355,7 +462,12 @@ async function getAvailableNowByProductIds(
   for (const productId of productIds) {
     const produced = producedMap.get(productId) ?? 0;
     const consumed = consumedMap.get(productId) ?? 0;
-    availableMap.set(productId, produced - consumed);
+    const available = produced - consumed;
+    availableMap.set(productId, available);
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/3e265bb7-e841-4942-a08a-d26ddc44c778',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'production.ts:358',message:'Product availability calculation',data:{productId,produced,consumed,available},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
+    // #endregion
   }
 
   return availableMap;
@@ -389,6 +501,12 @@ export async function computeUnavailableItemsForOrders(
   );
   const availableMap = await getAvailableNowByProductIds(prisma, productIds);
 
+  // #region agent log
+  const logData = Array.from(availableMap.entries()).map(([productId, available]) => ({ productId, available }));
+  const skuToProductData = Array.from(skuToProduct.entries()).map(([skuId, productId]) => ({ skuId, productId }));
+  fetch('http://127.0.0.1:7242/ingest/3e265bb7-e841-4942-a08a-d26ddc44c778',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'production.ts:390',message:'Product availability map calculated',data:{availableMap:logData,skuToProduct:skuToProductData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+  // #endregion
+
   const result = new Map<
     string,
     {
@@ -418,6 +536,11 @@ export async function computeUnavailableItemsForOrders(
       const requiredQty = asNumber(item.quantity);
       const availableNow = availableMap.get(productId) ?? 0;
       const gapQty = Math.max(requiredQty - availableNow, 0);
+      
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/3e265bb7-e841-4942-a08a-d26ddc44c778',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'production.ts:419',message:'Comparing SKU qty vs Product availability',data:{skuId,productId,requiredQty,availableNow,gapQty,isUnavailable:requiredQty>availableNow},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      
       itemAvailability.push({
         skuId,
         productId,

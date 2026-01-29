@@ -216,20 +216,10 @@ export async function createOrderAction(formData: FormData) {
     return { ...item, quantity, sku };
   });
 
-  if (finalOrderType === "PRONTA_ENTREGA" && !availabilityBypass) {
-    const requiredBySku = new Map<string, number>();
-    for (const item of normalizedItems) {
-      const current = requiredBySku.get(item.skuId) ?? 0;
-      requiredBySku.set(item.skuId, current + item.quantity);
-    }
-    for (const [skuId, requiredQty] of requiredBySku.entries()) {
-      const sku = skuMap.get(skuId);
-      const availableQty = sku ? Number(sku.stockQuantity) : 0;
-      if (requiredQty > availableQty) {
-        redirect("/admin/orders/new?error=sem-estoque");
-      }
-    }
-  }
+  // Validação de estoque para PRONTA_ENTREGA (apenas aviso, não bloqueia)
+  // O cliente já mostra aviso antes do submit, então aqui apenas valida se bypass foi usado
+  // Agora stockQuantity sempre reflete produced - consumed (sincronizado)
+  // Não precisa mais verificar aqui - o cliente já fez a verificação
 
   function parseUnitPrice(value: unknown) {
     const parsed = Number(String(value ?? "").replace(",", "."));

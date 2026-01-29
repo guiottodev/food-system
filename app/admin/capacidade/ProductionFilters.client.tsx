@@ -19,6 +19,14 @@ const windowOptions: Array<{ value: CapacityWindowKey; label: string }> = [
   { value: "30", label: "Próximos 30 dias" },
 ];
 
+const productionWindowOptions: Array<{ value: CapacityWindowKey; label: string }> = [
+  { value: "15", label: "Últimos 15 dias" },
+  { value: "7", label: "Últimos 7 dias" },
+  { value: "14", label: "Últimos 14 dias" },
+  { value: "30", label: "Últimos 30 dias" },
+  { value: "today", label: "Hoje" },
+];
+
 const displayOptions = [
   { value: "0", label: "Todos os produtos" },
   { value: "1", label: "Somente os que precisam de produção" },
@@ -26,13 +34,15 @@ const displayOptions = [
 
 type ProductionFiltersProps = {
   initialQuery: string;
-  initialWindow: CapacityWindowKey;
+  initialWindow: CapacityWindowKey; // demanda default (provavelmente 7)
+  initialProductionWindow?: CapacityWindowKey; // produção default 15
   initialGapOnly: boolean;
 };
 
 export default function ProductionFilters({
   initialQuery,
   initialWindow,
+  initialProductionWindow,
   initialGapOnly,
 }: ProductionFiltersProps) {
   const router = useRouter();
@@ -45,9 +55,13 @@ export default function ProductionFilters({
 
   const currentQuery = searchParams.get("q") ?? initialQuery;
   const currentWindow = normalizeCapacityWindow(searchParams.get("window") ?? initialWindow);
+  const currentProductionWindow = normalizeCapacityWindow(
+    searchParams.get("productionWindow") ?? initialProductionWindow ?? "15" // Default: 15
+  );
   const currentGap = searchParams.get("gap") ?? (initialGapOnly ? "1" : "0");
 
   const [draftWindow, setDraftWindow] = useState<CapacityWindowKey>(currentWindow);
+  const [draftProductionWindow, setDraftProductionWindow] = useState<CapacityWindowKey>(currentProductionWindow);
   const [draftGap, setDraftGap] = useState(currentGap);
 
   const applyParams = useCallback(
@@ -77,31 +91,43 @@ export default function ProductionFilters({
   useEffect(() => {
     if (!filtersOpen) {
       setDraftWindow(currentWindow);
+      setDraftProductionWindow(currentProductionWindow);
       setDraftGap(currentGap);
     }
-  }, [filtersOpen, currentWindow, currentGap]);
+  }, [filtersOpen, currentWindow, currentProductionWindow, currentGap]);
 
   const handleApplyFilters = () => {
     applyParams({
-      window: draftWindow !== "7" ? draftWindow : "",
-      gap: draftGap !== "0" ? draftGap : "",
+      window: draftWindow !== "7" ? draftWindow : null, // Default demanda
+      productionWindow: draftProductionWindow !== "15" ? draftProductionWindow : null, // Default: 15
+      gap: draftGap !== "0" ? draftGap : null,
     });
     setFiltersOpen(false);
   };
 
   const handleClearFilters = () => {
-    applyParams({ q: "", window: "", gap: "" });
+    // Limpar todos os filtros e resetar sort para gap desc
+    const params = new URLSearchParams();
+    params.set("sort", "gap");
+    params.set("dir", "desc");
+    startTransition(() => {
+      router.push(`${pathname}?${params.toString()}`);
+    });
     setFiltersOpen(false);
   };
 
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (currentWindow !== "7") count++;
+    if (currentWindow !== "7") count++; // Default demanda
+    if (currentProductionWindow !== "15") count++; // Default produção: 15
     if (currentGap !== "0") count++;
     return count;
-  }, [currentWindow, currentGap]);
+  }, [currentWindow, currentProductionWindow, currentGap]);
 
   const windowLabel = windowOptions.find((o) => o.value === currentWindow)?.label ?? "Próximos 7 dias";
+  const productionWindowLabel = productionWindowOptions.find(
+    (o) => o.value === currentProductionWindow
+  )?.label ?? "Últimos 15 dias";
   const displayLabel = displayOptions.find((o) => o.value === currentGap)?.label ?? "Todos os produtos";
 
   const chips = useMemo(
@@ -110,10 +136,18 @@ export default function ProductionFilters({
         currentQuery.trim()
           ? { key: "q", label: `Busca: ${currentQuery.trim()}` }
           : null,
-        currentWindow !== "7" ? { key: "window", label: windowLabel } : null,
+        currentWindow !== "7" // Só aparece quando != default
+          ? { key: "window", label: `Demanda: ${windowLabel}` }
+          : null,
+        currentProductionWindow !== "15" // Só aparece quando != default
+          ? { 
+              key: "productionWindow", 
+              label: `Produção: ${productionWindowLabel}` 
+            }
+          : null,
         currentGap !== "0" ? { key: "gap", label: displayLabel } : null,
       ].filter(Boolean) as Array<{ key: string; label: string }>,
-    [currentQuery, currentWindow, currentGap, windowLabel, displayLabel]
+    [currentQuery, currentWindow, currentProductionWindow, currentGap, windowLabel, productionWindowLabel, displayLabel]
   );
 
   return (
@@ -184,6 +218,24 @@ export default function ProductionFilters({
               </div>
               <div className={layoutStyles.filtersGroup}>
                 <div className={layoutStyles.filtersGroupHeader}>
+                  <Calendar size={16} aria-hidden />
+                  <span>Período da produção</span>
+                </div>
+                <div className={layoutStyles.filtersGroupContent}>
+                  <div className={layoutStyles.filterField}>
+                    <span className={layoutStyles.filterFieldLabel}>Últimos X dias</span>
+                    <FilterSelect
+                      options={productionWindowOptions}
+                      value={draftProductionWindow}
+                      onChange={(v) => setDraftProductionWindow(v as CapacityWindowKey)}
+                      disabled={isPending}
+                      aria-label="Período da produção"
+                    />
+                  </div>
+                </div>
+              </div>
+              <div className={layoutStyles.filtersGroup}>
+                <div className={layoutStyles.filtersGroupHeader}>
                   <span>Exibir</span>
                 </div>
                 <div className={layoutStyles.filtersGroupContent}>
@@ -212,7 +264,8 @@ export default function ProductionFilters({
                 type="button"
                 onClick={() => {
                   if (chip.key === "q") applyParams({ q: null });
-                  else if (chip.key === "window") applyParams({ window: null });
+                  else if (chip.key === "window") applyParams({ window: null }); // Volta para default demanda
+                  else if (chip.key === "productionWindow") applyParams({ productionWindow: null }); // Volta para default 15
                   else applyParams({ gap: null });
                 }}
                 className={layoutStyles.chipButton}
