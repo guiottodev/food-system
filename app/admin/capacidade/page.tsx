@@ -13,6 +13,7 @@ import ProductionFilters from "./ProductionFilters.client";
 import CapacityTable from "./CapacityTable.client";
 import ProductionEmptyState from "./ProductionEmptyState.client";
 import Button from "../_components/Button";
+import { InlineNotice } from "../design-system/InlineNotice.client";
 
 type SearchParams = {
   q?: string;
@@ -21,6 +22,8 @@ type SearchParams = {
   gap?: string;
   sort?: string;
   dir?: string;
+  producao?: string;
+  consumo?: string;
 };
 
 const SORT_KEYS: SortKey[] = [
@@ -90,6 +93,8 @@ export default async function CapacidadePage({
   const gapOnly = sp?.gap === "1";
   const sort = normalizeSort(sp?.sort);
   const dir = normalizeDir(sp?.dir);
+  const producaoOk = sp?.producao === "1";
+  const consumoOk = sp?.consumo === "1";
 
   const rows = await getCapacityRows(prisma, {
     window: windowKey,
@@ -104,6 +109,16 @@ export default async function CapacidadePage({
 
   return (
     <main className={styles.page}>
+      {producaoOk ? (
+        <InlineNotice tone="success" clearQueryKeys={["producao"]}>
+          Produção registrada com sucesso.
+        </InlineNotice>
+      ) : null}
+      {consumoOk ? (
+        <InlineNotice tone="success" clearQueryKeys={["consumo"]}>
+          Consumo registrado com sucesso.
+        </InlineNotice>
+      ) : null}
       <div className={layoutStyles.pageHeader}>
         <div>
           <h1 className={styles.pageTitle}>Produção</h1>

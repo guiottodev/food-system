@@ -141,5 +141,5 @@ export async function createConsumptionAction(formData: FormData) {
     });
   });
 
-  redirect("/admin/consumo?created=1");
+  redirect("/admin/capacidade?consumo=1");
 }

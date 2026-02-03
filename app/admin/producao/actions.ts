@@ -189,5 +189,5 @@ export async function createProductionSessionAction(formData: FormData) {
     }
   });
 
-  redirect("/admin/producao?created=1");
+  redirect("/admin/capacidade?producao=1");
 }
