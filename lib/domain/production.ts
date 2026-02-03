@@ -311,9 +311,8 @@ export async function getCapacityRows(
     const consumed = Number(consumedMap.get(product.id) ?? 0);
     const demand = Number(demandMap.get(product.id) ?? 0);
     const available = produced - consumed;
-    const gap = Math.max(demand - available, 0);
     const sku = product.skus[0];
-    
+
     // Calcular SKUs individuais
     const skuRows: CapacitySkuRow[] = product.skus.map((sku) => {
       // Garantir NUMBER para evitar problemas com Decimal/string em sort
@@ -341,7 +340,9 @@ export async function getCapacityRows(
         gap: skuGap,
       };
     });
-    
+    // Gap do produto = soma dos gaps por SKU (reflete necessidade real por variedade)
+    const gap = skuRows.reduce((sum, s) => sum + s.gap, 0);
+
     // #region agent log
     fetch('http://127.0.0.1:7242/ingest/3e265bb7-e841-4942-a08a-d26ddc44c778',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'production.ts:280',message:'Capacity row calculated with SKUs',data:{productId:product.id,productName:product.name,produced,consumed,available,demand,gap,skusCount:skuRows.length,skus:skuRows.map(s=>({skuId:s.skuId,skuName:s.skuName,stockQuantity:s.stockQuantity,available:s.available}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
     // #endregion
@@ -490,22 +491,16 @@ export async function computeUnavailableItemsForOrders(
   const skuRows = skuList.length
     ? await prisma.sku.findMany({
         where: { id: { in: skuList } },
-        select: { id: true, productId: true },
+        select: { id: true, productId: true, stockQuantity: true },
       })
     : [];
   const skuToProduct = new Map(
     skuRows.map((sku) => [sku.id, sku.productId])
   );
-  const productIds = Array.from(
-    new Set(skuRows.map((sku) => sku.productId))
+  // Disponibilidade por SKU (stockQuantity), alinhado à lista de pedidos (computeOrderStockStatus)
+  const availableBySku = new Map(
+    skuRows.map((s) => [s.id, Number(asNumber(s.stockQuantity ?? 0))])
   );
-  const availableMap = await getAvailableNowByProductIds(prisma, productIds);
-
-  // #region agent log
-  const logData = Array.from(availableMap.entries()).map(([productId, available]) => ({ productId, available }));
-  const skuToProductData = Array.from(skuToProduct.entries()).map(([skuId, productId]) => ({ skuId, productId }));
-  fetch('http://127.0.0.1:7242/ingest/3e265bb7-e841-4942-a08a-d26ddc44c778',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'production.ts:390',message:'Product availability map calculated',data:{availableMap:logData,skuToProduct:skuToProductData},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-  // #endregion
 
   const result = new Map<
     string,
@@ -534,13 +529,9 @@ export async function computeUnavailableItemsForOrders(
       const productId = skuToProduct.get(skuId);
       if (!productId) continue;
       const requiredQty = asNumber(item.quantity);
-      const availableNow = availableMap.get(productId) ?? 0;
+      const availableNow = availableBySku.get(skuId) ?? 0;
       const gapQty = Math.max(requiredQty - availableNow, 0);
-      
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/3e265bb7-e841-4942-a08a-d26ddc44c778',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'production.ts:419',message:'Comparing SKU qty vs Product availability',data:{skuId,productId,requiredQty,availableNow,gapQty,isUnavailable:requiredQty>availableNow},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      
+
       itemAvailability.push({
         skuId,
         productId,

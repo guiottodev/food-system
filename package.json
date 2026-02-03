@@ -11,7 +11,10 @@
         "test": "node scripts/test-run.js",
         "db:migrate": "prisma migrate deploy",
         "db:seed": "prisma db seed",
-        "db:check": "node scripts/check-db-integrity.js"
+        "db:check": "node scripts/check-db-integrity.js",
+        "seed:sim": "npx tsx scripts/seed-simulated.ts --mode=full --reset",
+        "seed:sim:golden": "npx tsx scripts/seed-simulated.ts --mode=golden --reset",
+        "seed:sim:bulk": "npx tsx scripts/seed-simulated.ts --mode=bulk --reset"
     },
     "dependencies": {
         "@prisma/client": "^6.16.2",

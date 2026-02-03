@@ -21,6 +21,11 @@ Testes (Vitest + SQLite):
 Popular base de testes:
 - `node scripts\\fill_test_data.js --count=1000 --pastDays=90 --futureDays=30 --reset`
 
+Seed simulado (base determinística 2025-12-01 a 2026-02-28, ~450 pedidos, 300 clientes, 130 produtos):
+- `npx tsx scripts/seed-simulated.ts --mode=full --reset`
+- Modos: `--mode=golden` | `--mode=bulk` | `--mode=full`. `--reset` limpa tabelas antes.
+- Ver `docs/SEED_SIMULATED.md` e `npm run seed:sim` / `seed:sim:golden` / `seed:sim:bulk`.
+
 Produtos e SKUs (Categorias/Produtos/SKUs):
 - Categoria: nome unico, descricao opcional.
 - Produto: lead time (horas), imagens (principal + extras).
