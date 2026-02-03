@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { createOrderAction } from "./actions";
+import { useEffect, useMemo, useRef, useState, useActionState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { createOrderAction, type CreateOrderResult } from "./actions";
 import { normalizePhoneBR, normalizePhoneDigits } from "@/lib/phone";
 import { validateSkuQuantity } from "@/lib/quantity";
 import type { OrderStatus } from "@prisma/client";
@@ -326,6 +327,18 @@ export default function OrderForm({
   const initialOrderStatus = initial.orderStatus;
   const isFinalOrder =
     isEdit && (initialOrderStatus === "ENTREGUE" || initialOrderStatus === "CANCELADO");
+
+  const router = useRouter();
+  const [createState, createFormAction] = useActionState<CreateOrderResult | null, FormData>(
+    createOrderAction,
+    null
+  );
+
+  useEffect(() => {
+    if (!isEdit && createState?.success && createState.orderId) {
+      router.push(`/admin/orders/${createState.orderId}?created=1`);
+    }
+  }, [isEdit, createState, router]);
 
   const [customerMode, setCustomerMode] = useState<"existing" | "new">(
     initial.customerMode ?? "existing"
@@ -1461,7 +1474,7 @@ export default function OrderForm({
 
   const showErrors = submitAttempted;
 
-  const formAction = action ?? createOrderAction;
+  const formAction = action ?? createFormAction;
 
   return (
     <form

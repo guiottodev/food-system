@@ -1,4 +1,6 @@
-# Sistema interno de pedidos, impressao e estoque para o negocio (uso administrativo).
+# Sistema interno de pedidos, produção e estoque para o negócio (uso administrativo)
+
+Documentação canônica: `docs/SOURCE_OF_TRUTH.md`; tópicos em `docs/source/`. Impressão e relatórios não estão implementados.
 
 Scripts (placeholders):
 - start-local.bat: executar `scripts\\start-local.bat`

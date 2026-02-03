@@ -7,7 +7,8 @@ Passos principais
 2) Escolher método de entrega.
 3) Escolher tipo de pedido.
 4) Adicionar itens e preços unitários.
-5) Salvar como RASCUNHO.
+5) Informar método de pagamento e sinal (opcional).
+6) Salvar como RASCUNHO.
 
 Notas
 - PRONTA_ENTREGA define deliveryDatetime como agora na criação.

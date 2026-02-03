@@ -156,7 +156,14 @@ async function generateOrderNumber(
   return `${prefix}${String(next).padStart(6, "0")}`;
 }
 
-export async function createOrderAction(formData: FormData) {
+export type CreateOrderResult =
+  | { success: true; orderId: string }
+  | { success: false; error?: string };
+
+export async function createOrderAction(
+  _prevState: CreateOrderResult | null,
+  formData: FormData
+): Promise<CreateOrderResult> {
   const payload = parsePayload(formData);
   const items = Array.isArray(payload.items) ? payload.items : [];
   const availabilityBypass = String(formData.get("availabilityBypass") ?? "0") === "1";
@@ -440,5 +447,6 @@ export async function createOrderAction(formData: FormData) {
     return { orderId: order.id };
   });
 
-  redirect(`/admin/orders/${result.orderId}?created=1`);
+  // Retornar sucesso para o cliente redirecionar; redirect() aqui lança e pode ser exibido como erro
+  return { success: true, orderId: result.orderId };
 }

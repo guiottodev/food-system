@@ -116,11 +116,12 @@ O estoque físico (`stockQuantity`) é sempre calculado como a diferença entre 
 ## 7. Tela de Capacidade (`/admin/capacidade`)
 
 **O que mostra:**
-- **Produzido**: Soma de `ProductionSessionItem` por produto/SKU
-- **Consumido**: Soma de `ProductionConsumption` por produto/SKU
-- **Disponível**: `Produzido - Consumido` (igual a `stockQuantity` para SKU)
-- **Demanda**: Soma de pedidos `RASCUNHO`, `CONFIRMADO`, `EM_PRODUCAO`
-- **Gap**: `max(Demanda - Disponível, 0)`
+- **Produzido**: Soma de `ProductionSessionItem` por produto/SKU **no período selecionado** (últimos X dias)
+- **Consumido**: Soma de `ProductionConsumption` por produto/SKU **no período selecionado**
+- **Disponível**: `Produzido - Consumido` **no período** (não é o saldo total; o saldo total por SKU é `stockQuantity`)
+- **Demanda**: Soma de pedidos `RASCUNHO`, `CONFIRMADO`, `EM_PRODUCAO` na janela de demanda (próximos X dias)
+- **Gap**: `max(Demanda - Disponível, 0)` (considera o maior entre stockQuantity e disponível no período)
+- **Filtros**: dois independentes — período da demanda (default 7 dias) e período da produção (default 15 dias)
 
 **Código:** `lib/domain/production.ts` → `getCapacityRows()`
 

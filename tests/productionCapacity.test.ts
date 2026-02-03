@@ -309,6 +309,24 @@ describe("production capacity", () => {
       },
     });
 
+    // computeOrderPendingFlags usa sku.stockQuantity; sincronizar após produção
+    const [producedItems, consumedItems] = await Promise.all([
+      prisma.productionSessionItem.findMany({
+        where: { sku: { id: sku.id } },
+        select: { quantity: true },
+      }),
+      prisma.productionConsumption.findMany({
+        where: { sku: { id: sku.id } },
+        select: { quantity: true },
+      }),
+    ]);
+    const produced = producedItems.reduce((s, i) => s + Number(i.quantity), 0);
+    const consumed = consumedItems.reduce((s, i) => s + Number(i.quantity), 0);
+    await prisma.sku.update({
+      where: { id: sku.id },
+      data: { stockQuantity: Math.max(0, produced - consumed) },
+    });
+
     const pendingAfter = await computeOrderPendingFlags(prisma, {
       id: order.id,
       status: order.status,

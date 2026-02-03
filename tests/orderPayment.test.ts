@@ -73,6 +73,6 @@ describe("order payment", () => {
 
   it("renders payment block", () => {
     const html = renderToStaticMarkup(createElement(OrderForm, { customers: [] }));
-    expect(html).toContain("Pagamento combinado");
+    expect(html).toContain("A combinar");
   });
 });

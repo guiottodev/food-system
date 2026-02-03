@@ -62,6 +62,16 @@ describe("stock idempotency", () => {
       },
     });
 
+    // Estoque é derivado de produção - consumo; sem produção, ao entregar o saldo viraria 0
+    await prisma.productionSession.create({
+      data: {
+        producedAt: new Date(),
+        items: {
+          create: { skuId: sku.id, quantity: new Prisma.Decimal(10) },
+        },
+      },
+    });
+
     const customer = await prisma.customer.create({
       data: { name: "Cliente teste", phone: "11999999999" },
     });

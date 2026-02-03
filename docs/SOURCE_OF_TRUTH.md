@@ -1,6 +1,6 @@
 # FONTE DA VERDADE
 
-Última atualização: 2026-01-24
+Última atualização: 2026-02-02
 
 Este documento é a única fonte da verdade sobre como o produto funciona hoje.
 Ele reflete o código atual (Next.js + Prisma + SQLite). Se este documento e o
@@ -110,7 +110,7 @@ Observações importantes:
 - OrderItem.skuId é anulável (SKU pode ser removido/inativado depois).
 - inventory_movements e capacity_rules existem no schema, mas não são usados
   na lógica atual da aplicação.
-  - Observação: categorias agora suportam subcategorias (árvore) via `parentId`.
+- Categorias suportam subcategorias (árvore) via `parentId`.
 
 ---
 
@@ -201,7 +201,9 @@ Transições aplicadas pelo código:
 - CANCELADO -> (sem transições)
 
 Status finais: ENTREGUE, CANCELADO.
-Observação: o fluxo permite ir de RASCUNHO direto para EM_PRODUCAO.
+Regras de validação: CONFIRMADO e EM_PRODUCAO exigem pedido pronto (itens + data).
+Transições para PRONTO ou ENTREGUE são bloqueadas se houver pendências fortes
+(INCOMPLETE ou needsReconfirmation). O fluxo permite ir de RASCUNHO direto para EM_PRODUCAO.
 
 ### 7.2 Tipos de pedido
 - PRONTA_ENTREGA: entrega é agendada imediatamente (agora) na criação.
@@ -338,13 +340,16 @@ Consumo:
 - Pode ser usado para ajustes operacionais sem entrega.
 
 Tela de capacidade:
-- /admin/capacidade mostra por produto:
-  - produzido, consumido, disponível (produzido - consumido)
-  - demanda (pedidos RASCUNHO, CONFIRMADO, EM_PRODUCAO dentro da janela)
+- /admin/capacidade mostra por produto (e por SKU na expansão):
+  - produzido, consumido, disponível (produzido - consumido no período da produção)
+  - demanda (pedidos RASCUNHO, CONFIRMADO, EM_PRODUCAO dentro da janela de demanda)
   - gap (max(demanda - disponível, 0))
+  - stockQuantity do SKU é o saldo total (todos os tempos); produzido/consumido/disponível da tabela referem-se ao período selecionado.
 Observação: a lista considera apenas produtos ativos.
 
-Janelas: hoje, 7 dias, 14 dias, 30 dias.
+Janelas (dois filtros independentes):
+- Demanda (próximos X dias): hoje, 7, 14, 30 — default 7.
+- Produção (últimos X dias): hoje, 7, 14, 15, 30 — default 15.
 
 ---
 
