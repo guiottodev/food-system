@@ -7,6 +7,7 @@ import {
   computeUnavailableItemsForOrders,
 } from "@/lib/domain/production";
 import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
+import { FINAL_STATUSES } from "@/lib/domain/status";
 import { normalizePhoneDigits } from "@/lib/phone";
 import { DeliveryMethod, OrderStatus, OrderType, Prisma } from "@prisma/client";
 import OrdersTableClient from "./OrdersTableClient";
@@ -18,6 +19,7 @@ type OrdersSearchParams = {
   period?: string;
   deliveryStart?: string;
   deliveryEnd?: string;
+  mode?: string;
   view?: string;
   status?: string;
   q?: string;
@@ -61,7 +63,7 @@ function formatDate(value?: Date | null) {
 }
 
 function formatDeliveryLabel(value?: Date | null, time?: string | null) {
-  if (!value) return "-";
+  if (!value) return "Sem data";
   const dateLabel = formatDate(value);
   const trimmedTime = time?.trim();
   if (!trimmedTime || trimmedTime === DEFAULT_DELIVERY_TIME) {
@@ -132,22 +134,46 @@ function normalizeView(view?: string) {
   return "upcoming";
 }
 
-type PeriodValue = "upcoming" | "today" | "range" | "history";
+type OrdersMode = "agenda" | "historico";
+
+function normalizeMode(value?: string): OrdersMode | null {
+  if (value === "agenda") return "agenda";
+  if (value === "historico" || value === "history") return "historico";
+  return null;
+}
+
+type PeriodValue =
+  | "upcoming"
+  | "today"
+  | "next7"
+  | "next30"
+  | "range"
+  | "last7"
+  | "last30";
 type SortValue = "delivery_asc" | "delivery_desc" | "created_desc";
 
 function normalizePeriod(value?: string): PeriodValue {
+  if (value === "upcoming") return "upcoming";
   if (value === "today") return "today";
   if (value === "range") return "range";
-  if (value === "history") return "history";
+  if (value === "next7") return "next7";
+  if (value === "next30") return "next30";
+  if (value === "last7") return "last7";
+  if (value === "last30") return "last30";
+  if (value === "history") return "last30";
   return "upcoming";
 }
 
-function parseSort(value: string | undefined, legacyDir: string | undefined): SortValue {
+function parseSort(
+  value: string | undefined,
+  legacyDir: string | undefined,
+  fallback: SortValue
+): SortValue {
   if (value === "delivery_desc") return "delivery_desc";
   if (value === "created_desc") return "created_desc";
   if (value === "delivery_asc") return "delivery_asc";
   if (legacyDir === "desc") return "delivery_desc";
-  return "delivery_asc";
+  return fallback;
 }
 
 function normalizeOrderType(value: string | undefined) {
@@ -257,21 +283,41 @@ export default async function OrdersPage({
   const view = normalizeView(sp?.view);
   const statusParam = sp?.status ?? "ALL";
   const query = (sp?.q ?? "").trim();
-  const sort = parseSort(sp?.sort, sp?.dir);
   const page = parsePage(sp?.page);
   const pageSize = parsePageSize(sp?.pageSize);
   const deliveryDateParam = sp?.deliveryDate ?? "";
   const deliveryStartParam = sp?.deliveryStart ?? "";
   const deliveryEndParam = sp?.deliveryEnd ?? "";
-  const periodParam = normalizePeriod(sp?.period);
-  const attentionParam = normalizeAttention(sp?.attention, sp?.attentionType);
-  const orderTypeParam = normalizeOrderType(sp?.orderType);
-  const deliveryMethodParam = normalizeDeliveryMethod(sp?.deliveryMethod);
   const legacyRange =
     sp?.view === "week" ? "week" : sp?.view === "day" ? "day" : "";
   const deliveryRangeParam = parseDeliveryRange(
     sp?.deliveryRange ?? legacyRange
   );
+  const periodParamRaw = normalizePeriod(sp?.period);
+  const modeParam = normalizeMode(sp?.mode);
+  const inferredMode = (() => {
+    if (periodParamRaw === "last7" || periodParamRaw === "last30") return "historico";
+    if (sp?.view === "previous") return "historico";
+    return null;
+  })();
+  let mode: OrdersMode = modeParam ?? inferredMode ?? "agenda";
+  if (!modeParam && !inferredMode) {
+    const operationalCount = await prisma.order.count({
+      where: { status: { notIn: FINAL_STATUSES } },
+    });
+    mode = operationalCount > 0 ? "agenda" : "historico";
+  }
+  const sort = parseSort(
+    sp?.sort,
+    sp?.dir,
+    mode === "historico" ? "delivery_desc" : "delivery_asc"
+  );
+  const attentionParam =
+    mode === "historico"
+      ? "all"
+      : normalizeAttention(sp?.attention, sp?.attentionType);
+  const orderTypeParam = normalizeOrderType(sp?.orderType);
+  const deliveryMethodParam = normalizeDeliveryMethod(sp?.deliveryMethod);
 
   const now = new Date();
   const startToday = startOfDay(now);
@@ -281,56 +327,100 @@ export default async function OrdersPage({
   const daysToSunday = (7 - startToday.getDay()) % 7;
   const endWeek = endOfDay(addDays(startToday, daysToSunday));
   const startMonth = startOfDay(new Date(now.getFullYear(), now.getMonth(), 1));
+  const endNext7 = endOfDay(addDays(startToday, 6));
+  const endNext30 = endOfDay(addDays(startToday, 29));
+  const startLast7 = startOfDay(addDays(startToday, -6));
+  const startLast30 = startOfDay(addDays(startToday, -29));
+  const defaultPeriod: PeriodValue = mode === "historico" ? "last30" : "upcoming";
 
   // Ranges baseadas em data local (inicio/fim do dia) para inclusao correta.
   let dateFilter: { gte?: Date; lte?: Date } = {};
   const parsedDeliveryDate = parseDateParam(deliveryDateParam);
   const parsedDeliveryStart = parseDateParam(deliveryStartParam);
   const parsedDeliveryEnd = parseDateParam(deliveryEndParam);
-  const hasNewPeriod =
+  const hasExplicitPeriod =
     Boolean(sp?.period) ||
     Boolean(deliveryStartParam) ||
     Boolean(deliveryEndParam);
-  if (hasNewPeriod) {
+  const allowedPeriods =
+    mode === "historico"
+      ? new Set<PeriodValue>(["last7", "last30", "range"])
+      : new Set<PeriodValue>(["upcoming", "today", "next7", "next30", "range"]);
+
+  const buildRangeFilter = (start: Date | null, end: Date | null) => ({
+    ...(start ? { gte: startOfDay(start) } : {}),
+    ...(end ? { lte: endOfDay(end) } : {}),
+  });
+
+  let periodParam = periodParamRaw;
+  if (hasExplicitPeriod && !allowedPeriods.has(periodParam)) {
+    periodParam = defaultPeriod;
+  }
+
+  if (hasExplicitPeriod) {
     if (periodParam === "today") {
       dateFilter = { gte: startToday, lte: endToday };
+    } else if (periodParam === "upcoming") {
+      dateFilter = { gte: startToday };
+    } else if (periodParam === "next7") {
+      dateFilter = { gte: startToday, lte: endNext7 };
+    } else if (periodParam === "next30") {
+      dateFilter = { gte: startToday, lte: endNext30 };
+    } else if (periodParam === "last7") {
+      dateFilter = { gte: startLast7, lte: endToday };
+    } else if (periodParam === "last30") {
+      dateFilter = { gte: startLast30, lte: endToday };
     } else if (periodParam === "range") {
-      dateFilter = {
-        ...(parsedDeliveryStart ? { gte: startOfDay(parsedDeliveryStart) } : {}),
-        ...(parsedDeliveryEnd ? { lte: endOfDay(parsedDeliveryEnd) } : {}),
-      };
-    } else if (periodParam === "history") {
-      dateFilter = { lte: endToday };
+      dateFilter = buildRangeFilter(parsedDeliveryStart, parsedDeliveryEnd);
     } else {
       dateFilter = { gte: startToday };
     }
   } else if (parsedDeliveryDate) {
+    periodParam = "range";
     dateFilter = {
       gte: startOfDay(parsedDeliveryDate),
       lte: endOfDay(parsedDeliveryDate),
     };
   } else if (deliveryRangeParam === "week") {
+    periodParam = "range";
     dateFilter = { gte: startToday, lte: endWeek };
   } else if (deliveryRangeParam === "month") {
+    periodParam = "range";
     dateFilter = { gte: startMonth, lte: endToday };
   } else if (deliveryRangeParam === "day") {
+    periodParam = "today";
     dateFilter = { gte: startToday, lte: endToday };
   } else if (view === "previous") {
+    periodParam = "range";
     dateFilter = { gte: startPrevious, lte: endYesterday };
-  } else if (view === "all") {
-    dateFilter = {};
   } else {
-    dateFilter = { gte: startToday };
+    periodParam = defaultPeriod;
+    if (periodParam === "last30") {
+      dateFilter = { gte: startLast30, lte: endToday };
+    } else if (periodParam === "last7") {
+      dateFilter = { gte: startLast7, lte: endToday };
+    } else if (periodParam === "upcoming") {
+      dateFilter = { gte: startToday };
+    } else if (periodParam === "next30") {
+      dateFilter = { gte: startToday, lte: endNext30 };
+    } else if (periodParam === "next7") {
+      dateFilter = { gte: startToday, lte: endNext7 };
+    } else {
+      dateFilter = { gte: startToday, lte: endToday };
+    }
   }
 
-  const effectiveStatusParam =
-    periodParam === "history" && hasNewPeriod ? OrderStatus.ENTREGUE : statusParam;
+  const historyStatusParam =
+    statusParam === OrderStatus.ENTREGUE || statusParam === OrderStatus.CANCELADO
+      ? statusParam
+      : "ALL";
+  const effectiveStatusParam = mode === "historico" ? historyStatusParam : "ALL";
   const statusFilter =
-    effectiveStatusParam !== "ALL"
-      ? {
-          status: effectiveStatusParam as OrderStatus,
-        }
-      : {};
+    mode === "historico"
+      ? effectiveStatusParam !== "ALL"
+        ? { status: effectiveStatusParam as OrderStatus }
+        : { status: { in: FINAL_STATUSES } }
+      : { status: { notIn: FINAL_STATUSES } };
 
   const orderTypeFilter =
     orderTypeParam !== "all"
@@ -377,12 +467,26 @@ export default async function OrdersPage({
       }
     : {};
 
-  const where = {
-    deliveryDatetime: dateFilter,
+  const dateFilterActive = Boolean(dateFilter.gte || dateFilter.lte);
+  const andFilters: Prisma.OrderWhereInput[] = [];
+  if (query) {
+    andFilters.push(queryFilter);
+  }
+  if (dateFilterActive) {
+    if (mode === "agenda") {
+      andFilters.push({
+        OR: [{ deliveryDatetime: dateFilter }, { deliveryDatetime: null }],
+      });
+    } else {
+      andFilters.push({ deliveryDatetime: dateFilter });
+    }
+  }
+
+  const where: Prisma.OrderWhereInput = {
     ...statusFilter,
-    ...queryFilter,
     ...orderTypeFilter,
     ...deliveryMethodFilter,
+    ...(andFilters.length ? { AND: andFilters } : {}),
   };
 
   const shouldFilterByAttention = attentionParam !== "all";
@@ -499,21 +603,29 @@ export default async function OrdersPage({
       ? 0
       : Math.min(clampedPage * pageSize, totalCount);
 
+  const defaultSort =
+    mode === "historico" ? ("delivery_desc" as SortValue) : ("delivery_asc" as SortValue);
   const baseParams = {
     q: query || undefined,
-    status: effectiveStatusParam !== "ALL" ? effectiveStatusParam : undefined,
-    sort: sort !== "delivery_asc" ? sort : undefined,
+    mode,
+    status:
+      mode === "historico" && effectiveStatusParam !== "ALL"
+        ? effectiveStatusParam
+        : undefined,
+    sort: sort !== defaultSort ? sort : undefined,
     pageSize: pageSize !== PAGE_SIZES[0] ? pageSize : undefined,
-    deliveryDate: !hasNewPeriod && deliveryDateParam ? deliveryDateParam : undefined,
+    deliveryDate:
+      !hasExplicitPeriod && deliveryDateParam ? deliveryDateParam : undefined,
     deliveryRange:
-      !hasNewPeriod && deliveryRangeParam ? deliveryRangeParam : undefined,
-    deliveryStart: deliveryStartParam || undefined,
-    deliveryEnd: deliveryEndParam || undefined,
-    period: hasNewPeriod ? periodParam : undefined,
-    attention: attentionParam !== "all" ? attentionParam : undefined,
+      !hasExplicitPeriod && deliveryRangeParam ? deliveryRangeParam : undefined,
+    deliveryStart: hasExplicitPeriod ? deliveryStartParam || undefined : undefined,
+    deliveryEnd: hasExplicitPeriod ? deliveryEndParam || undefined : undefined,
+    period: hasExplicitPeriod ? periodParam : undefined,
+    attention:
+      mode === "agenda" && attentionParam !== "all" ? attentionParam : undefined,
     orderType: orderTypeParam !== "all" ? orderTypeParam : undefined,
     deliveryMethod: deliveryMethodParam !== "all" ? deliveryMethodParam : undefined,
-    view: hasNewPeriod ? undefined : view,
+    view: undefined,
   };
 
   const pageLink = (nextPage: number) =>
@@ -566,6 +678,7 @@ export default async function OrdersPage({
           statusOptions={statusOptions}
           pageSizes={PAGE_SIZES}
           initialView={view}
+          initialMode={mode}
           initialPeriod={periodParam}
           initialQuery={query}
           initialStatus={effectiveStatusParam}
@@ -615,6 +728,10 @@ export default async function OrdersPage({
                 deliveryMethodLabel: deliveryMethodLabel[order.deliveryMethod],
                 status: order.status,
                 statusLabel: statusLabel[order.status],
+                isOverdue:
+                  mode === "agenda" &&
+                  Boolean(order.deliveryDatetime) &&
+                  (order.deliveryDatetime as Date) < startToday,
                 deliveryDatetime: formatDeliveryLabel(
                   order.deliveryDatetime,
                   order.deliveryTime
@@ -644,6 +761,7 @@ export default async function OrdersPage({
             })}
             sort={sort}
             dir={sort === "delivery_desc" || sort === "created_desc" ? "desc" : "asc"}
+            mode={mode}
           />
         )}
       </section>

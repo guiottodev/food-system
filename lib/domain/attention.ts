@@ -1,5 +1,6 @@
 import { DeliveryMethod, OrderStatus, OrderType } from "@prisma/client";
 import { DEFAULT_DELIVERY_TIME, OrderItemSnapshot, getOrderPendingSummary } from "./order";
+import { isFinalStatus } from "./status";
 
 export type AttentionSeverity = "strong" | "weak";
 export type AttentionReasonType =
@@ -53,8 +54,6 @@ export type OrderAttentionSummary = {
   };
 };
 
-const FINAL_STATUSES: OrderStatus[] = ["ENTREGUE", "CANCELADO"];
-
 function normalizeText(value?: string | null) {
   const trimmed = value?.trim() ?? "";
   return trimmed === "" ? null : trimmed;
@@ -94,7 +93,7 @@ function buildFlag(state: FieldFlagState, label: string): FieldFlag {
 export function getOrderAttentionSummary(
   order: OrderAttentionInput
 ): OrderAttentionSummary {
-  if (FINAL_STATUSES.includes(order.status) && !order.hasStockShortage) {
+  if (isFinalStatus(order.status) && !order.hasStockShortage) {
     return {
       reasons: [],
       strongReasons: [],
@@ -110,7 +109,7 @@ export function getOrderAttentionSummary(
       },
     };
   }
-  if (FINAL_STATUSES.includes(order.status) && order.hasStockShortage) {
+  if (isFinalStatus(order.status) && order.hasStockShortage) {
     const reasons: AttentionReason[] = [
       {
         type: "SALDO_INSUFICIENTE",

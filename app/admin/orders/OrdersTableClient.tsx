@@ -35,6 +35,7 @@ type OrderRow = {
   deliveryMethodLabel: string;
   status: OrderStatus;
   statusLabel: string;
+  isOverdue: boolean;
   deliveryDatetime: string;
   totalLabel: string;
   items: OrderItem[];
@@ -60,19 +61,27 @@ function formatUnit(item: OrderItem) {
 }
 
 function parseDeliveryDateTime(datetime: string) {
-  const parts = datetime.split(" ");
+  const normalized = datetime.trim();
+  if (normalized === "Sem data" || normalized === "-") {
+    return { date: normalized, time: "" };
+  }
+  const parts = normalized.split(" ");
   if (parts.length >= 2) {
     return { date: parts[0], time: parts.slice(1).join(" ") };
   }
-  return { date: datetime, time: "" };
+  return { date: normalized, time: "" };
 }
 
 export default function OrdersTableClient({
   orders,
   sort,
+  mode,
+  dir,
 }: {
   orders: OrderRow[];
   sort?: string;
+  mode: "agenda" | "historico";
+  dir?: "asc" | "desc";
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -87,6 +96,7 @@ export default function OrdersTableClient({
     } else {
       params.delete("sort");
     }
+    params.set("mode", mode);
     router.push(`${pathname}?${params.toString()}`);
   };
 
@@ -168,6 +178,11 @@ export default function OrdersTableClient({
           <div className={layoutStyles.dateInfo}>
             <span className={layoutStyles.dateMain}>{date}</span>
             {time && <span className={layoutStyles.dateTime}>{time}</span>}
+            {row.isOverdue && (
+              <span className={`${layoutStyles.operationalBadge} ${layoutStyles.operationalDanger}`}>
+                Atrasado
+              </span>
+            )}
           </div>
         );
       },

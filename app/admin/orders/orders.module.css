@@ -93,6 +93,39 @@
   min-width: 240px;
 }
 
+.modeToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+}
+
+.modeButton {
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: none;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.modeButton:hover {
+  color: var(--text-primary);
+}
+
+.modeButtonActive {
+  background: var(--action-primary);
+  color: var(--text-inverse);
+  box-shadow: var(--shadow-sm);
+}
+
 .searchWrap {
   flex: 1 1 280px;
   min-width: 200px;
@@ -1299,6 +1332,16 @@
 @media (max-width: 720px) {
   .toolbarMain {
     flex: 1 1 100%;
+  }
+
+  .modeToggle {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .modeButton {
+    flex: 1;
+    text-align: center;
   }
 
   .filtersPanel {
