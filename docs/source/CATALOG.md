@@ -5,6 +5,7 @@ Referencia canonica: `docs/SOURCE_OF_TRUTH.md` (secao 5).
 Checklist operacional
 - Categoria exige nome; descricao e opcional; flag ativo suporta filtro.
 - Categorias suportam subcategorias (arvore) via `parentId`.
+- Na tela /admin/categories, a arvore abre com todos os nos recolhidos; o usuario expande os que desejar.
 - Nome de categoria e unico por nivel (mesmo pai) e unico na raiz.
 - Ativar/desativar categoria aplica cascata para subcategorias.
 - Produto exige nome e categoria folha (sem filhos) e com ancestrais ativos.

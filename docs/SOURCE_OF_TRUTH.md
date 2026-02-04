@@ -1,6 +1,6 @@
 # FONTE DA VERDADE
 
-Última atualização: 2026-02-02
+Última atualização: 2026-02-03
 
 Este documento é a única fonte da verdade sobre como o produto funciona hoje.
 Ele reflete o código atual (Next.js + Prisma + SQLite). Se este documento e o
@@ -132,6 +132,7 @@ Observações importantes:
   - A flag `isActive` é usada para filtros no admin.
   - **Cascata**: ao ativar/desativar uma categoria, o sistema aplica a mesma
     mudança para todas as subcategorias descendentes.
+- **Listagem (/admin/categories)**: a árvore de categorias/subcategorias abre com todos os nós recolhidos; o usuário expande os que desejar.
 
 ### Produtos
 - Campos: name, categoryId, leadTime (horas, opcional), descriptionLong,
@@ -196,6 +197,9 @@ Lista de clientes:
 
 ## 7. Pedidos
 
+### 7.0 Lista de pedidos (/admin/orders)
+A tela tem dois modos: **Agenda** (pedidos operacionais: RASCUNHO, CONFIRMADO, EM_PRODUCAO, PRONTO) e **Histórico** (ENTREGUE e CANCELADO). Ao abrir, se existir ao menos um pedido operacional o default é Agenda; caso contrário, Histórico. Troca entre modos não é persistida. Detalhes (filtros, ordenação, presets) em docs/source/ORDER_FLOW.md.
+
 ### 7.1 Fluxo de status (transições reais)
 Transições aplicadas pelo código:
 - RASCUNHO -> CONFIRMADO, EM_PRODUCAO, CANCELADO
@@ -222,6 +226,10 @@ Passos:
 4) Adicionar itens (SKU, quantidade, preço unitário).
 5) Informar método de pagamento e sinal (opcional).
 6) Salvar pedido em status RASCUNHO.
+
+Comportamento ao salvar:
+- Após criar o pedido, o servidor redireciona para a página do pedido (/admin/orders/[id]?created=1), evitando duplo estado ou mensagem de erro na tela de novo pedido.
+- O botão "Salvar rascunho" / "Confirmar pedido" fica desabilitado durante o envio (isPending).
 
 Número do pedido:
 - Gerado no salvamento.

@@ -1,4 +1,4 @@
-﻿# Fluxo de pedido
+# Fluxo de pedido
 
 Referência canônica: `docs/SOURCE_OF_TRUTH.md` (seção 7).
 
@@ -76,3 +76,8 @@ Edge cases
 Notas técnicas
 - Queries devem derivar modo a partir de `isFinalStatus()` para evitar duplicação.
 - Para Agenda, incluir `deliveryDatetime = null` nos filtros de período.
+
+# Criação de pedido (novo pedido) — comportamento de salvamento
+
+- Após salvar (rascunho ou confirmar), o servidor redireciona para `/admin/orders/[id]?created=1`, evitando duplo estado ou exibição de erro na tela de novo pedido.
+- Os botões "Salvar rascunho" e "Confirmar pedido" ficam desabilitados durante o envio (isPending).
