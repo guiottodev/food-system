@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { createPortal } from "react-dom";
@@ -26,7 +26,7 @@ export interface TimePickerHandle {
   focus: () => void;
 }
 
-// Gerar opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes de hora
+// Gerar opÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âµes de hora
 const generateTimeOptions = (interval: 30 | 60 = 30): string[] => {
   const options: string[] = [];
   const totalMinutes = 24 * 60;
@@ -52,18 +52,18 @@ const isValidTimeFormat = (time: string): boolean => {
 const normalizeTimeInput = (input: string, interval: 30 | 60): string | null => {
   if (!input || !input.trim()) return null;
   
-  // Remove tudo exceto nÃƒÆ’Ã‚Âºmeros
+  // Remove tudo exceto nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºmeros
   const numbers = input.replace(/\D/g, "");
   
   if (numbers.length === 0) return null;
   
-  // Se tem 4 dÃƒÆ’Ã‚Â­gitos, assume HHMM
+  // Se tem 4 dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gitos, assume HHMM
   if (numbers.length >= 4) {
     const hours = parseInt(numbers.slice(0, 2), 10);
     const minutes = parseInt(numbers.slice(2, 4), 10);
     
     if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
-      // Arredondar minutos para o intervalo mais prÃƒÆ’Ã‚Â³ximo
+      // Arredondar minutos para o intervalo mais prÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ximo
       const roundedMinutes = Math.round(minutes / interval) * interval;
       const finalHours = roundedMinutes >= 60 ? hours + 1 : hours;
       const finalMins = roundedMinutes >= 60 ? 0 : roundedMinutes;
@@ -74,7 +74,7 @@ const normalizeTimeInput = (input: string, interval: 30 | 60): string | null => 
     }
   }
   
-  // Se tem 1-2 dÃƒÆ’Ã‚Â­gitos, assume horas
+  // Se tem 1-2 dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­gitos, assume horas
   if (numbers.length <= 2) {
     const hours = parseInt(numbers, 10);
     if (hours >= 0 && hours <= 23) {
@@ -92,7 +92,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
   name,
   disabled = false,
   required = false,
-  placeholder = "Selecione o horÃƒÆ’Ã‚Â¡rio",
+  placeholder = "Selecione o horario",
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
@@ -149,7 +149,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     });
   }, [isOpen]);
 
-  // Atualizar posicao ao redimensionar (mas nÃƒÆ’Ã‚Â£o ao scrollar dentro do dropdown)
+  // Atualizar posicao ao redimensionar (mas nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o ao scrollar dentro do dropdown)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -164,11 +164,11 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
       });
     };
 
-    // Escutar scroll apenas na window (nÃƒÆ’Ã‚Â£o em containers internos)
+    // Escutar scroll apenas na window (nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o em containers internos)
     const handleWindowScroll = () => {
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
-        // SÃƒÆ’Ã‚Â³ atualizar Se nao estiver rolando dentro do dropdown
+        // SÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ atualizar Se nao estiver rolando dentro do dropdown
         if (!isScrollingRef.current) {
           updateDropdownPosition();
         }
@@ -186,16 +186,17 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
       }, 150);
     };
 
-    if (scrollContainerRef.current) {
-      scrollContainerRef.current.addEventListener("scroll", handleDropdownScroll);
+    const scrollContainer = scrollContainerRef.current;
+    if (scrollContainer) {
+      scrollContainer.addEventListener("scroll", handleDropdownScroll);
     }
 
     return () => {
       if (rafId) cancelAnimationFrame(rafId);
       window.removeEventListener("scroll", handleWindowScroll, true);
       window.removeEventListener("resize", handleResize);
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.removeEventListener("scroll", handleDropdownScroll);
+      if (scrollContainer) {
+        scrollContainer.removeEventListener("scroll", handleDropdownScroll);
       }
     };
   }, [isOpen, updateDropdownPosition]);
@@ -205,7 +206,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
       
-      // NÃƒÆ’Ã‚Â£o fechar se o clique foi em um botÃƒÆ’Ã‚Â£o de opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ou no input
+      // NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o fechar se o clique foi em um botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o de opÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o ou no input
       const clickedElement = target as Element;
       if (clickedElement.closest && (
         clickedElement.closest(`[role="option"]`) ||
@@ -221,7 +222,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
       if (isOutsideContainer && isOutsideDropdown) {
         setIsOpen(false);
         setDropdownPosition(null);
-        // SÃƒÆ’Ã‚Â³ setar isEditing como false se realmente saiu do componente
+        // SÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ setar isEditing como false se realmente saiu do componente
         setTimeout(() => {
           if (!containerRef.current?.contains(document.activeElement)) {
             setIsEditing(false);
@@ -278,7 +279,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     }
   }, [isOpen, value, timeOptions]);
 
-  // Expor mÃƒÆ’Ã‚Â©todos via ref
+  // Expor mÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â©todos via ref
   useImperativeHandle(ref, () => ({
     focus: () => {
       inputRef.current?.focus();
@@ -290,7 +291,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     setInputValue(newValue);
     setIsEditing(true);
     
-    // Se o formato ÃƒÆ’Ã‚Â© vÃƒÆ’Ã‚Â¡lido, atualizar imediatamente
+    // Se o formato ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lido, atualizar imediatamente
     if (isValidTimeFormat(newValue)) {
       onChange(newValue);
     }
@@ -305,11 +306,11 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
     setInputValue(value || "");
     setIsEditing(true);
-    // Selecionar todo o texto ao focar para facilitar ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o
+    // Selecionar todo o texto ao focar para facilitar ediÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o
     setTimeout(() => {
       e.target.select();
     }, 0);
-    // NÃƒÆ’Ã‚Â£o abrir dropdown automaticamente ao focar (sÃƒÆ’Ã‚Â³ se clicar no botÃƒÆ’Ã‚Â£o)
+    // NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o abrir dropdown automaticamente ao focar (sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³ se clicar no botÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o)
   };
 
   const handleInputBlur = () => {
@@ -322,7 +323,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
         dropdownRef.current?.contains(activeElement);
       
       if (isFocusInComponent) {
-        // Foco ainda estÃƒÆ’Ã‚Â¡ no componente, nÃƒÆ’Ã‚Â£o fazer blur
+        // Foco ainda estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ no componente, nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o fazer blur
         return;
       }
       
@@ -331,7 +332,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
       setDropdownPosition(null);
       setIsEditing(false);
       
-      // Se o valor nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© vÃƒÆ’Ã‚Â¡lido, tentar normalizar ou reverter
+      // Se o valor nÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lido, tentar normalizar ou reverter
       if (inputValue && !isValidTimeFormat(inputValue)) {
         const normalized = normalizeTimeInput(inputValue, interval);
         if (normalized && isValidTimeFormat(normalized)) {
@@ -342,7 +343,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
           setInputValue(value || "");
         }
       } else if (isValidTimeFormat(inputValue)) {
-        // Se ÃƒÆ’Ã‚Â© vÃƒÆ’Ã‚Â¡lido, garantir que estÃƒÆ’Ã‚Â¡ sincronizado
+        // Se ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â© vÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡lido, garantir que estÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡ sincronizado
         onChange(inputValue);
       }
       
@@ -373,7 +374,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
         setIsOpen(true);
         setTimeout(() => updateDropdownPosition(true), 0);
       }
-      // Focar primeira opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do dropdown
+      // Focar primeira opÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o do dropdown
       setTimeout(() => {
         const firstOption = scrollContainerRef.current?.querySelector('[role="option"]') as HTMLElement;
         firstOption?.focus();
@@ -391,11 +392,11 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     setInputValue(time);
     setIsOpen(false);
     setDropdownPosition(null);
-    // NÃƒÆ’Ã‚Â£o setar isEditing como false imediatamente para permitir ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o contÃƒÆ’Ã‚Â­nua
+    // NÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o setar isEditing como false imediatamente para permitir ediÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o contÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­nua
     setTimeout(() => {
       setIsEditing(false);
       inputRef.current?.focus();
-      inputRef.current?.select(); // Selecionar texto para facilitar ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o
+      inputRef.current?.select(); // Selecionar texto para facilitar ediÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â£o
       onBlur?.();
     }, 100);
   };
@@ -425,7 +426,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
 
   return (
     <div className={`${styles.timePicker} ${className}`} ref={containerRef} style={{ position: "relative", zIndex: isOpen ? 1000 : "auto" }}>
-      {/* Hidden input para formulÃƒÆ’Ã‚Â¡rios */}
+      {/* Hidden input para formulÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡rios */}
       {name && (
         <input
           type="hidden"
@@ -453,7 +454,6 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
           aria-invalid={ariaInvalid || (!hasValidValue && inputValue.length > 0)}
           aria-describedby={ariaDescribedBy}
           aria-haspopup="listbox"
-          aria-expanded={isOpen}
           aria-autocomplete="list"
           id={id}
           className={styles.timePickerInput}
@@ -463,9 +463,8 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
           onClick={handleDropdownClick}
           disabled={disabled}
           className={styles.timePickerDropdownButton}
-          aria-label="Abrir lista de horÃƒÆ’Ã‚Â¡rios"
+          aria-label="Abrir lista de horarios"
           aria-haspopup="listbox"
-          aria-expanded={isOpen}
         >
           <ChevronDown 
             size={16} 

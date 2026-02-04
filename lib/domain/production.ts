@@ -1,4 +1,4 @@
-import { OrderStatus, PrismaClient } from "@prisma/client";
+﻿import { OrderStatus, PrismaClient } from "@prisma/client";
 import { buildCategoryIndex, buildCategoryPathLabel } from "@/lib/domain/categoryHierarchy";
 import { formatSkuLabel, normalizeText } from "@/lib/normalization";
 
@@ -41,7 +41,7 @@ export type CapacityRow = {
 
 type CapacityOptions = {
   window: CapacityWindowKey; // Demanda (futuro)
-  productionWindow?: CapacityWindowKey; // Produção/Consumo (passado) — aplicar default "15"
+  productionWindow?: CapacityWindowKey; // ProduÃ§Ã£o/Consumo (passado) â€” aplicar default "15"
   productQuery?: string;
   gapOnly?: boolean;
 };
@@ -112,12 +112,12 @@ export function getWindowRange(window: CapacityWindowKey, now = new Date()) {
   return { start, end };
 }
 
-// Range de CALENDÁRIO para "últimos X dias" (passado)
-// Usado para filtrar produção/consumo por período histórico
+// Range de CALENDÃRIO para "Ãºltimos X dias" (passado)
+// Usado para filtrar produÃ§Ã£o/consumo por perÃ­odo histÃ³rico
 export function getPastWindowRange(window: CapacityWindowKey, now = new Date()) {
   const end = endOfDay(now); // Fim: hoje (inclusive)
   const days = WINDOW_DAYS[window];
-  const start = startOfDay(addDays(now, -days + 1)); // Início: X dias atrás
+  const start = startOfDay(addDays(now, -days + 1)); // InÃ­cio: X dias atrÃ¡s
   return { start, end };
 }
 
@@ -185,7 +185,7 @@ export async function getCapacityRows(
 
   // Determinar effectiveProductionWindow (default "15")
   const effectiveProductionWindow = options.productionWindow ?? ("15" as CapacityWindowKey);
-  // Calcular productionRange usando range de CALENDÁRIO para "últimos X dias"
+  // Calcular productionRange usando range de CALENDÃRIO para "Ãºltimos X dias"
   const productionRange = getPastWindowRange(effectiveProductionWindow);
 
   const products = await prisma.product.findMany({
@@ -245,7 +245,7 @@ export async function getCapacityRows(
         session: {
           producedAt: {
             gte: productionRange.start,
-            lt: productionRange.end, // IMPORTANTE: lt, não lte
+            lt: productionRange.end, // IMPORTANTE: lt, nÃ£o lte
           },
         },
       },
@@ -256,7 +256,7 @@ export async function getCapacityRows(
         sku: { productId: { in: productIds } },
         consumedAt: {
           gte: productionRange.start,
-          lt: productionRange.end, // IMPORTANTE: lt, não lte
+          lt: productionRange.end, // IMPORTANTE: lt, nÃ£o lte
         },
       },
       select: { quantity: true, sku: { select: { id: true, productId: true } } },
@@ -339,10 +339,10 @@ export async function getCapacityRows(
       const skuConsumed = Number(consumedBySku.get(sku.id) ?? 0);
       const skuDemand = Number(demandBySku.get(sku.id) ?? 0);
       const skuStockQty = Number(sku.stockQuantity ?? 0);
-      // Disponibilidade = Produzido - Consumido (disponibilidade de produção)
-      // stockQuantity é o estoque atual (usado para PRONTA_ENTREGA)
+      // Disponibilidade = Produzido - Consumido (disponibilidade de produÃ§Ã£o)
+      // stockQuantity Ã© o estoque atual (usado para PRONTA_ENTREGA)
       const skuAvailable = skuProduced - skuConsumed;
-      // Gap considera o maior entre stockQuantity e disponibilidade de produção
+      // Gap considera o maior entre stockQuantity e disponibilidade de produÃ§Ã£o
       const skuEffectiveAvailable = Math.max(skuStockQty, skuAvailable);
       const skuGap = Math.max(skuDemand - skuEffectiveAvailable, 0);
       
@@ -442,50 +442,6 @@ export async function getProductCapacitySnapshot(
   };
 }
 
-async function getAvailableNowByProductIds(
-  prisma: PrismaClient,
-  productIds: string[]
-) {
-  if (productIds.length === 0) {
-    return new Map<string, number>();
-  }
-
-  const [producedItems, consumedItems] = await Promise.all([
-    prisma.productionSessionItem.findMany({
-      where: { sku: { productId: { in: productIds } } },
-      select: { quantity: true, sku: { select: { productId: true } } },
-    }),
-    prisma.productionConsumption.findMany({
-      where: { sku: { productId: { in: productIds } } },
-      select: { quantity: true, sku: { select: { productId: true } } },
-    }),
-  ]);
-
-  const producedMap = new Map<string, number>();
-  for (const item of producedItems) {
-    const productId = item.sku?.productId;
-    if (!productId) continue;
-    producedMap.set(productId, (producedMap.get(productId) ?? 0) + asNumber(item.quantity));
-  }
-  const consumedMap = new Map<string, number>();
-  for (const item of consumedItems) {
-    const productId = item.sku?.productId;
-    if (!productId) continue;
-    consumedMap.set(productId, (consumedMap.get(productId) ?? 0) + asNumber(item.quantity));
-  }
-
-  const availableMap = new Map<string, number>();
-  for (const productId of productIds) {
-    const produced = producedMap.get(productId) ?? 0;
-    const consumed = consumedMap.get(productId) ?? 0;
-    const available = produced - consumed;
-    availableMap.set(productId, available);
-    
-  }
-
-  return availableMap;
-}
-
 export async function computeUnavailableItemsForOrders(
   prisma: PrismaClient,
   orders: OrderAvailabilityInput[]
@@ -509,7 +465,7 @@ export async function computeUnavailableItemsForOrders(
   const skuToProduct = new Map(
     skuRows.map((sku) => [sku.id, sku.productId])
   );
-  // Disponibilidade por SKU (stockQuantity), alinhado à lista de pedidos (computeOrderStockStatus)
+  // Disponibilidade por SKU (stockQuantity), alinhado Ã  lista de pedidos (computeOrderStockStatus)
   const availableBySku = new Map(
     skuRows.map((s) => [s.id, Number(asNumber(s.stockQuantity ?? 0))])
   );

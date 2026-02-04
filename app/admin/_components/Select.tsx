@@ -64,7 +64,7 @@ export default function Select({
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [isOpen]);
+  }, [isOpen, containerRef]);
 
   // Fechar com Escape
   useEffect(() => {
@@ -138,7 +138,6 @@ export default function Select({
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
-        aria-invalid={ariaInvalid}
         disabled={disabled}
         id={id}
       >

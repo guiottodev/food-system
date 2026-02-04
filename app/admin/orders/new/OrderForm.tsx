@@ -129,12 +129,6 @@ export type OrderFormInitialData = Partial<OrderDraft> & {
   orderStatus?: OrderStatus;
 };
 
-const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
-  const hour = Math.floor(index / 2);
-  const minute = index % 2 === 0 ? "00" : "30";
-  return `${String(hour).padStart(2, "0")}:${minute}`;
-});
-
 function buildLocalDate(dateValue: string, timeValue: string) {
   const [year, month, day] = dateValue.split("-").map(Number);
   const [hour, minute] = timeValue.split(":").map(Number);
@@ -2695,4 +2689,3 @@ export default function OrderForm({
     </form>
   );
 }
-

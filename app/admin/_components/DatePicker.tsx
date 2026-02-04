@@ -246,7 +246,6 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
   };
 
   const days = getDaysInMonth(viewMonth, viewYear);
-  const currentMonth = new Date(viewYear, viewMonth, 1);
   const selectedDate = value ? new Date(value + "T00:00:00") : null;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -354,7 +353,6 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label={ariaLabel}
-        aria-invalid={ariaInvalid}
         aria-describedby={ariaDescribedBy}
         disabled={disabled}
         id={id}
@@ -428,7 +426,6 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
                   onClick={() => handleDateSelect(date)}
                   disabled={isDisabled}
                   aria-label={`${date.getDate()} de ${MONTHS[date.getMonth()]} de ${date.getFullYear()}`}
-                  aria-selected={isSelectedDate}
                 >
                   {date.getDate()}
                 </button>

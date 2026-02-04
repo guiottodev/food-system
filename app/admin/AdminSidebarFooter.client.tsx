@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { LogOut, Plus } from "lucide-react";
 import styles from "./_styles/adminNav.module.css";
-import primitives from "./_styles/adminPrimitives.module.css";
 import { primaryAction } from "./adminNav";
 import Button from "./_components/Button";
 

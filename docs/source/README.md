@@ -1,4 +1,4 @@
-# Índice dos documentos
+﻿# Índice dos documentos
 
 Esta pasta oferece uma visão modular do produto. A fonte canônica da verdade
 está em `docs/SOURCE_OF_TRUTH.md`. Cada arquivo aqui referencia a seção

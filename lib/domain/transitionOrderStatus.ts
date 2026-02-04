@@ -46,9 +46,7 @@ export async function transitionOrderStatus(
       return { ok: false, error: "order_not_found" };
     }
 
-    const validation = validateOrderTransition(order, nextStatus, {
-      willMarkPaid: options.markPaid,
-    });
+    const validation = validateOrderTransition(order, nextStatus);
     if (!validation.ok) {
       return { ok: false, error: validation.error };
     }

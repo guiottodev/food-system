@@ -191,7 +191,6 @@ export default function ProductionFilters({
               activeCount={activeFilterCount}
               onApply={handleApplyFilters}
               onClear={handleClearFilters}
-              syncMode="url"
               isOpen={filtersOpen}
               onClose={() => {
                 setFiltersOpen(false);

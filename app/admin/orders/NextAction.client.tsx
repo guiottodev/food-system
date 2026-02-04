@@ -5,7 +5,7 @@ import { CheckCircle2, XCircle, AlertTriangle, Circle } from "lucide-react";
 import Button from "../_components/Button";
 import OrderStatusStack from "./OrderStatusStack.client";
 import type { OrderStatus } from "@prisma/client";
-import type { AttentionReason, OrderAttentionSummary } from "@/lib/domain/attention";
+import type { OrderAttentionSummary } from "@/lib/domain/attention";
 import styles from "./NextAction.module.css";
 
 export type ChecklistItemStatus = "complete" | "pending" | "warning" | "optional";

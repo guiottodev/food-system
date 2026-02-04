@@ -47,10 +47,6 @@ export type OrderCriticalSnapshot = {
   items?: OrderItemSnapshot[];
 };
 
-type OrderTransitionOptions = {
-  willMarkPaid?: boolean;
-};
-
 export const DEFAULT_DELIVERY_TIME = "00:00";
 
 export function validateCancelReason(reason: string): ValidationResult {
@@ -95,8 +91,7 @@ export function getOrderPendingSummary(order: OrderPendingInput) {
 
 export function validateOrderTransition(
   order: OrderTransitionInput,
-  nextStatus: OrderStatus,
-  options: OrderTransitionOptions = {}
+  nextStatus: OrderStatus
 ): ValidationResult<OrderTransitionError> {
   const statusValidation = validateStatusTransition(order.status, nextStatus);
   if (!statusValidation.ok) {

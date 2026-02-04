@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import DataTable from "../_components/DataTable";
-import type { CapacityRow, CapacitySkuRow } from "@/lib/domain/production";
+import type { CapacityRow } from "@/lib/domain/production";
 import layoutStyles from "./capacidade.module.css";
 
 export type SortKey = "productName" | "categoryName" | "produced" | "consumed" | "available" | "demand" | "gap";

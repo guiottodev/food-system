@@ -70,11 +70,9 @@ function parseDeliveryDateTime(datetime: string) {
 export default function OrdersTableClient({
   orders,
   sort,
-  dir,
 }: {
   orders: OrderRow[];
   sort?: string;
-  dir?: "asc" | "desc";
 }) {
   const router = useRouter();
   const pathname = usePathname();

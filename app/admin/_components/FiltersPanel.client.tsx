@@ -9,7 +9,6 @@ export interface FiltersPanelProps {
   activeCount: number;
   onApply: () => void;
   onClear: () => void;
-  syncMode?: "url" | "localStorage";
   variant?: "popover" | "drawer";
   density?: "comfortable" | "compact";
   children: React.ReactNode;
@@ -22,7 +21,6 @@ export default function FiltersPanel({
   activeCount,
   onApply,
   onClear,
-  syncMode = "url",
   variant,
   density = "comfortable",
   children,

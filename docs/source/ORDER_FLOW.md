@@ -1,4 +1,4 @@
-# Fluxo de pedido
+﻿# Fluxo de pedido
 
 Referência canônica: `docs/SOURCE_OF_TRUTH.md` (seção 7).
 
@@ -15,5 +15,5 @@ Notas
 - ENCOMENDA pode ser salva sem data de entrega, mas a confirmação exige data.
 - A edição substitui itens e recalcula totais.
 - Pedidos finais exigem confirmação e motivo para edição.
-Observação: pedidos ENTREGUE/CANCELADO são finais para transição, mas editáveis sob confirmação.
-Observação: ENTREGUE consome o saldo de pronta-entrega do SKU; se não houver saldo, gera pendência.
+- Observação: pedidos ENTREGUE/CANCELADO são finais para transição, mas editáveis sob confirmação.
+- Observação: ENTREGUE consome o saldo de pronta-entrega do SKU; se não houver saldo, gera pendência.

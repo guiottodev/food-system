@@ -185,7 +185,6 @@ export default function CategoriesFilters({
               activeCount={filterActiveCount}
               onApply={handleApplyFilters}
               onClear={handleClearFilters}
-              syncMode="url"
               isOpen={filtersOpen}
               onClose={() => {
                 setFiltersOpen(false);

@@ -55,15 +55,13 @@ function DataTableInner<T extends { id: string } & Record<string, unknown>>({
   onSort,
   sortColumn,
   sortDirection,
-  tableId: _tableId = "default",
   densityToggle,
-  expandStateKey: _expandStateKey,
 }: DataTableProps<T>) {
   const router = useRouter();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const handleRowClick = useCallback(
-    (row: T, e?: React.MouseEvent) => {
+    (row: T) => {
       if (rowHref) {
         router.push(rowHref(row));
       } else if (onRowClick) {

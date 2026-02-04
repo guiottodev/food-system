@@ -56,7 +56,7 @@ export default function CategoriesTreeClient({ rows }: { rows: CategoryRow[] }) 
     if (!editing) return;
     // Focus inicial
     setTimeout(() => nameRef.current?.focus(), 0);
-  }, [editing?.id]);
+  }, [editing]);
 
   useEffect(() => {
     if (!editing) return;

@@ -47,10 +47,6 @@ export default function DashboardNextActions({ orders }: DashboardNextActionsPro
           order.orderType === "PRONTA_ENTREGA"
             ? true
             : Boolean(order.deliveryDatetime);
-        const timeReady =
-          order.orderType === "PRONTA_ENTREGA"
-            ? true
-            : Boolean(order.deliveryTime && order.deliveryTime !== "00:00");
         const addressReady =
           order.deliveryMethod !== "ENTREGA"
             ? true

@@ -166,7 +166,6 @@ export async function createOrderAction(
 ): Promise<CreateOrderResult> {
   const payload = parsePayload(formData);
   const items = Array.isArray(payload.items) ? payload.items : [];
-  const availabilityBypass = String(formData.get("availabilityBypass") ?? "0") === "1";
 
   const finalOrderType: OrderType =
     payload.orderType === "PRONTA_ENTREGA" ? "PRONTA_ENTREGA" : "ENCOMENDA";

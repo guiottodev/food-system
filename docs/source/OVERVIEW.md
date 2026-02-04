@@ -1,4 +1,4 @@
-# Visão geral
+﻿# Visão geral
 
 Referência canônica: `docs/SOURCE_OF_TRUTH.md` (seções 1 a 3).
 
@@ -8,6 +8,7 @@ Propósito
 Módulos principais
 - Pedidos e fluxo de status
 - Catálogo (categorias, produtos, SKUs)
+- Configurações (atributos de SKU)
 - Clientes
 - Capacidade (produção/consumo)
 - Atenção/pendências

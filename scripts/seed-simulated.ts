@@ -31,7 +31,6 @@ const {
 const SEED = Number(process.env.SEED ?? 20260201);
 const PERIOD_START = new Date("2025-12-01T00:00:00.000Z");
 const PERIOD_END = new Date("2026-02-28T23:59:59.999Z");
-const ORDERS_PER_MONTH = 150;
 const TOTAL_ORDERS = 450;
 const TOTAL_CUSTOMERS = 300;
 const TOTAL_PRODUCTS = 130;
@@ -726,8 +725,6 @@ async function validate(
     byStatus[o.status] = (byStatus[o.status] ?? 0) + 1;
   }
 
-  let entregueOk = 0;
-  let canceladoOk = 0;
   let cancelReasonOnlyCancel = true;
   let confirmadoHasConfirm = true;
   let reconfirmCount = 0;
@@ -736,18 +733,18 @@ async function validate(
 
   for (const o of orders) {
     if (o.status === "ENTREGUE") {
-      if (o.stockDecrementedAt) entregueOk++;
-      else
+      if (!o.stockDecrementedAt) {
         throw new Error(
           `Invariant: ENTREGUE sem stockDecrementedAt (order ${o.id})`
         );
+      }
     }
     if (o.status === "CANCELADO") {
-      if (o.cancellationReason) canceladoOk++;
-      else
+      if (!o.cancellationReason) {
         throw new Error(
           `Invariant: CANCELADO sem cancellationReason (order ${o.id})`
         );
+      }
     }
     if (o.status !== "CANCELADO" && o.cancellationReason) {
       cancelReasonOnlyCancel = false;
@@ -808,7 +805,7 @@ async function validate(
   }));
   const unavMap = await computeUnavailableItemsForOrders(prisma, inputs);
   let unavCount = 0;
-  for (const [oid, v] of unavMap) {
+  for (const [, v] of unavMap) {
     if (v.hasUnavailableItems) unavCount++;
   }
   if (enforceMinimums && unavCount < UNAVAILABLE_ORDERS_TARGET) {

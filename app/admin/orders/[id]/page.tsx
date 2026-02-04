@@ -6,7 +6,6 @@ import { DEFAULT_DELIVERY_TIME, getOrderPendingSummary } from "@/lib/domain/orde
 import { computeOrderPendingFlags, computeOrderStockStatus } from "@/lib/domain/production";
 import { OrderStatus } from "@prisma/client";
 import {
-  confirmOrderAction,
   convertToEncomendaAction,
   markPaidAction,
   reconfirmOrderAction,
@@ -61,19 +60,6 @@ function formatDate(value?: Date | null) {
   }).format(value);
 }
 
-type ChecklistStatus = "ok" | "warning" | "danger" | "neutral";
-function getChecklistBadge(status: ChecklistStatus) {
-  if (status === "ok") {
-    return { label: "OK", className: styles.badgeSuccess };
-  }
-  if (status === "danger") {
-    return { label: "Falta", className: styles.badgeDanger };
-  }
-  if (status === "warning") {
-    return { label: "Atencao", className: styles.badgeWarning };
-  }
-  return { label: "Opcional", className: styles.badgeNeutral };
-}
 
 function formatDateTime(value?: Date | null, time?: string | null) {
   if (!value) return "-";
@@ -201,7 +187,6 @@ export default async function OrderDetailPage({
     items: order.items,
     needsReconfirmation: order.needsReconfirmation,
   });
-  const hasItems = order.items.length > 0;
   const itemsReady = pendingSummary.hasItems;
   const scheduleReady =
     order.orderType === "PRONTA_ENTREGA"
@@ -250,7 +235,6 @@ export default async function OrderDetailPage({
         )
       : [];
 
-  const statusIndex = statusFlow.indexOf(order.status);
   const isFinal = order.status === "ENTREGUE" || order.status === "CANCELADO";
   const hasPayment = Boolean(order.paidAt);
 
@@ -317,7 +301,6 @@ export default async function OrderDetailPage({
     return { label: "Atualizar status", type: "none" as const };
   })();
 
-  const primaryDisabled = blockedReasons.length > 0 || isFinal;
   const whyList: string[] = [];
   if (order.orderType === "ENCOMENDA") {
     whyList.push("Pedido de encomenda: producao planejada.");

@@ -213,7 +213,7 @@ describe("production capacity", () => {
   });
 
   it("filters capacity rows by gap", async () => {
-    const { product: productA, sku: skuA } = await createProductWithSku("Produto A");
+    const { sku: skuA } = await createProductWithSku("Produto A");
     const { product: productB, sku: skuB } = await createProductWithSku("Produto B");
     const customer = await prisma.customer.create({
       data: { name: "Cliente 2", phone: "11988887777" },

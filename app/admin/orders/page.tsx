@@ -523,7 +523,6 @@ export default async function OrdersPage({
   const totalValue = orders.reduce((sum, { order }) => sum + Number(order.total), 0);
   const pendingCount = orders.filter(({ attention }) => attention.strongReasons.length > 0).length;
   const readyCount = orders.filter(({ order }) => order.status === "PRONTO").length;
-  const inProductionCount = orders.filter(({ order }) => order.status === "EM_PRODUCAO").length;
 
   return (
     <main className={styles.page}>

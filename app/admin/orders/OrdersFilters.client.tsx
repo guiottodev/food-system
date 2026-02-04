@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, Calendar, Package, Truck, ArrowUpDown, AlertCircle } from "lucide-react";
+import { Search, Calendar, Package, ArrowUpDown, AlertCircle } from "lucide-react";
 import FiltersPanel from "../_components/FiltersPanel.client";
 import FilterSelect from "./FilterSelect.client";
 import styles from "../_styles/adminPrimitives.module.css";
@@ -483,7 +483,6 @@ export default function OrdersFilters({
               activeCount={activeFilterCount}
               onApply={handleApplyFilters}
               onClear={handleClearFilters}
-              syncMode="url"
               isOpen={filtersOpen}
               onClose={() => {
                 setFiltersOpen(false);
