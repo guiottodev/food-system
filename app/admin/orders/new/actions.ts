@@ -446,6 +446,7 @@ export async function createOrderAction(
     return { orderId: order.id };
   });
 
-  // Retornar sucesso para o cliente redirecionar; redirect() aqui lança e pode ser exibido como erro
-  return { success: true, orderId: result.orderId };
+  // Redirecionar no servidor para evitar duplo estado (ex.: useActionState em Strict Mode)
+  // e garantir uma única resposta de sucesso sem risco de exibir erro na tela.
+  redirect(`/admin/orders/${result.orderId}?created=1`);
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useActionState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import { createOrderAction, type CreateOrderResult } from "./actions";
 import { normalizePhoneBR, normalizePhoneDigits } from "@/lib/phone";
 import { validateSkuQuantity } from "@/lib/quantity";
@@ -322,17 +321,10 @@ export default function OrderForm({
   const isFinalOrder =
     isEdit && (initialOrderStatus === "ENTREGUE" || initialOrderStatus === "CANCELADO");
 
-  const router = useRouter();
-  const [createState, createFormAction] = useActionState<CreateOrderResult | null, FormData>(
+  const [createState, createFormAction, isCreatePending] = useActionState<CreateOrderResult | null, FormData>(
     createOrderAction,
     null
   );
-
-  useEffect(() => {
-    if (!isEdit && createState?.success && createState.orderId) {
-      router.push(`/admin/orders/${createState.orderId}?created=1`);
-    }
-  }, [isEdit, createState, router]);
 
   const [customerMode, setCustomerMode] = useState<"existing" | "new">(
     initial.customerMode ?? "existing"
@@ -2658,7 +2650,7 @@ export default function OrderForm({
                         formRef.current.requestSubmit();
                       }
                     },
-                    disabled: !validation.isValid,
+                    disabled: !validation.isValid || isCreatePending,
                   }
                 : {
                     label: "Salvar rascunho",
@@ -2667,7 +2659,7 @@ export default function OrderForm({
                         formRef.current.requestSubmit();
                       }
                     },
-                    disabled: false,
+                    disabled: isCreatePending,
                   }
             }
             // Removido secondaryActions quando pronto: se está tudo OK, não precisa de "Salvar como rascunho"

@@ -41,9 +41,7 @@ export default function CategoriesTreeClient({ rows }: { rows: CategoryRow[] }) 
     [rows]
   );
 
-  const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(expandableIds)
-  );
+  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = editingId ? rowById.get(editingId) ?? null : null;
