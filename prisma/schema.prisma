@@ -139,6 +139,7 @@ model Category {
 model Product {
   id         String   @id @default(cuid())
   name       String
+  nameNormalized String @default("")
   categoryId String
   leadTime            Int? @map("leadTimeHours")
   descriptionLong     String?
@@ -153,6 +154,7 @@ model Product {
 
   @@map("products")
   @@unique([name, categoryId])
+  @@index([nameNormalized])
 }
 
 model ProductionSession {
@@ -222,6 +224,9 @@ model Sku {
   flavorText   String?
   isFrozen     Boolean  @default(false)
   displayName  String
+  displayNameNormalized String @default("")
+  referencia  String?
+  referenciaNormalized String?
   unitLabel    String
   unitType     UnitType
   quantityStep Decimal
@@ -241,11 +246,15 @@ model Sku {
   inventoryMoves   InventoryMovement[]
   capacityRules    CapacityRule[]
   tags             SkuTag[]
+  skuAtributos     SkuAtributo[]
   productionItems       ProductionSessionItem[]
   productionConsumptions ProductionConsumption[]
 
   @@map("skus")
   @@unique([productId, displayName])
+  @@unique([referenciaNormalized])
+  @@index([displayNameNormalized])
+  @@index([referenciaNormalized])
 }
 
 model SkuTag {
@@ -259,6 +268,61 @@ model SkuTag {
   @@map("sku_tags")
   @@unique([skuId, name])
   @@index([skuId])
+}
+
+enum AtributoTipo {
+  TEXTO
+  NUMERO
+  LISTA
+}
+
+model Atributo {
+  id            String       @id @default(cuid())
+  name          String
+  nameNormalized String
+  type          AtributoTipo
+  unit          String?
+  isActive      Boolean      @default(true)
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  valores       AtributoValor[]
+  skuAtributos  SkuAtributo[]
+
+  @@map("atributos")
+  @@unique([nameNormalized])
+  @@index([nameNormalized])
+}
+
+model AtributoValor {
+  id         String   @id @default(cuid())
+  atributoId String
+  value      String
+  sortOrder  Int      @default(0)
+
+  atributo Atributo @relation(fields: [atributoId], references: [id], onDelete: Cascade)
+  skuAtributos SkuAtributo[]
+
+  @@map("atributo_valores")
+  @@index([atributoId])
+}
+
+model SkuAtributo {
+  id              String   @id @default(cuid())
+  skuId           String
+  atributoId      String
+  atributoValorId String?
+  valueText       String?
+
+  sku         Sku           @relation(fields: [skuId], references: [id], onDelete: Cascade)
+  atributo    Atributo      @relation(fields: [atributoId], references: [id], onDelete: Cascade)
+  atributoValor AtributoValor? @relation(fields: [atributoValorId], references: [id], onDelete: Restrict)
+
+  @@map("sku_atributos")
+  @@unique([skuId, atributoId])
+  @@index([skuId])
+  @@index([atributoId])
+  @@index([atributoValorId])
 }
 
 model Order {
@@ -387,6 +451,4 @@ model CapacityRule {
   @@map("capacity_rules")
   @@index([categoryId, skuId])
 }
-
-
 

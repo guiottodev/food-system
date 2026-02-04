@@ -88,13 +88,11 @@ export default function ProductionFilters({
     };
   }, []);
 
-  useEffect(() => {
-    if (!filtersOpen) {
-      setDraftWindow(currentWindow);
-      setDraftProductionWindow(currentProductionWindow);
-      setDraftGap(currentGap);
-    }
-  }, [filtersOpen, currentWindow, currentProductionWindow, currentGap]);
+  const syncDrafts = useCallback(() => {
+    setDraftWindow(currentWindow);
+    setDraftProductionWindow(currentProductionWindow);
+    setDraftGap(currentGap);
+  }, [currentWindow, currentProductionWindow, currentGap]);
 
   const handleApplyFilters = () => {
     applyParams({
@@ -195,8 +193,17 @@ export default function ProductionFilters({
               onClear={handleClearFilters}
               syncMode="url"
               isOpen={filtersOpen}
-              onClose={() => setFiltersOpen(false)}
-              onToggle={() => setFiltersOpen((o) => !o)}
+              onClose={() => {
+                setFiltersOpen(false);
+                syncDrafts();
+              }}
+              onToggle={() =>
+                setFiltersOpen((open) => {
+                  const next = !open;
+                  if (next) syncDrafts();
+                  return next;
+                })
+              }
             >
               <div className={layoutStyles.filtersGroup}>
                 <div className={layoutStyles.filtersGroupHeader}>

@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { createProductAction } from "../actions";
-import { buildCategoryOptions } from "@/lib/domain/categoryHierarchy";
+import {
+  buildCategoryOptions,
+  buildCategoryIndex,
+  buildCategoryPathLabel,
+} from "@/lib/domain/categoryHierarchy";
 import ProductsNewForm from "./ProductsNewForm.client";
 import styles from "../../_styles/adminPrimitives.module.css";
 
@@ -19,6 +23,7 @@ export default async function ProductsNewPage({
     orderBy: [{ parentId: "asc" }, { name: "asc" }],
     select: { id: true, name: true, parentId: true, isActive: true },
   });
+  const { byId } = buildCategoryIndex(categories);
   
   // Categorias folha para o select (apenas para produtos)
   const leafOptions = buildCategoryOptions({
@@ -33,6 +38,25 @@ export default async function ProductsNewPage({
     includeInactive: false,
     leavesOnly: false,
   });
+
+  const recentCategoryIds = Array.from(
+    new Set(
+      (
+        await prisma.product.findMany({
+          orderBy: { updatedAt: "desc" },
+          take: 10,
+          select: { categoryId: true },
+        })
+      ).map((product) => product.categoryId)
+    )
+  );
+
+  const recentCategories = recentCategoryIds
+    .map((categoryId) => {
+      const label = buildCategoryPathLabel(byId, categoryId);
+      return label ? { id: categoryId, label } : null;
+    })
+    .filter((item): item is { id: string; label: string } => Boolean(item));
 
   return (
     <main className={styles.page}>
@@ -57,13 +81,21 @@ export default async function ProductsNewPage({
         <p className={styles.textError}>
           Tipo de venda invalido para o primeiro SKU.
         </p>
+      ) : sp?.error === "sku_referencia" ? (
+        <p className={styles.textError}>
+          Referencia deve ter no maximo 50 caracteres.
+        </p>
+      ) : sp?.error === "referencia_duplicada" ? (
+        <p className={styles.textError}>
+          Referencia ja utilizada por outro SKU.
+        </p>
       ) : null}
 
       <ProductsNewForm
         categories={leafOptions}
+        recentCategories={recentCategories}
         parentCategories={allActiveCategories}
         allCategories={categories}
-        error={sp?.error}
         createProductAction={createProductAction}
       />
     </main>

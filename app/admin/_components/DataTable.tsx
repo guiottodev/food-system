@@ -1,10 +1,8 @@
 "use client";
 
-"use client";
-
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useCallback, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, MoreVertical, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { ChevronRight, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 import styles from "./DataTable.module.css";
 
 export interface ColumnDef<T> {
@@ -43,7 +41,7 @@ export interface DataTableProps<T> {
   expandStateKey?: string;
 }
 
-export default function DataTable<T extends { id: string }>({
+function DataTableInner<T extends { id: string } & Record<string, unknown>>({
   columns,
   data,
   rowHref,
@@ -57,19 +55,12 @@ export default function DataTable<T extends { id: string }>({
   onSort,
   sortColumn,
   sortDirection,
-  tableId = "default",
+  tableId: _tableId = "default",
   densityToggle,
-  expandStateKey,
+  expandStateKey: _expandStateKey,
 }: DataTableProps<T>) {
   const router = useRouter();
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-
-  // Reset expanded rows quando expandStateKey muda (ex: ao mudar filtros/busca)
-  useEffect(() => {
-    if (expandStateKey !== undefined) {
-      setExpandedRows(new Set());
-    }
-  }, [expandStateKey]);
 
   const handleRowClick = useCallback(
     (row: T, e?: React.MouseEvent) => {
@@ -121,14 +112,15 @@ export default function DataTable<T extends { id: string }>({
   );
 
   // Em mobile, mostrar apenas colunas de alta prioridade (ou todas se não especificado)
-  const [isMobile, setIsMobile] = React.useState(false);
-  
-  React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 640);
-    checkMobile();
-    window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
-  }, []);
+  const isMobile = useSyncExternalStore(
+    (callback) => {
+      if (typeof window === "undefined") return () => {};
+      window.addEventListener("resize", callback);
+      return () => window.removeEventListener("resize", callback);
+    },
+    () => (typeof window === "undefined" ? false : window.innerWidth < 640),
+    () => false
+  );
 
   const visibleColumns = columns.filter((col) => {
     if (col.visible === false) return false;
@@ -266,7 +258,9 @@ export default function DataTable<T extends { id: string }>({
                           column.align === "right" ? styles.tdRight : column.align === "center" ? styles.tdCenter : ""
                         } ${truncationClass} ${numericClass}`}
                       >
-                        {column.accessor ? column.accessor(row) : String((row as any)[column.key] ?? "")}
+                        {column.accessor
+                          ? column.accessor(row)
+                          : String(row[column.key as keyof T] ?? "")}
                       </td>
                     );
                   })}
@@ -299,4 +293,11 @@ export default function DataTable<T extends { id: string }>({
       </table>
     </div>
   );
+}
+
+export default function DataTable<T extends { id: string } & Record<string, unknown>>(
+  props: DataTableProps<T>
+) {
+  const key = props.expandStateKey ?? "default";
+  return <DataTableInner key={key} {...props} />;
 }

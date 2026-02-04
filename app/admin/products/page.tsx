@@ -2,7 +2,14 @@ import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { buildCategoryIndex, buildCategoryOptions, getDescendantCategoryIds, buildCategoryPathLabel } from "@/lib/domain/categoryHierarchy";
+import {
+  buildCategoryIndex,
+  buildCategoryOptions,
+  getDescendantCategoryIds,
+  buildCategoryPathLabel,
+} from "@/lib/domain/categoryHierarchy";
+import { normalizeText } from "@/lib/normalization";
+import { buildSkuAttributesDisplay } from "@/lib/skuAttributesDisplay";
 import styles from "../_styles/adminPrimitives.module.css";
 import layoutStyles from "./products.module.css";
 import ProductsFilters from "./ProductsFilters.client";
@@ -102,6 +109,7 @@ export default async function ProductsPage({
   const pageSize = parsePageSize(sp?.pageSize);
   const stock = sp?.stock ?? "";
   const semSkuAtivo = sp?.semSkuAtivo ?? "";
+  const queryNormalized = normalizeText(query);
 
   const categories = await prisma.category.findMany({
     orderBy: [{ parentId: "asc" }, { name: "asc" }],
@@ -118,7 +126,18 @@ export default async function ProductsPage({
   }).map((c) => ({ id: c.id, label: c.label }));
 
   const whereBase = {
-    ...(query ? { name: { contains: query } } : {}),
+    ...(query
+      ? {
+          OR: [
+            { nameNormalized: { contains: queryNormalized } },
+            {
+              skus: {
+                some: { referenciaNormalized: { contains: queryNormalized } },
+              },
+            },
+          ],
+        }
+      : {}),
     ...(categoryFilterIds.length ? { categoryId: { in: categoryFilterIds } } : {}),
     ...(activeFilter === "active" ? { isActive: true } : activeFilter === "inactive" ? { isActive: false } : {}),
   };
@@ -155,6 +174,7 @@ export default async function ProductsPage({
             id: true,
             isActive: true,
             displayName: true,
+            referencia: true,
             sizeText: true,
             flavorText: true,
             isFrozen: true,
@@ -163,6 +183,13 @@ export default async function ProductsPage({
             priceCurrent: true,
             stockQuantity: true,
             attributesJson: true,
+            skuAtributos: {
+              select: {
+                valueText: true,
+                atributo: { select: { name: true, type: true, unit: true } },
+                atributoValor: { select: { value: true } },
+              },
+            },
           },
           orderBy: { displayName: "asc" },
         },
@@ -219,6 +246,7 @@ export default async function ProductsPage({
       id: s.id,
       isActive: s.isActive,
       displayName: s.displayName,
+      referencia: s.referencia,
       sizeText: s.sizeText,
       flavorText: s.flavorText,
       isFrozen: s.isFrozen,
@@ -226,7 +254,9 @@ export default async function ProductsPage({
       unitLabel: s.unitLabel,
       priceCurrent: Number(s.priceCurrent),
       stockQuantity: Number(s.stockQuantity),
-      attributes: parseAttributesJson(s.attributesJson),
+      attributes: s.skuAtributos.length
+        ? buildSkuAttributesDisplay(s.skuAtributos)
+        : parseAttributesJson(s.attributesJson),
     })),
   }));
 

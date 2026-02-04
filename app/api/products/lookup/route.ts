@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
+import { normalizeText } from "@/lib/normalization";
 
 async function hasValidSession() {
   const cookieStore = await cookies();
@@ -17,6 +18,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";
+  const normalizedQuery = normalizeText(query);
   const rawLimit = Number(searchParams.get("limit") ?? 10);
   const limit = Number.isFinite(rawLimit)
     ? Math.min(Math.max(rawLimit, 1), 50)
@@ -29,7 +31,10 @@ export async function GET(request: Request) {
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
-      name: { contains: query },
+      OR: [
+        { nameNormalized: { contains: normalizedQuery } },
+        { skus: { some: { referenciaNormalized: { contains: normalizedQuery } } } },
+      ],
     },
     orderBy: { name: "asc" },
     take: limit,

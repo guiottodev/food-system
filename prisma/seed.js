@@ -1,6 +1,10 @@
 const { PrismaClient } = require("@prisma/client");
 
 const { normalizeUnitType, unitLabelFor } = require("../lib/unit");
+
+function normalizeText(value) {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
 const prisma = new PrismaClient();
 
 async function main() {
@@ -27,6 +31,7 @@ async function main() {
     const productA = await prisma.product.create({
       data: {
         name: "Coxinha",
+        nameNormalized: normalizeText("Coxinha"),
         categoryId: category.id,
       },
     });
@@ -34,6 +39,7 @@ async function main() {
     const productB = await prisma.product.create({
       data: {
         name: "Bolo",
+        nameNormalized: normalizeText("Bolo"),
         categoryId: category.id,
       },
     });
@@ -46,6 +52,7 @@ async function main() {
           flavorText: "Frango",
           isFrozen: true,
           displayName: "Coxinha 25g Frango Congelada",
+          displayNameNormalized: normalizeText("Coxinha 25g Frango Congelada"),
           unitType: normalizeUnitType("UNIDADE"),
           unitLabel: "un",
           quantityStep: 1,
@@ -58,6 +65,7 @@ async function main() {
           flavorText: "Frango",
           isFrozen: false,
           displayName: "Coxinha 25g Frango Frita",
+          displayNameNormalized: normalizeText("Coxinha 25g Frango Frita"),
           unitType: normalizeUnitType("UNIDADE"),
           unitLabel: "un",
           quantityStep: 1,
@@ -70,6 +78,7 @@ async function main() {
           flavorText: "Chocolate",
           isFrozen: false,
           displayName: "Bolo Chocolate",
+          displayNameNormalized: normalizeText("Bolo Chocolate"),
           unitType: normalizeUnitType("KG"),
           unitLabel: unitLabelFor("KG"),
           quantityStep: 0.1,
@@ -82,6 +91,7 @@ async function main() {
           flavorText: "Cenoura",
           isFrozen: false,
           displayName: "Bolo Cenoura",
+          displayNameNormalized: normalizeText("Bolo Cenoura"),
           unitType: normalizeUnitType("KG"),
           unitLabel: unitLabelFor("KG"),
           quantityStep: 0.1,

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
 import { isSkuAvailableInternal } from "@/lib/skuAvailability";
 import type { Prisma } from "@prisma/client";
+import { formatSkuLabel, normalizeText } from "@/lib/normalization";
 
 async function hasValidSession() {
   const cookieStore = await cookies();
@@ -19,6 +20,7 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim() ?? "";
+  const normalizedQuery = normalizeText(query);
   const categoryId = searchParams.get("categoryId")?.trim() ?? "";
   const productId = searchParams.get("productId")?.trim() ?? "";
   const rawLimit = Number(searchParams.get("limit") ?? 10);
@@ -45,8 +47,9 @@ export async function GET(request: Request) {
 
   if (query && !productId) {
     where.OR = [
-      { displayName: { contains: query } },
-      { product: { name: { contains: query } } },
+      { displayNameNormalized: { contains: normalizedQuery } },
+      { referenciaNormalized: { contains: normalizedQuery } },
+      { product: { nameNormalized: { contains: normalizedQuery } } },
     ];
   }
 
@@ -73,7 +76,7 @@ export async function GET(request: Request) {
       .filter(({ sku, product }) => isSkuAvailableInternal({ sku, product }))
       .map(({ sku, product }) => ({
         skuId: sku.id,
-        skuLabel: sku.displayName,
+        skuLabel: formatSkuLabel(sku.displayName, sku.referencia),
         productName: product.name,
         categoryName: product.category.name,
         unit: sku.unitLabel,

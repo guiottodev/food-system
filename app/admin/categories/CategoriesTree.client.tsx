@@ -45,11 +45,6 @@ export default function CategoriesTreeClient({ rows }: { rows: CategoryRow[] }) 
     () => new Set(expandableIds)
   );
 
-  // Recalcular quando mudar o dataset (ex.: filtros/busca)
-  useEffect(() => {
-    setExpanded(new Set(expandableIds));
-  }, [expandableIds]);
-
   const [editingId, setEditingId] = useState<string | null>(null);
   const editing = editingId ? rowById.get(editingId) ?? null : null;
 
@@ -59,11 +54,9 @@ export default function CategoriesTreeClient({ rows }: { rows: CategoryRow[] }) 
 
   useEffect(() => {
     if (!editing) return;
-    setShowCascadeConfirm(false);
-    setCascadeConfirmed(false);
     // Focus inicial
     setTimeout(() => nameRef.current?.focus(), 0);
-  }, [editing?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [editing?.id]);
 
   useEffect(() => {
     if (!editing) return;
@@ -234,7 +227,11 @@ export default function CategoriesTreeClient({ rows }: { rows: CategoryRow[] }) 
                       <button
                         type="button"
                         className={layoutStyles.actionButton}
-                        onClick={() => setEditingId(row.id)}
+                        onClick={() => {
+                          setShowCascadeConfirm(false);
+                          setCascadeConfirmed(false);
+                          setEditingId(row.id);
+                        }}
                       >
                         Editar
                       </button>
@@ -376,4 +373,3 @@ export default function CategoriesTreeClient({ rows }: { rows: CategoryRow[] }) 
     </>
   );
 }
-

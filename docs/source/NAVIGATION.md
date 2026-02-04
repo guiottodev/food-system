@@ -1,25 +1,28 @@
-# Navegação e rotas
+# Navegacao e rotas
 
-Referência canônica: `docs/SOURCE_OF_TRUTH.md` (seção 3).
+Referencia canonica: `docs/SOURCE_OF_TRUTH.md` (secao 3).
 
 ## Sidebar (menu lateral)
 
-Controlada por `app/admin/adminNav.ts`. Duas seções:
+Controlada por `app/admin/adminNav.ts`. Tres secoes:
 
-### Operação
-- Visão geral → /admin
-- Pedidos → /admin/orders (match startsWith)
-- Produção → /admin/capacidade (match startsWith)
-- Clientes → /admin/clientes (match startsWith)
+### Operacao
+- Visao geral -> /admin
+- Pedidos -> /admin/orders (match startsWith)
+- Producao -> /admin/capacidade (match startsWith)
+- Clientes -> /admin/clientes (match startsWith)
 
 ### Cadastros
-- Produtos → /admin/products (match startsWith)
-- Categorias → /admin/categories (match startsWith)
+- Produtos -> /admin/products (match startsWith)
+- Categorias -> /admin/categories (match startsWith)
 
-### Ação primária (destaque)
-- + Novo pedido → /admin/orders/new
+### Configuracoes
+- Configuracoes -> /admin/configuracoes (match startsWith)
 
-As rotas /admin/producao (Registrar produção) e /admin/consumo não ficam na sidebar; são acessadas pelo topo, pela tela de capacidade ou pelo detalhe do pedido.
+### Acao primaria (destaque)
+- + Novo pedido -> /admin/orders/new
+
+As rotas /admin/producao (Registrar producao) e /admin/consumo nao ficam na sidebar; sao acessadas pelo topo, pela tela de capacidade ou pelo detalhe do pedido.
 
 ---
 
@@ -27,14 +30,15 @@ As rotas /admin/producao (Registrar produção) e /admin/consumo não ficam na s
 
 Controlado por `app/admin/AdminTopNav.client.tsx`. Links, na ordem:
 
-1. Painel → /admin
-2. Pedidos → /admin/orders
-3. Clientes → /admin/clientes
-4. Produção → /admin/capacidade
-5. Registrar produção → /admin/producao
-6. Novo pedido → /admin/orders/new
-7. Categorias → /admin/categories
-8. Produtos → /admin/products
+1. Painel -> /admin
+2. Pedidos -> /admin/orders
+3. Clientes -> /admin/clientes
+4. Producao -> /admin/capacidade
+5. Registrar producao -> /admin/producao
+6. Novo pedido -> /admin/orders/new
+7. Categorias -> /admin/categories
+8. Produtos -> /admin/products
+9. Configuracoes -> /admin/configuracoes
 
 ---
 
@@ -53,8 +57,9 @@ Controlado por `app/admin/AdminTopNav.client.tsx`. Links, na ordem:
 - /admin/products
 - /admin/products/new
 - /admin/products/[id]
+- /admin/configuracoes
 - /admin/capacidade
 - /admin/producao
 - /admin/consumo
 
-A tela /admin/pendencias foi descontinuada; as pendências aparecem no Painel (/admin) e nos filtros de /admin/orders (Com pendencias, etc.).
+A tela /admin/pendencias foi descontinuada; as pendencias aparecem no Painel (/admin) e nos filtros de /admin/orders (Com pendencias, etc.).

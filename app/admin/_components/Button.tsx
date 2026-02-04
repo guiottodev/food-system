@@ -36,16 +36,21 @@ export default function Button({
   const classes = `${baseClass} ${variantClass} ${sizeClass} ${densityClass} ${className || ""}`.trim();
 
   if (asChild && React.isValidElement(children) && children.type === Link) {
-    const childProps = children.props as Record<string, unknown>;
-    return React.cloneElement(children as React.ReactElement<any>, {
-      className: `${classes} ${(childProps.className as string) || ""}`.trim(),
+    const childElement = children as React.ReactElement<{ className?: string }>;
+    const childClassName =
+      typeof childElement.props.className === "string"
+        ? childElement.props.className
+        : "";
+    return React.cloneElement(childElement, {
+      className: `${classes} ${childClassName}`.trim(),
       ...props,
     });
   }
 
   if (href && !disabled) {
+    const linkProps = props as React.AnchorHTMLAttributes<HTMLAnchorElement>;
     return (
-      <Link href={href} className={classes} {...(props as any)}>
+      <Link href={href} className={classes} {...linkProps}>
         {loading && <Loader2 size={16} className={styles.buttonSpinner} aria-hidden />}
         {children}
       </Link>

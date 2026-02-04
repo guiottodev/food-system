@@ -39,17 +39,11 @@ export default function CategoryModal({
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (isOpen) {
-      setName("");
-      setDescription("");
-      setParentId(initialParentId);
-      setIsActive(true);
-      setError("");
-      setTimeout(() => {
-        nameInputRef.current?.focus();
-      }, 100);
-    }
-  }, [isOpen, initialParentId]);
+    if (!isOpen) return;
+    setTimeout(() => {
+      nameInputRef.current?.focus();
+    }, 100);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -91,7 +85,7 @@ export default function CategoryModal({
         onSuccess(result.category.id, categoryLabel);
         onClose();
       }
-    } catch (err) {
+  } catch {
       setError("Erro ao criar categoria. Tente novamente.");
       setIsPending(false);
     }

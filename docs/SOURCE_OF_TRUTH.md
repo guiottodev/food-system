@@ -42,14 +42,15 @@ Comportamento:
 
 ---
 
-## 3. Navegação e rotas principais
+## 3. Navegacao e rotas principais
 
-Sidebar (adminNav.ts), duas seções:
-- Operação: Visão geral (/admin), Pedidos (/admin/orders), Produção (/admin/capacidade), Clientes (/admin/clientes)
+Sidebar (adminNav.ts), tres secoes:
+- Operacao: Visao geral (/admin), Pedidos (/admin/orders), Producao (/admin/capacidade), Clientes (/admin/clientes)
 - Cadastros: Produtos (/admin/products), Categorias (/admin/categories)
-- Ação primária: + Novo pedido (/admin/orders/new)
+- Configuracoes: Configuracoes (/admin/configuracoes)
+- Acao primaria: + Novo pedido (/admin/orders/new)
 
-Topo (AdminTopNav): Painel, Pedidos, Clientes, Produção (/admin/capacidade), Registrar produção (/admin/producao), Novo pedido, Categorias, Produtos.
+Topo (AdminTopNav): Painel, Pedidos, Clientes, Producao (/admin/capacidade), Registrar producao (/admin/producao), Novo pedido, Categorias, Produtos, Configuracoes.
 
 Rotas principais:
 - /login
@@ -65,11 +66,12 @@ Rotas principais:
 - /admin/products
 - /admin/products/new
 - /admin/products/[id]
+- /admin/configuracoes
 - /admin/capacidade
 - /admin/producao
 - /admin/consumo
 
-A tela /admin/pendencias foi descontinuada; pendências no Painel (lista) e nos filtros de Pedidos.
+A tela /admin/pendencias foi descontinuada; pendencias no Painel (lista) e nos filtros de Pedidos.
 
 ---
 
@@ -142,20 +144,23 @@ Observações importantes:
 - Produto é criado junto com o primeiro SKU.
 
 ### SKUs
-- SKU é a unidade vendável.
+- SKU e a unidade vendavel.
 - Tipos de unidade suportados: UNIDADE, KG.
+- Campo opcional de referencia (unico quando preenchido, comparacao case-insensitive via referenciaNormalized).
+- Regra de preco/custo: UNIDADE suporta ate 4 casas decimais; outros tipos usam 2 casas.
 - Cada SKU tem defaults por tipo de unidade:
   - KG: minQty 0.5, quantityStep 0.05, unitLabel "kg"
   - UNIDADE: minQty 1, quantityStep 1, unitLabel "un"
-- Disponibilidade do SKU na criação/edição de pedidos:
+- Disponibilidade do SKU na criacao/edicao de pedidos:
   - O SKU deve estar ativo e o produto pai deve estar ativo.
 
 ### Atributos e tags de SKU
-- Tags são salvas em sku_tags (rótulos livres).
-- Atributos são pares chave/valor com validação:
-  - Chave e valor obrigatórios se um dos dois estiver preenchido
-  - Chaves normalizadas e únicas
-  - Máximo de 15 atributos
+- Tags sao salvas em sku_tags (rotulos livres).
+- Atributos agora vem do catalogo (/admin/configuracoes):
+  - Tipos: Texto, Numero, Lista (valores fixos).
+  - Para LISTA, o SKU armazena atributoValorId (integridade em renomeacoes).
+  - Maximo de 15 atributos por SKU.
+  - SKUs legados com attributesJson aparecem como somente leitura.
 
 ### Listagem de produtos (/admin/products)
 - **Tabela expansível**: cada linha de produto pode ser expandida para exibir as linhas de SKU.
@@ -164,7 +169,7 @@ Observações importantes:
 - **Linha de SKU** (ao expandir): displayName, sublinha (sizeText, flavorText, "Congelado"), badge Inativo se aplicável; **Disponível** formatado por unidade (KG: 2 decimais pt-BR + unitLabel; UNIDADE: inteiro + unitLabel), com destaque quando stockQuantity === 0; **Preço** editável na própria célula (clique para editar, blur ou Enter grava via `updateSkuPriceAction`, Escape cancela); link **Editar** para ?tab=skus&skuMode=edit&skuId=.
 - **Produto sem SKUs**: ao expandir, uma linha com empty state e link "Adicionar SKU" para ?tab=skus.
 - **Server Action** `updateSkuPriceAction(skuId, price)`: valida, atualiza `priceCurrent` do SKU e retorna `{ ok: true }` ou `{ ok: false, error }`.
-- **Filtros**: busca por nome, categoria, status (ativos/inativos). Chips de filtros ativos com botão **×** para remover; botão **Limpar** (remove todos os filtros e fecha o painel) quando há filtros ativos; no botão "Filtros", pill com a quantidade de filtros ativos quando > 0.
+- **Filtros**: busca por nome ou referencia, categoria, status (ativos/inativos). Chips de filtros ativos com botao **X** para remover; botao **Limpar** (remove todos os filtros e fecha o painel) quando ha filtros ativos; no botao "Filtros", pill com a quantidade de filtros ativos quando > 0.
 - Em viewport ≤720px a coluna Categoria é ocultada.
 
 ---

@@ -1,5 +1,6 @@
 import { OrderStatus, PrismaClient } from "@prisma/client";
 import { buildCategoryIndex, buildCategoryPathLabel } from "@/lib/domain/categoryHierarchy";
+import { formatSkuLabel, normalizeText } from "@/lib/normalization";
 
 export type CapacityWindowKey = "today" | "7" | "14" | "15" | "30";
 
@@ -179,6 +180,7 @@ export async function getCapacityRows(
   options: CapacityOptions
 ) {
   const productQuery = options.productQuery?.trim() ?? "";
+  const normalizedQuery = normalizeText(productQuery);
   const { start, end } = getWindowRange(options.window); // Demanda (futuro)
 
   // Determinar effectiveProductionWindow (default "15")
@@ -189,7 +191,23 @@ export async function getCapacityRows(
   const products = await prisma.product.findMany({
     where: {
       isActive: true,
-      name: productQuery ? { contains: productQuery } : undefined,
+      ...(productQuery
+        ? {
+            OR: [
+              { nameNormalized: { contains: normalizedQuery } },
+              {
+                skus: {
+                  some: { referenciaNormalized: { contains: normalizedQuery } },
+                },
+              },
+              {
+                skus: {
+                  some: { displayNameNormalized: { contains: normalizedQuery } },
+                },
+              },
+            ],
+          }
+        : {}),
     },
     include: {
       category: { select: { id: true, name: true, parentId: true } },
@@ -199,6 +217,7 @@ export async function getCapacityRows(
         select: {
           id: true,
           displayName: true,
+          referencia: true,
           unitLabel: true,
           unitType: true,
           stockQuantity: true,
@@ -314,7 +333,7 @@ export async function getCapacityRows(
     const sku = product.skus[0];
 
     // Calcular SKUs individuais
-    const skuRows: CapacitySkuRow[] = product.skus.map((sku) => {
+      const skuRows: CapacitySkuRow[] = product.skus.map((sku) => {
       // Garantir NUMBER para evitar problemas com Decimal/string em sort
       const skuProduced = Number(producedBySku.get(sku.id) ?? 0);
       const skuConsumed = Number(consumedBySku.get(sku.id) ?? 0);
@@ -329,7 +348,7 @@ export async function getCapacityRows(
       
       return {
         skuId: sku.id,
-        skuName: sku.displayName,
+        skuName: formatSkuLabel(sku.displayName, sku.referencia),
         unitLabel: sku.unitLabel,
         unitType: sku.unitType,
         stockQuantity: skuStockQty,
@@ -343,10 +362,6 @@ export async function getCapacityRows(
     // Gap do produto = soma dos gaps por SKU (reflete necessidade real por variedade)
     const gap = skuRows.reduce((sum, s) => sum + s.gap, 0);
 
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/3e265bb7-e841-4942-a08a-d26ddc44c778',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'production.ts:280',message:'Capacity row calculated with SKUs',data:{productId:product.id,productName:product.name,produced,consumed,available,demand,gap,skusCount:skuRows.length,skus:skuRows.map(s=>({skuId:s.skuId,skuName:s.skuName,stockQuantity:s.stockQuantity,available:s.available}))},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-    // #endregion
-    
     return {
       productId: product.id,
       productName: product.name,
@@ -466,9 +481,6 @@ async function getAvailableNowByProductIds(
     const available = produced - consumed;
     availableMap.set(productId, available);
     
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/3e265bb7-e841-4942-a08a-d26ddc44c778',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'production.ts:358',message:'Product availability calculation',data:{productId,produced,consumed,available},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'C'})}).catch(()=>{});
-    // #endregion
   }
 
   return availableMap;

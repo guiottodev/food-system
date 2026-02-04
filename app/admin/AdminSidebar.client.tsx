@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ChevronsLeft, ChevronsRight } from "lucide-react";
 import { navSections } from "./adminNav";
@@ -16,14 +16,10 @@ export default function AdminSidebar({
 }: {
   logoutAction: (formData: FormData) => void | Promise<void>;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (stored === "true") {
-      setCollapsed(true);
-    }
-  }, []);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(STORAGE_KEY) === "true";
+  });
 
   const toggleCollapsed = () => {
     setCollapsed((current) => {

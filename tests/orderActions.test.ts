@@ -3,6 +3,10 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import {
+  normalizeProductName,
+  normalizeSkuDisplayName,
+} from "@/lib/normalization";
 
 class RedirectError extends Error {
   url: string;
@@ -82,12 +86,18 @@ describe("order actions", () => {
       data: { name: "Categoria", isActive: true },
     });
     const product = await prisma.product.create({
-      data: { name: "Produto", categoryId: category.id, isActive: true },
+      data: {
+        name: "Produto",
+        nameNormalized: normalizeProductName("Produto"),
+        categoryId: category.id,
+        isActive: true,
+      },
     });
     const sku = await prisma.sku.create({
       data: {
         productId: product.id,
         displayName: "SKU",
+        displayNameNormalized: normalizeSkuDisplayName("SKU"),
         unitLabel: "un",
         unitType: "UNIDADE",
         quantityStep: 1,

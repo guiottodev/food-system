@@ -6,6 +6,10 @@ const { normalizeUnitType } = require("../lib/unit");
 const TAG = "[SEED_FAKE]";
 const prisma = new PrismaClient();
 
+function normalizeText(value) {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
   const content = fs.readFileSync(filePath, "utf8");
@@ -141,6 +145,7 @@ async function ensureSkus(minCount) {
       await prisma.product.create({
         data: {
           name: `${TAG} Produto ${i}`,
+          nameNormalized: normalizeText(`${TAG} Produto ${i}`),
           categoryId: category.id,
         },
       })
@@ -157,12 +162,14 @@ async function ensureSkus(minCount) {
     const product = products[i % products.length];
     const unit = unitTypes[i % unitTypes.length];
     const normalizedUnit = normalizeUnitType(unit.unitType);
+    const displayName = `${TAG} SKU ${String(i).padStart(2, "0")}`;
     skuData.push({
       productId: product.id,
       sizeText: unit.unitType === "KG" ? "1kg" : "25g",
       flavorText: `Sabor ${i}`,
       isFrozen: i % 2 === 0,
-      displayName: `${TAG} SKU ${String(i).padStart(2, "0")}`,
+      displayName,
+      displayNameNormalized: normalizeText(displayName),
       unitLabel: unit.unitLabel,
       unitType: normalizedUnit,
       quantityStep: toDecimal(unit.step),

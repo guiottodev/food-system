@@ -5,6 +5,7 @@ import {
   Package,
   Tags,
   Users,
+  Settings,
 } from "lucide-react";
 
 export type NavItem = {
@@ -36,7 +37,7 @@ export const navSections: NavSection[] = [
         icon: ClipboardList,
       },
       {
-        label: "Produção",
+        label: "Producao",
         href: "/admin/capacidade",
         match: "startsWith",
         icon: Gauge,
@@ -63,6 +64,17 @@ export const navSections: NavSection[] = [
         href: "/admin/categories",
         match: "startsWith",
         icon: Tags,
+      },
+    ],
+  },
+  {
+    title: "Configuracoes",
+    items: [
+      {
+        label: "Configuracoes",
+        href: "/admin/configuracoes",
+        match: "startsWith",
+        icon: Settings,
       },
     ],
   },

@@ -8,6 +8,10 @@ import {
   getCapacityRows,
   getProductCapacitySnapshot,
 } from "../lib/domain/production";
+import {
+  normalizeProductName,
+  normalizeSkuDisplayName,
+} from "@/lib/normalization";
 
 describe("production capacity", () => {
   let prisma: PrismaClient;
@@ -55,6 +59,7 @@ describe("production capacity", () => {
     const product = await prisma.product.create({
       data: {
         name,
+        nameNormalized: normalizeProductName(name),
         categoryId: category.id,
         isActive: true,
       },
@@ -63,6 +68,7 @@ describe("production capacity", () => {
       data: {
         productId: product.id,
         displayName: `${name}-sku`,
+        displayNameNormalized: normalizeSkuDisplayName(`${name}-sku`),
         sizeText: "un",
         unitLabel: "un",
         unitType: "UNIDADE",

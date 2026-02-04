@@ -37,12 +37,20 @@ export default function CategoriesFilters({
   const [isPending, startTransition] = useTransition();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(Boolean(openModalOnLoad));
-  const [modalParentId, setModalParentId] = useState<string>(
-    () => initialParentId ?? ""
-  );
-  const [modalError, setModalError] = useState(
-    error === "nome" && openModalOnLoad ? "Informe o nome da categoria." : ""
-  );
+  const [modalParentId, setModalParentId] = useState<string>(() => {
+    if (openModalOnLoad) {
+      return searchParams.get("parentId") ?? initialParentId ?? "";
+    }
+    return initialParentId ?? "";
+  });
+  const [modalError, setModalError] = useState(() => {
+    if (!openModalOnLoad) return "";
+    if (error === "nome") return "Informe o nome da categoria.";
+    if (error === "duplicado") return "Ja existe uma categoria com esse nome nesse nivel.";
+    if (error === "pai_invalido") return "Categoria pai invalida (ou inativa).";
+    if (error === "pai_inativo") return "Nao e possivel ativar: a categoria pai esta inativa.";
+    return "";
+  });
   const debounceRef = useRef<number | null>(null);
 
   const currentQuery = searchParams.get("q") ?? initialQuery;
@@ -93,13 +101,11 @@ export default function CategoriesFilters({
     };
   }, []);
 
-  useEffect(() => {
-    if (!filtersOpen) {
-      setDraftActive(currentActive);
-      setDraftKind(currentKind);
-      setDraftHas(currentHas);
-    }
-  }, [filtersOpen, currentActive, currentKind, currentHas]);
+  const syncDrafts = useCallback(() => {
+    setDraftActive(currentActive);
+    setDraftKind(currentKind);
+    setDraftHas(currentHas);
+  }, [currentActive, currentKind, currentHas]);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -111,21 +117,6 @@ export default function CategoriesFilters({
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [closeModal, modalOpen]);
-
-  useEffect(() => {
-    if (openModalOnLoad) {
-      setModalOpen(true);
-      const currentParentId = searchParams.get("parentId") ?? initialParentId ?? "";
-      setModalParentId(currentParentId);
-      if (error === "nome") setModalError("Informe o nome da categoria.");
-      if (error === "duplicado")
-        setModalError("Já existe uma categoria com esse nome nesse nível.");
-      if (error === "pai_invalido")
-        setModalError("Categoria pai inválida (ou inativa).");
-      if (error === "pai_inativo")
-        setModalError("Não é possível ativar: a categoria pai está inativa.");
-    }
-  }, [error, openModalOnLoad, initialParentId, searchParams]);
 
   const handleApplyFilters = () => {
     applyParams({
@@ -196,8 +187,17 @@ export default function CategoriesFilters({
               onClear={handleClearFilters}
               syncMode="url"
               isOpen={filtersOpen}
-              onClose={() => setFiltersOpen(false)}
-              onToggle={() => setFiltersOpen((o) => !o)}
+              onClose={() => {
+                setFiltersOpen(false);
+                syncDrafts();
+              }}
+              onToggle={() =>
+                setFiltersOpen((open) => {
+                  const next = !open;
+                  if (next) syncDrafts();
+                  return next;
+                })
+              }
             >
               <div className={layoutStyles.filtersGroup}>
                 <div className={layoutStyles.filtersGroupHeader}>

@@ -12,6 +12,10 @@ import {
   getOrderPendingSummary,
 } from "@/lib/domain/order";
 import type { OrderStatus, UnitType } from "@prisma/client";
+import {
+  normalizeProductName,
+  normalizeSkuDisplayName,
+} from "@/lib/normalization";
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const {
@@ -206,6 +210,9 @@ async function createDimensions(
     const p = await prisma.product.create({
       data: {
         name: `Produto Sim ${String(i + 1).padStart(3, "0")}`,
+        nameNormalized: normalizeProductName(
+          `Produto Sim ${String(i + 1).padStart(3, "0")}`
+        ),
         categoryId: cat.id,
         isActive: true,
       },
@@ -225,12 +232,14 @@ async function createDimensions(
       const ut = unitTypes[k % unitTypes.length]!;
       const def = getSkuDefaults(ut);
       const label = unitLabelFor(ut);
+      const displayName = `${p.name} ${ut} ${k + 1}`;
       skuData.push({
         productId: p.id,
         sizeText: ut === "KG" ? "1kg" : "25g",
         flavorText: `Sabor ${k + 1}`,
         isFrozen: k % 2 === 0,
-        displayName: `${p.name} ${ut} ${k + 1}`,
+        displayName,
+        displayNameNormalized: normalizeSkuDisplayName(displayName),
         unitLabel: label,
         unitType: normalizeUnitType(ut),
         quantityStep: toDecimal(def.quantityStep),
@@ -440,11 +449,6 @@ async function createOrders(
   const nonCriticalSkus = skus.filter((s) => !criticalProductIds.has(s.productId));
 
   const unavailableOrderIds: string[] = [];
-  let noItemsCount = 0;
-  let noDateCount = 0;
-  let reconfirmCount = 0;
-  let deliveryNoAddressCount = 0;
-
   const total =
     mode === "golden"
       ? Math.max(

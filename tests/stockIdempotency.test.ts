@@ -4,6 +4,10 @@ import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { transitionOrderStatus } from "../lib/domain/transitionOrderStatus";
+import {
+  normalizeProductName,
+  normalizeSkuDisplayName,
+} from "@/lib/normalization";
 
 const dbPath = path.join(process.cwd(), "data", "test-idempotency.sqlite");
 const dbUrl = `file:${dbPath}`;
@@ -42,6 +46,7 @@ describe("stock idempotency", () => {
     const product = await prisma.product.create({
       data: {
         name: "Produto teste",
+        nameNormalized: normalizeProductName("Produto teste"),
         categoryId: category.id,
         isActive: true,
       },
@@ -51,6 +56,7 @@ describe("stock idempotency", () => {
       data: {
         productId: product.id,
         displayName: "SKU teste",
+        displayNameNormalized: normalizeSkuDisplayName("SKU teste"),
         sizeText: "un",
         unitLabel: "un",
         unitType: "UNIDADE",

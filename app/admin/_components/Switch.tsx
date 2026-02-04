@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useId } from "react";
 import styles from "./Switch.module.css";
 
 export interface SwitchProps {
@@ -33,7 +33,8 @@ export default function Switch({
     }
   };
 
-  const switchId = id || `switch-${Math.random().toString(36).substr(2, 9)}`;
+  const autoId = useId();
+  const switchId = id ?? autoId;
 
   return (
     <div className={styles.switchContainer}>

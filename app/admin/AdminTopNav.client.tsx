@@ -24,6 +24,8 @@ export default function AdminTopNav() {
     pathname === "/admin/categories" || pathname.startsWith("/admin/categories/");
   const isProducts =
     pathname === "/admin/products" || pathname.startsWith("/admin/products/");
+  const isConfiguracoes =
+    pathname === "/admin/configuracoes" || pathname.startsWith("/admin/configuracoes/");
 
   return (
     <nav className={styles.topNav}>
@@ -53,14 +55,14 @@ export default function AdminTopNav() {
         href="/admin/capacidade"
         aria-current={isProducaoHub ? "page" : undefined}
       >
-        Produção
+        Producao
       </Link>
       <Link
         className={linkClass(isProducao)}
         href="/admin/producao"
         aria-current={isProducao ? "page" : undefined}
       >
-        Registrar produção
+        Registrar producao
       </Link>
       <Link
         className={linkClass(isOrdersNew)}
@@ -82,6 +84,13 @@ export default function AdminTopNav() {
         aria-current={isProducts ? "page" : undefined}
       >
         Produtos
+      </Link>
+      <Link
+        className={linkClass(isConfiguracoes)}
+        href="/admin/configuracoes"
+        aria-current={isConfiguracoes ? "page" : undefined}
+      >
+        Configuracoes
       </Link>
     </nav>
   );

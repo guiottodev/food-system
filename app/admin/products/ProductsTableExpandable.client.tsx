@@ -15,6 +15,13 @@ import {
 } from "./actions";
 import layoutStyles from "./products.module.css";
 import primitivesStyles from "../_styles/adminPrimitives.module.css";
+import {
+  formatDecimalDisplay,
+  getUnitPriceDecimals,
+  normalizeDecimalInput,
+  parseDecimalInput,
+} from "@/lib/price";
+import { formatSkuLabel } from "@/lib/normalization";
 
 type SortKey = "name" | "category";
 type SortDir = "asc" | "desc";
@@ -28,6 +35,7 @@ type SkuRow = {
   id: string;
   isActive: boolean;
   displayName: string;
+  referencia?: string | null;
   sizeText: string;
   flavorText: string | null;
   isFrozen: boolean;
@@ -53,21 +61,9 @@ type ProductsTableExpandableProps = {
   dir?: SortDir;
 };
 
-function formatPrice(n: number): string {
-  return "R$ " + n.toFixed(2).replace(".", ",");
-}
-
-function formatPriceInput(value: string): string {
-  const numbers = value.replace(/\D/g, "");
-  if (!numbers) return "";
-  const num = Number(numbers) / 100;
-  return num.toFixed(2).replace(".", ",");
-}
-
-function parsePriceInput(value: string): number {
-  const numbers = value.replace(/\D/g, "");
-  if (!numbers) return 0;
-  return Number(numbers) / 100;
+function formatPrice(n: number, unitType: string): string {
+  const decimals = getUnitPriceDecimals(unitType);
+  return "R$ " + formatDecimalDisplay(n, decimals);
 }
 
 function formatAvailable(sku: SkuRow): string {
@@ -80,7 +76,7 @@ function formatAvailable(sku: SkuRow): string {
 
 function skuSubline(sku: SkuRow): string {
   const parts = [sku.sizeText, sku.flavorText || null].filter(Boolean) as string[];
-  return parts.length ? parts.join(" · ") : "";
+  return parts.length ? parts.join(" - ") : "";
 }
 
 export default function ProductsTableExpandable({ products, sort = "name", dir = "asc" }: ProductsTableExpandableProps) {
@@ -116,29 +112,33 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
     [pathname, router, searchParams]
   );
 
-  const handlePriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatted = formatPriceInput(e.target.value);
-    if (priceInputRef.current) {
-      priceInputRef.current.value = formatted;
-      const newSize = Math.max(5, Math.min(12, formatted.length + 1));
-      priceInputRef.current.size = newSize;
-    }
-  }, []);
+  const handlePriceChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>, decimals: number) => {
+      const formatted = normalizeDecimalInput(e.target.value, decimals);
+      if (priceInputRef.current) {
+        priceInputRef.current.value = formatted;
+        const newSize = Math.max(5, Math.min(12, formatted.length + 1));
+        priceInputRef.current.size = newSize;
+      }
+    },
+    []
+  );
 
   const handlePriceBlur = useCallback(
-    async (sku: SkuRow, productId: string) => {
+    async (sku: SkuRow) => {
       if (editingPriceSkuId !== sku.id) return;
       const raw = priceInputRef.current?.value ?? "";
-      const parsed = parsePriceInput(raw);
-      if (parsed <= 0) {
-        setPriceError({ skuId: sku.id, message: "Preço inválido" });
+      const decimals = getUnitPriceDecimals(sku.unitType);
+      const parsed = parseDecimalInput(raw, decimals);
+      if (!parsed || parsed.value <= 0) {
+        setPriceError({ skuId: sku.id, message: "Preco invalido" });
         return;
       }
       setPriceError(null);
       setSavingPriceSkuId(sku.id);
-      const res = await updateSkuPriceAction(sku.id, parsed);
+      const res = await updateSkuPriceAction(sku.id, parsed.value);
       if (res.ok) {
-        setSkusPriceCache((c) => ({ ...c, [sku.id]: parsed }));
+        setSkusPriceCache((c) => ({ ...c, [sku.id]: parsed.value }));
         setEditingPriceSkuId(null);
       } else {
         setPriceError({ skuId: sku.id, message: res.error });
@@ -150,7 +150,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
   );
 
   const handlePriceKeyDown = useCallback(
-    (e: React.KeyboardEvent, sku: SkuRow, productId: string) => {
+    (e: React.KeyboardEvent, sku: SkuRow) => {
       if (e.key === "Escape") {
         setEditingPriceSkuId(null);
         setPriceError(null);
@@ -158,7 +158,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
       }
       if (e.key === "Enter") {
         e.preventDefault();
-        handlePriceBlur(sku, productId);
+        handlePriceBlur(sku);
       }
     },
     [handlePriceBlur]
@@ -232,7 +232,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
     },
     {
       key: "available",
-      header: "Disponível",
+      header: "Disponivel",
       accessor: (row: ProductRow): React.ReactNode => {
         const activeSkus = row.skus.filter((s) => s.isActive).length;
         const disponivelX = row.skus.filter((s) => s.isActive && (s.stockQuantity ?? 0) > 0).length;
@@ -252,7 +252,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
               <Link
                 href={`/admin/capacidade?q=${encodeURIComponent(row.name)}`}
                 className={layoutStyles.actionLink}
-                title="Ver produção"
+                title="Ver producao"
                 onClick={(e) => e.stopPropagation()}
               >
                 <ToneChip tone="warning" label="Fora de estoque" density="compact" />
@@ -266,10 +266,10 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
             <Link
               href={`/admin/capacidade?q=${encodeURIComponent(row.name)}`}
               className={layoutStyles.actionLink}
-              title="Ver produção"
+              title="Ver producao"
               onClick={(e) => e.stopPropagation()}
             >
-              {disponivelX} de {disponivelY} disponíveis
+              {disponivelX} de {disponivelY} disponiveis
             </Link>
           </div>
         );
@@ -280,13 +280,15 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
     },
     {
       key: "price",
-      header: "Preço",
+      header: "Preco",
       accessor: (row: ProductRow): React.ReactNode => {
         const activeWithPrice = row.skus.filter((s) => s.isActive && typeof s.priceCurrent === "number");
-        const minPrice = activeWithPrice.length ? Math.min(...activeWithPrice.map((s) => s.priceCurrent)) : null;
+        const minSku = activeWithPrice.length
+          ? activeWithPrice.reduce((min, sku) => sku.priceCurrent < min.priceCurrent ? sku : min)
+          : null;
         return (
-          <span title={minPrice != null ? "Menor preço entre SKUs ativos" : "Apenas SKUs inativos ou sem preço"}>
-            {minPrice != null ? formatPrice(minPrice) : "Variável"}
+          <span title={minSku ? "Menor Preco entre SKUs ativos" : "Apenas SKUs inativos ou sem Preco"}>
+            {minSku ? formatPrice(minSku.priceCurrent, minSku.unitType) : "Variavel"}
           </span>
         );
       },
@@ -325,14 +327,17 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
                 const isSaving = savingPriceSkuId === sku.id;
                 const displayPrice = skusPriceCache[sku.id] ?? sku.priceCurrent;
                 const err = priceError?.skuId === sku.id ? priceError : null;
-                const initialFormattedValue = formatPriceInput(String(Math.round(displayPrice * 100)).padStart(3, "0"));
+                const decimals = getUnitPriceDecimals(sku.unitType);
+                const initialFormattedValue = formatDecimalDisplay(displayPrice, decimals);
                 const inputSize = Math.max(5, Math.min(12, initialFormattedValue.length + 1));
 
                 return (
                   <div key={sku.id} className={layoutStyles.skuRow}>
                     <div className={layoutStyles.skuHeader}>
                       <div className={layoutStyles.skuNameSection}>
-                        <strong className={layoutStyles.skuName}>{sku.displayName}</strong>
+                        <strong className={layoutStyles.skuName}>
+                          {formatSkuLabel(sku.displayName, sku.referencia)}
+                        </strong>
                         {skuSubline(sku) ? (
                           <span className={layoutStyles.skuSubline}>{skuSubline(sku)}</span>
                         ) : null}
@@ -359,19 +364,19 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
                     <div className={layoutStyles.skuMeta}>
                       <div className={layoutStyles.skuMetaData}>
                         <div className={layoutStyles.skuMetaItem}>
-                          <span className={layoutStyles.skuMetaLabel}>Disponível:</span>
+                          <span className={layoutStyles.skuMetaLabel}>Disponivel:</span>
                           <Link
                             href={`/admin/capacidade?q=${encodeURIComponent(row.name)}`}
                             className={`${layoutStyles.skuMetaValue} ${layoutStyles.skuDisponivelLink} ${sku.stockQuantity === 0 ? layoutStyles.stockZero : ""}`}
-                            title="Ver produção"
+                            title="Ver producao"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {formatAvailable(sku)}
                           </Link>
                         </div>
-                        <span className={layoutStyles.skuMetaSep} aria-hidden>·</span>
+                        <span className={layoutStyles.skuMetaSep} aria-hidden>-</span>
                         <div className={layoutStyles.skuMetaItem}>
-                          <span className={layoutStyles.skuMetaLabel}>Preço:</span>
+                          <span className={layoutStyles.skuMetaLabel}>Preco:</span>
                           <div className={layoutStyles.skuMetaValue}>
                             {isEditing ? (
                               <>
@@ -381,11 +386,13 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
                                   inputMode="decimal"
                                   size={inputSize}
                                   defaultValue={initialFormattedValue}
-                                  onChange={handlePriceChange}
-                                  onBlur={() => handlePriceBlur(sku, row.id)}
-                                  onKeyDown={(e) => handlePriceKeyDown(e, sku, row.id)}
-                                  placeholder="0,00"
-                                  aria-label={`Editar preço de ${sku.displayName}`}
+                                  onChange={(event) =>
+                                    handlePriceChange(event, decimals)
+                                  }
+                                  onBlur={() => handlePriceBlur(sku)}
+                                  onKeyDown={(e) => handlePriceKeyDown(e, sku)}
+                                  placeholder={decimals === 4 ? "0,0000" : "0,00"}
+                                  aria-label={`Editar Preco de ${formatSkuLabel(sku.displayName, sku.referencia)}`}
                                   className={layoutStyles.priceInput}
                                   autoFocus
                                   onClick={(e) => e.stopPropagation()}
@@ -403,7 +410,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
                                 }}
                                 disabled={isSaving}
                               >
-                                <span>{formatPrice(displayPrice)}</span>
+                                <span>{formatPrice(displayPrice, sku.unitType)}</span>
                                 <Pencil size={12} className={layoutStyles.priceEditIcon} aria-hidden />
                               </button>
                             )}
@@ -440,7 +447,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
                 }}
                 aria-haspopup="menu"
                 aria-expanded={openMenuProductId === row.id}
-                aria-label="Mais opções"
+                aria-label="Mais opcoes"
               >
                 <MoreVertical size={18} aria-hidden />
               </button>
@@ -448,7 +455,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
                 <div
                   className={layoutStyles.menuDropdown}
                   role="menu"
-                  aria-label="Ações do produto"
+                  aria-label="Acoes do produto"
                 >
                   <button
                     type="button"
@@ -486,7 +493,7 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
                     className={layoutStyles.menuDropdownItem}
                     onClick={async (e) => {
                       e.stopPropagation();
-                      if (!confirm("Excluir este produto? Esta ação não pode ser desfeita.")) {
+                      if (!confirm("Excluir este produto? Esta acao nao pode ser desfeita.")) {
                         setOpenMenuProductId(null);
                         return;
                       }
@@ -512,3 +519,5 @@ export default function ProductsTableExpandable({ products, sort = "name", dir =
     </div>
   );
 }
+
+

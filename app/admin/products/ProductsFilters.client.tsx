@@ -90,14 +90,12 @@ export default function ProductsFilters({
     };
   }, []);
 
-  useEffect(() => {
-    if (!filtersOpen) {
-      setDraftCategory(currentCategory);
-      setDraftActive(currentActive);
-      setDraftStock(currentStock);
-      setDraftSemSkuAtivo(currentSemSkuAtivo);
-    }
-  }, [filtersOpen, currentCategory, currentActive, currentStock, currentSemSkuAtivo]);
+  const syncDrafts = useCallback(() => {
+    setDraftCategory(currentCategory);
+    setDraftActive(currentActive);
+    setDraftStock(currentStock);
+    setDraftSemSkuAtivo(currentSemSkuAtivo);
+  }, [currentCategory, currentActive, currentStock, currentSemSkuAtivo]);
 
   const handleApplyFilters = () => {
     applyParams({
@@ -175,7 +173,7 @@ export default function ProductsFilters({
             <input
               type="text"
               name="q"
-              placeholder="Buscar por nome"
+              placeholder="Buscar por nome ou referencia"
               defaultValue={currentQuery}
               key={currentQuery}
               onChange={(event) => {
@@ -193,7 +191,7 @@ export default function ProductsFilters({
                   applyParams({ q: (event.currentTarget.value || "").trim() });
                 }
               }}
-              aria-label="Buscar por nome"
+              aria-label="Buscar por nome ou referencia"
               className={`${styles.control} ${layoutStyles.searchInput}`}
             />
           </div>
@@ -213,8 +211,17 @@ export default function ProductsFilters({
               onClear={handleClearFilters}
               syncMode="url"
               isOpen={filtersOpen}
-              onClose={() => setFiltersOpen(false)}
-              onToggle={() => setFiltersOpen((o) => !o)}
+              onClose={() => {
+                setFiltersOpen(false);
+                syncDrafts();
+              }}
+              onToggle={() =>
+                setFiltersOpen((open) => {
+                  const next = !open;
+                  if (next) syncDrafts();
+                  return next;
+                })
+              }
             >
               <div className={layoutStyles.filtersGroup}>
                 <div className={layoutStyles.filtersGroupHeader}>
@@ -330,7 +337,7 @@ export default function ProductsFilters({
                 className={layoutStyles.chipButton}
                 aria-label={`Remover filtro ${chip.label}`}
               >
-                ×
+                x
               </button>
             </span>
           ))}

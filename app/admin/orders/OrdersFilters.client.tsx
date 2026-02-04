@@ -371,11 +371,9 @@ export default function OrdersFilters({
     };
   }, []);
 
-  useEffect(() => {
-    if (!filtersOpen) {
-      setDraftFilters(currentFilters);
-    }
-  }, [currentFilters, filtersOpen]);
+  const syncDrafts = useCallback(() => {
+    setDraftFilters(currentFilters);
+  }, [currentFilters]);
 
   const handleApplyFilters = () => {
     const statusValue =
@@ -487,11 +485,17 @@ export default function OrdersFilters({
               onClear={handleClearFilters}
               syncMode="url"
               isOpen={filtersOpen}
-              onClose={() => setFiltersOpen(false)}
-              onToggle={() => {
-                setDraftFilters(currentFilters);
-                setFiltersOpen((o) => !o);
+              onClose={() => {
+                setFiltersOpen(false);
+                syncDrafts();
               }}
+              onToggle={() =>
+                setFiltersOpen((open) => {
+                  const next = !open;
+                  if (next) syncDrafts();
+                  return next;
+                })
+              }
             >
               {/* Grupo: Período */}
               <div className={layoutStyles.filtersGroup}>

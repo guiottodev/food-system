@@ -1,18 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useFormStatus } from "react-dom";
+import { type SkuAttributeInput } from "@/lib/validation/skuAttributes";
 import {
-  normalizeKey,
-  validateSkuAttributes,
-  type SkuAttributeInput,
-} from "@/lib/validation/skuAttributes";
-import {
+  formatSkuPriceInput,
+  normalizeSkuPriceInput,
+  parseSkuPriceInput,
   validateSkuFormValues,
   type SkuFormErrors,
   type SkuFormValues,
 } from "@/lib/skuFormValidation";
-import Select, { type SelectOption } from "../../_components/Select";
+import {
+  formatDecimalDisplay,
+  getUnitPriceDecimals,
+  parseDecimalInput,
+} from "@/lib/price";
+import { formatSkuLabel } from "@/lib/normalization";
+import Select from "../../_components/Select";
 import Switch from "../../_components/Switch";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "./productDetail.module.css";
@@ -21,10 +27,12 @@ import { InlineNotice } from "../../design-system/InlineNotice.client";
 type SkuView = {
   id: string;
   displayName: string;
+  referencia?: string | null;
   sizeText: string;
   flavorText: string;
   attributes: SkuAttributeInput[];
   attributesJson: string | null;
+  catalogAttributes: CatalogAttributeSelection[];
   isFrozen: boolean;
   unitType: string;
   unitLabel: string;
@@ -36,11 +44,38 @@ type SkuView = {
   tags: string[];
 };
 
+type CatalogAttributeValue = {
+  id: string;
+  value: string;
+};
+
+type CatalogAttribute = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  type: "TEXTO" | "NUMERO" | "LISTA";
+  unit: string | null;
+  values: CatalogAttributeValue[];
+};
+
+type CatalogAttributeSelection = {
+  atributoId: string;
+  atributoValorId: string | null;
+  valueText: string | null;
+};
+
+type CatalogAttributeRow = {
+  atributoId: string;
+  atributoValorId: string;
+  valueText: string;
+};
+
 type SkuFormMode = "new" | "edit";
 
 type ProductSkusSectionProps = {
   productId: string;
   skus: SkuView[];
+  catalogAttributes: CatalogAttribute[];
   createSkuAction: (formData: FormData) => void;
   updateSkuAction: (formData: FormData) => void;
   duplicateSkuAction: (formData: FormData) => void;
@@ -57,18 +92,66 @@ const unitTypeOptions = [
 
 const maxAttributes = 15;
 
-function createEmptyAttribute(): SkuAttributeInput {
-  return { key: "", value: "" };
+function createEmptyCatalogRow(): CatalogAttributeRow {
+  return { atributoId: "", atributoValorId: "", valueText: "" };
 }
 
-function getInitialAttributes(sku: SkuView | null): SkuAttributeInput[] {
-  if (sku?.attributes?.length) {
-    return sku.attributes.map((attr) => ({
-      key: attr.key,
-      value: attr.value,
+function getInitialCatalogRows(sku: SkuView | null): CatalogAttributeRow[] {
+  if (sku?.catalogAttributes?.length) {
+    return sku.catalogAttributes.map((attr) => ({
+      atributoId: attr.atributoId,
+      atributoValorId: attr.atributoValorId ?? "",
+      valueText: attr.valueText ?? "",
     }));
   }
-  return [createEmptyAttribute()];
+  return [createEmptyCatalogRow()];
+}
+
+function isCatalogRowEmpty(row: CatalogAttributeRow) {
+  return (
+    !row.atributoId.trim() &&
+    !row.atributoValorId.trim() &&
+    !row.valueText.trim()
+  );
+}
+
+function validateCatalogRows(
+  rows: CatalogAttributeRow[],
+  attributeMap: Map<string, CatalogAttribute>
+) {
+  const duplicates = new Set<string>();
+  const seen = new Set<string>();
+  let error = "";
+
+  for (const row of rows) {
+    if (isCatalogRowEmpty(row)) continue;
+    const atributoId = row.atributoId.trim();
+    if (!atributoId) {
+      error = "Selecione um atributo valido.";
+      break;
+    }
+    if (seen.has(atributoId)) {
+      duplicates.add(atributoId);
+      error = "Cada atributo deve ser unico.";
+      continue;
+    }
+    seen.add(atributoId);
+    const attribute = attributeMap.get(atributoId);
+    if (!attribute) {
+      error = "Selecione um atributo valido.";
+      break;
+    }
+    if (attribute.type === "LISTA") {
+      if (!row.atributoValorId.trim()) {
+        error = "Selecione um valor para o atributo.";
+      }
+    } else if (!row.valueText.trim()) {
+      error = "Preencha o valor do atributo.";
+    }
+    if (error) break;
+  }
+
+  return { ok: !error, error, duplicates };
 }
 
 function SkuFormActions({
@@ -104,6 +187,7 @@ function SkuFormActions({
 export default function ProductSkusSection({
   productId,
   skus,
+  catalogAttributes,
   createSkuAction,
   updateSkuAction,
   duplicateSkuAction,
@@ -130,46 +214,34 @@ export default function ProductSkusSection({
   const [unitTypeValue, setUnitTypeValue] = useState(
     () => initialSku?.unitType ?? "UNIDADE"
   );
-  // Formatar preço para exibição (formato brasileiro: "10,50")
-  const formatPriceForDisplay = (value: number): string => {
-    return value.toFixed(2).replace(".", ",");
-  };
-
-  // Formatar entrada de preço (máscara monetária brasileira)
-  // Aceita digitação natural: "10" → "0,10", "100" → "1,00", "1000" → "10,00"
-  const formatPriceInput = (value: string): string => {
-    const numbers = value.replace(/\D/g, "");
-    if (!numbers) return "";
-    const num = Number(numbers) / 100;
-    return num.toFixed(2).replace(".", ",");
-  };
-
-  // Converter string formatada para número
-  const parsePriceFromDisplay = (value: string): number => {
-    const normalized = value.replace(",", ".");
-    const parsed = parseFloat(normalized);
-    return isNaN(parsed) ? 0 : parsed;
+  const formatPriceForDisplay = (value: number, unitTypeValue: string): string => {
+    return formatDecimalDisplay(value, getUnitPriceDecimals(unitTypeValue));
   };
 
   const [priceValue, setPriceValue] = useState(() =>
-    initialSku ? formatPriceForDisplay(initialSku.priceCurrent) : ""
+    initialSku
+      ? formatPriceForDisplay(initialSku.priceCurrent, initialSku.unitType)
+      : ""
+  );
+  const [referenceValue, setReferenceValue] = useState(
+    () => initialSku?.referencia ?? ""
   );
   const [isActiveValue, setIsActiveValue] = useState(
     () => initialSku?.isActive ?? true
   );
   const [fieldErrors, setFieldErrors] = useState<SkuFormErrors>({});
+  const [unitChangeNotice, setUnitChangeNotice] = useState("");
   const unitTypeSelectRef = useRef<HTMLDivElement | null>(null);
-  const [attributeRows, setAttributeRows] = useState<SkuAttributeInput[]>(
-    () => getInitialAttributes(initialSku)
+  const [catalogRows, setCatalogRows] = useState<CatalogAttributeRow[]>(
+    () => getInitialCatalogRows(initialSku)
   );
-  const [showAttributeError, setShowAttributeError] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     "all" | "active" | "inactive"
   >("all");
   const nameInputRef = useRef<HTMLInputElement | null>(null);
   const priceRef = useRef<HTMLInputElement | null>(null);
-  const valueInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const costRef = useRef<HTMLInputElement | null>(null);
 
   const activeSku = useMemo(
     () => skus.find((sku) => sku.id === activeSkuId) ?? null,
@@ -195,10 +267,11 @@ export default function ProductSkusSection({
     setDisplayName("");
     setUnitTypeValue("UNIDADE");
     setPriceValue("");
+    setReferenceValue("");
     setIsActiveValue(true);
     setFieldErrors({});
-    setAttributeRows(getInitialAttributes(null));
-    setShowAttributeError(false);
+    setCatalogRows(getInitialCatalogRows(null));
+    setUnitChangeNotice("");
     setModalOpen(true);
   }
 
@@ -210,12 +283,18 @@ export default function ProductSkusSection({
     setDisplayName(nextSku?.displayName ?? "");
     setUnitTypeValue(nextSku?.unitType ?? "UNIDADE");
     setPriceValue(
-      nextSku?.priceCurrent ? formatPriceForDisplay(nextSku.priceCurrent) : ""
+      nextSku?.priceCurrent !== undefined && nextSku?.priceCurrent !== null
+        ? formatPriceForDisplay(
+            nextSku.priceCurrent,
+            nextSku.unitType ?? "UNIDADE"
+          )
+        : ""
     );
+    setReferenceValue(nextSku?.referencia ?? "");
     setIsActiveValue(nextSku?.isActive ?? true);
     setFieldErrors({});
-    setAttributeRows(getInitialAttributes(nextSku));
-    setShowAttributeError(false);
+    setCatalogRows(getInitialCatalogRows(nextSku));
+    setUnitChangeNotice("");
     setModalOpen(true);
   }
 
@@ -228,79 +307,80 @@ export default function ProductSkusSection({
     [skus]
   );
 
-  const attributeValidation = useMemo(
-    () => validateSkuAttributes(attributeRows),
-    [attributeRows]
+  const attributeMap = useMemo(
+    () => new Map(catalogAttributes.map((attr) => [attr.id, attr])),
+    [catalogAttributes]
   );
-  const duplicateAttributeKeys = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const row of attributeRows) {
-      const normalized = normalizeKey(row.key);
-      if (!normalized) continue;
-      counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
-    }
-    const duplicates = new Set<string>();
-    for (const [key, count] of counts) {
-      if (count > 1) {
-        duplicates.add(key);
-      }
-    }
-    return duplicates;
-  }, [attributeRows]);
-  const attributesJsonValue = attributeValidation.ok
-    ? attributeValidation.json
-    : JSON.stringify(attributeRows);
+  const hasActiveAttributes = useMemo(
+    () => catalogAttributes.some((attr) => attr.isActive),
+    [catalogAttributes]
+  );
+  const useLegacyAttributes =
+    Boolean(modalSku?.attributesJson) &&
+    (modalSku?.catalogAttributes?.length ?? 0) === 0;
+  const catalogValidation = useMemo(
+    () => validateCatalogRows(catalogRows, attributeMap),
+    [catalogRows, attributeMap]
+  );
   const filledAttributeCount = useMemo(
-    () =>
-      attributeRows.filter(
-        (row) => row.key.trim() !== "" || row.value.trim() !== ""
-      ).length,
-    [attributeRows]
+    () => catalogRows.filter((row) => !isCatalogRowEmpty(row)).length,
+    [catalogRows]
   );
   const attributesError = useMemo(() => {
-    if (attributeValidation.ok) return "";
-    const message =
-      attributeValidation.message ?? attributeValidation.error;
-    if (attributeValidation.error === "atributos_duplicados") {
-      return message;
-    }
-    return showAttributeError ? message : "";
-  }, [attributeValidation, showAttributeError]);
+    if (useLegacyAttributes) return "";
+    return catalogValidation.ok ? "" : catalogValidation.error;
+  }, [catalogValidation, useLegacyAttributes]);
   const hasDuplicateAttributes =
-    !attributeValidation.ok &&
-    attributeValidation.error === "atributos_duplicados";
+    !useLegacyAttributes && catalogValidation.duplicates.size > 0;
+  const attributesCatalogValue = useMemo(
+    () =>
+      JSON.stringify(
+        catalogRows.map((row) => ({
+          atributoId: row.atributoId,
+          atributoValorId: row.atributoValorId || null,
+          valueText: row.valueText || null,
+        }))
+      ),
+    [catalogRows]
+  );
   const filteredSkus = useMemo(() => {
     const query = searchText.trim().toLowerCase();
     return skus.filter((sku) => {
       if (statusFilter === "active" && !sku.isActive) return false;
       if (statusFilter === "inactive" && sku.isActive) return false;
-      if (query && !sku.displayName.toLowerCase().includes(query)) return false;
+      if (query) {
+        const nameMatch = sku.displayName.toLowerCase().includes(query);
+        const refMatch = sku.referencia
+          ? sku.referencia.toLowerCase().includes(query)
+          : false;
+        if (!nameMatch && !refMatch) return false;
+      }
       return true;
     });
   }, [searchText, skus, statusFilter]);
 
-  function updateAttributeRow(
+  function updateCatalogRow(
     index: number,
-    field: "key" | "value",
+    field: keyof CatalogAttributeRow,
     value: string
   ) {
-    setAttributeRows((prev) =>
+    setCatalogRows((prev) =>
       prev.map((row, rowIndex) =>
         rowIndex === index ? { ...row, [field]: value } : row
       )
     );
   }
 
-  function addAttributeRow() {
-    setAttributeRows((prev) =>
-      prev.length >= maxAttributes ? prev : [...prev, createEmptyAttribute()]
+  function addCatalogRow() {
+    setCatalogRows((prev) =>
+      prev.length >= maxAttributes ? prev : [...prev, createEmptyCatalogRow()]
     );
   }
 
-  function removeAttributeRow(index: number) {
-    setAttributeRows((prev) => {
+  function removeCatalogRow(index: number) {
+    setCatalogRows((prev) => {
       const next = prev.filter((_, rowIndex) => rowIndex !== index);
-      return next.length ? next : [createEmptyAttribute()];
+      return next.length ? next : [createEmptyCatalogRow()];
     });
   }
 
@@ -310,7 +390,10 @@ export default function ProductSkusSection({
     price: priceValue,
   };
   const validationState = validateSkuFormValues(formValues);
-  const isFormValid = validationState.ok && !hasDuplicateAttributes;
+  const isFormValid =
+    validationState.ok &&
+    !hasDuplicateAttributes &&
+    (useLegacyAttributes || catalogValidation.ok);
 
   function focusFirstError(nextErrors: SkuFormErrors) {
     if (nextErrors.displayName) {
@@ -327,22 +410,46 @@ export default function ProductSkusSection({
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    const validation = validateSkuAttributes(attributeRows);
-    if (!validation.ok) {
+    if (!useLegacyAttributes && !catalogValidation.ok) {
       event.preventDefault();
-      setShowAttributeError(true);
       return;
     }
     const result = validateSkuFormValues(formValues);
     if (!result.ok) {
       event.preventDefault();
       setFieldErrors(result.errors);
-      setShowAttributeError(false);
       focusFirstError(result.errors);
       return;
     }
     setFieldErrors({});
-    setShowAttributeError(false);
+  }
+
+  function handleUnitTypeChange(nextValue: string) {
+    if (nextValue === unitTypeValue) return;
+    const prevUnitType = unitTypeValue;
+    const prevDecimals = getUnitPriceDecimals(prevUnitType);
+    const nextDecimals = getUnitPriceDecimals(nextValue);
+    const parsedPrice = parseSkuPriceInput(priceValue, prevUnitType);
+    if (parsedPrice) {
+      setPriceValue(formatDecimalDisplay(parsedPrice.value, nextDecimals));
+    }
+    const rawCost = costRef.current?.value ?? "";
+    const parsedCost = parseDecimalInput(rawCost, prevDecimals);
+    if (parsedCost && costRef.current) {
+      costRef.current.value = formatDecimalDisplay(
+        parsedCost.value,
+        nextDecimals
+      );
+    }
+    if (prevDecimals > nextDecimals) {
+      setUnitChangeNotice("O preco foi ajustado para 2 casas decimais.");
+    } else {
+      setUnitChangeNotice("");
+    }
+    setUnitTypeValue(nextValue);
+    if (fieldErrors.unitType) {
+      setFieldErrors((prev) => ({ ...prev, unitType: "" }));
+    }
   }
 
   const modalTitle = mode === "edit" ? "Editar SKU" : "Novo SKU";
@@ -384,7 +491,7 @@ export default function ProductSkusSection({
             <div className={detailStyles.skuFilters}>
               <input
                 type="search"
-                placeholder="Buscar por nome"
+                placeholder="Buscar por nome ou referencia"
                 value={searchText}
                 onChange={(event) => setSearchText(event.target.value)}
                 className={`${styles.control} ${detailStyles.skuFilterInput}`}
@@ -430,7 +537,7 @@ export default function ProductSkusSection({
                         <tr key={sku.id}>
                           <td>
                             <div className={detailStyles.skuMeta}>
-                              <strong>{sku.displayName}</strong>
+                              <strong>{formatSkuLabel(sku.displayName, sku.referencia)}</strong>
                               <div
                                 className={detailStyles.skuSubline}
                                 title={attributesTitle}
@@ -465,7 +572,7 @@ export default function ProductSkusSection({
                             {sku.unitType} ({sku.unitLabel})
                           </td>
                           <td className={styles.tableNumeric}>
-                            R$ {sku.priceCurrent.toFixed(2)}
+                            R$ {formatDecimalDisplay(sku.priceCurrent, getUnitPriceDecimals(sku.unitType))}
                           </td>
                           <td>{sku.isActive ? "ATIVO" : "INATIVO"}</td>
                           <td className={styles.tableActions}>
@@ -513,6 +620,11 @@ export default function ProductSkusSection({
                                 />
                                 <input
                                   type="hidden"
+                                  name="referencia"
+                                  value={sku.referencia ?? ""}
+                                />
+                                <input
+                                  type="hidden"
                                   name="sizeText"
                                   value={sku.sizeText}
                                 />
@@ -554,6 +666,11 @@ export default function ProductSkusSection({
                                   type="hidden"
                                   name="attributesJson"
                                   value={sku.attributesJson ?? ""}
+                                />
+                                <input
+                                  type="hidden"
+                                  name="attributesMode"
+                                  value="legacy"
                                 />
                                 {nextActive ? (
                                   <input
@@ -643,6 +760,17 @@ export default function ProductSkusSection({
                   </span>
                 ) : null}
               </label>
+              <label className={styles.field}>
+                Referencia (opcional)
+                <input
+                  name="referencia"
+                  placeholder="Ex.: 123ABC"
+                  value={referenceValue}
+                  maxLength={50}
+                  onChange={(event) => setReferenceValue(event.target.value)}
+                  className={styles.control}
+                />
+              </label>
               {mode === "edit" && modalSku ? (
                 <>
                   <input
@@ -667,12 +795,7 @@ export default function ProductSkusSection({
                       label: opt.label,
                     }))}
                     value={unitTypeValue}
-                    onChange={(value) => {
-                      setUnitTypeValue(value);
-                      if (fieldErrors.unitType) {
-                        setFieldErrors((prev) => ({ ...prev, unitType: "" }));
-                      }
-                    }}
+                    onChange={handleUnitTypeChange}
                     variant={fieldErrors.unitType ? "error" : "default"}
                     aria-invalid={Boolean(fieldErrors.unitType)}
                     aria-label="Tipo de venda"
@@ -695,25 +818,41 @@ export default function ProductSkusSection({
                       required
                       value={priceValue}
                       onChange={(event) => {
-                        const formatted = formatPriceInput(event.target.value);
+                        const formatted = normalizeSkuPriceInput(
+                          event.target.value,
+                          unitTypeValue
+                        );
                         setPriceValue(formatted);
                         if (fieldErrors.price) {
                           setFieldErrors((prev) => ({ ...prev, price: "" }));
                         }
                       }}
                     onBlur={(event) => {
-                      const formatted = formatPriceInput(event.target.value);
+                      const formatted = formatSkuPriceInput(
+                        event.target.value,
+                        unitTypeValue
+                      );
                       setPriceValue(formatted);
                     }}
                       className={`${styles.control} ${styles.moneyInput}`}
                       aria-invalid={Boolean(fieldErrors.price)}
+                      placeholder={getUnitPriceDecimals(unitTypeValue) === 4 ? "0,0000" : "0,00"}
                     />
                   </div>
                   <input
                     type="hidden"
                     name="priceCurrent"
-                    value={priceValue ? parsePriceFromDisplay(priceValue).toFixed(2) : ""}
+                    value={
+                      priceValue
+                        ? parseSkuPriceInput(priceValue, unitTypeValue)?.value.toFixed(
+                            getUnitPriceDecimals(unitTypeValue)
+                          ) ?? ""
+                        : ""
+                    }
                   />
+                  {unitChangeNotice ? (
+                    <span className={styles.textMuted}>{unitChangeNotice}</span>
+                  ) : null}
                   {fieldErrors.price ? (
                     <span className={styles.textError}>
                       {fieldErrors.price}
@@ -746,14 +885,30 @@ export default function ProductSkusSection({
                     <label className={styles.field}>
                       Custo (opcional)
                       <input
-                        type="number"
+                        ref={costRef}
+                        type="text"
+                        inputMode="decimal"
                         name="cost"
-                        step="0.01"
                         defaultValue={
                           modalSku && modalSku.cost !== null
-                            ? String(modalSku.cost)
+                            ? formatDecimalDisplay(
+                                Number(modalSku.cost),
+                                getUnitPriceDecimals(unitTypeValue)
+                              )
                             : ""
                         }
+                        onBlur={(event) => {
+                          const parsed = parseDecimalInput(
+                            event.target.value,
+                            getUnitPriceDecimals(unitTypeValue)
+                          );
+                          if (parsed) {
+                            event.target.value = formatDecimalDisplay(
+                              parsed.value,
+                              getUnitPriceDecimals(unitTypeValue)
+                            );
+                          }
+                        }}
                         className={styles.control}
                       />
                     </label>
@@ -772,79 +927,161 @@ export default function ProductSkusSection({
                       <div>
                         <div className={detailStyles.attributeTitle}>Atributos</div>
                         <div className={styles.textMuted}>
-                          Ex.: sabor=frango, tamanho=160g (o sistema padroniza automaticamente)
+                          Use atributos do catalogo para padronizar os SKUs.
                         </div>
                       </div>
                       <span className={detailStyles.attributeCount}>
                         {filledAttributeCount}/{maxAttributes}
                       </span>
                     </div>
-                    <div className={detailStyles.attributeList}>
-                      {attributeRows.map((row, index) => {
-                        const normalizedKey = normalizeKey(row.key);
-                        const isDuplicate =
-                          Boolean(normalizedKey) &&
-                          duplicateAttributeKeys.has(normalizedKey);
-                        return (
-                          <div
-                            key={`attr-${index}`}
-                            className={`${detailStyles.attributeRow} ${
-                              isDuplicate ? detailStyles.attributeRowError : ""
-                            }`}
-                          >
-                            <input
-                              name={`attribute-key-${index}`}
-                              placeholder="atributo"
-                              value={row.key}
-                              onChange={(event) =>
-                                updateAttributeRow(index, "key", event.target.value)
-                              }
-                              className={styles.control}
-                            />
-                            <input
-                              name={`attribute-value-${index}`}
-                              placeholder="valor"
-                              value={row.value}
-                              onChange={(event) =>
-                                updateAttributeRow(
-                                  index,
-                                  "value",
-                                  event.target.value
-                                )
-                              }
-                              ref={(element) => {
-                                valueInputRefs.current[index] = element;
-                              }}
-                              className={styles.control}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeAttributeRow(index)}
-                              className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-                            >
-                              Remover
-                            </button>
+                    {catalogAttributes.length === 0 ? (
+                      <div className={styles.textMuted}>
+                        Nenhum atributo cadastrado.{" "}
+                        <Link href="/admin/configuracoes">Ir para Configuracoes</Link>
+                      </div>
+                    ) : useLegacyAttributes ? (
+                      <div className={detailStyles.attributeList}>
+                        <div className={styles.textMuted}>
+                          Atributos legados (somente leitura).
+                        </div>
+                        {modalSku?.attributes.length ? (
+                          <div className={detailStyles.attributeBadges}>
+                            {modalSku.attributes.map((attr, index) => (
+                              <span
+                                key={`${modalSku.id}-legacy-${index}`}
+                                className={`${styles.badge} ${styles.badgeNeutral}`}
+                              >
+                                {attr.key}: {attr.value}
+                              </span>
+                            ))}
                           </div>
-                        );
-                      })}
-                    </div>
-                    <div className={detailStyles.attributeFooter}>
-                      <button
-                        type="button"
-                        onClick={addAttributeRow}
-                        disabled={attributeRows.length >= maxAttributes}
-                        className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
-                      >
-                        Adicionar atributo
-                      </button>
-                      {attributesError ? (
-                        <span className={styles.textError}>{attributesError}</span>
-                      ) : null}
-                    </div>
+                        ) : (
+                          <span className={styles.textMuted}>Sem atributos</span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className={detailStyles.attributeList}>
+                        {!hasActiveAttributes ? (
+                          <div className={styles.textMuted}>
+                            Nenhum atributo ativo. Ative em Configuracoes para adicionar novos.
+                          </div>
+                        ) : null}
+                        {catalogRows.map((row, index) => {
+                          const attribute = attributeMap.get(row.atributoId);
+                          const isDuplicate =
+                            Boolean(row.atributoId) &&
+                            catalogValidation.duplicates.has(row.atributoId);
+                          const valueOptions = attribute?.values ?? [];
+                          const attributeOptions = [
+                            { value: "", label: "Selecione um atributo" },
+                            ...catalogAttributes
+                              .filter((attr) => attr.isActive || attr.id === row.atributoId)
+                              .map((attr) => ({
+                                value: attr.id,
+                                label: attr.isActive ? attr.name : `${attr.name} (inativo)`,
+                              })),
+                          ];
+                          return (
+                            <div
+                              key={`attr-${index}`}
+                              className={`${detailStyles.attributeRow} ${
+                                isDuplicate ? detailStyles.attributeRowError : ""
+                              }`}
+                            >
+                              <Select
+                                options={attributeOptions}
+                                value={row.atributoId}
+                                onChange={(value) => {
+                                  updateCatalogRow(index, "atributoId", value);
+                                  updateCatalogRow(index, "atributoValorId", "");
+                                  updateCatalogRow(index, "valueText", "");
+                                }}
+                                aria-label="Atributo"
+                                className={styles.control}
+                              />
+                              {attribute?.type === "LISTA" ? (
+                                <Select
+                                  options={[
+                                    { value: "", label: "Selecione um valor" },
+                                    ...valueOptions.map((opt) => ({
+                                      value: opt.id,
+                                      label: opt.value,
+                                    })),
+                                  ]}
+                                  value={row.atributoValorId}
+                                  onChange={(value) =>
+                                    updateCatalogRow(index, "atributoValorId", value)
+                                  }
+                                  aria-label="Valor do atributo"
+                                  className={styles.control}
+                                />
+                              ) : (
+                                <div className={detailStyles.attributeValueWrap}>
+                                  <input
+                                    placeholder="valor"
+                                    value={row.valueText}
+                                    onChange={(event) =>
+                                      updateCatalogRow(
+                                        index,
+                                        "valueText",
+                                        event.target.value
+                                      )
+                                    }
+                                    className={styles.control}
+                                    inputMode={
+                                      attribute?.type === "NUMERO"
+                                        ? "decimal"
+                                        : "text"
+                                    }
+                                  />
+                                  {attribute?.type === "NUMERO" && attribute.unit ? (
+                                    <span className={detailStyles.attributeUnit}>
+                                      {attribute.unit}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => removeCatalogRow(index)}
+                                className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {!useLegacyAttributes && catalogAttributes.length > 0 ? (
+                      <div className={detailStyles.attributeFooter}>
+                        <button
+                          type="button"
+                          onClick={addCatalogRow}
+                          disabled={catalogRows.length >= maxAttributes}
+                          className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+                        >
+                          Adicionar atributo
+                        </button>
+                        {attributesError ? (
+                          <span className={styles.textError}>{attributesError}</span>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <input
+                      type="hidden"
+                      name="attributesMode"
+                      value={useLegacyAttributes ? "legacy" : "catalog"}
+                    />
+                    <input
+                      type="hidden"
+                      name="attributesCatalog"
+                      value={attributesCatalogValue}
+                    />
                     <input
                       type="hidden"
                       name="attributesJson"
-                      value={attributesJsonValue}
+                      value={useLegacyAttributes ? modalSku?.attributesJson ?? "" : ""}
                     />
                   </div>
                 </div>

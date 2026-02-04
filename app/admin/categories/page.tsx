@@ -270,7 +270,10 @@ export default async function CategoriesPage({
             </div>
           </div>
         ) : (
-          <CategoriesTreeClient rows={rows} />
+          <CategoriesTreeClient
+            key={rows.map((row) => row.id).join("|")}
+            rows={rows}
+          />
         )}
       </section>
     </main>

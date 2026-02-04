@@ -58,9 +58,9 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Função para calcular e atualizar posição do dropdown
-  const updateDropdownPosition = useCallback(() => {
-    if (!isOpen || !triggerRef.current) {
-      setDropdownPosition(null);
+  const updateDropdownPosition = useCallback((force = false) => {
+    if ((!isOpen && !force) || !triggerRef.current) {
+      if (isOpen) setDropdownPosition(null);
       return;
     }
 
@@ -93,15 +93,6 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
       width: rect.width,
     });
   }, [isOpen]);
-
-  // Calcular posição inicial quando abrir
-  useEffect(() => {
-    if (isOpen) {
-      updateDropdownPosition();
-    } else {
-      setDropdownPosition(null);
-    }
-  }, [isOpen, updateDropdownPosition]);
 
   // Atualizar posição ao rolar ou redimensionar
   useEffect(() => {
@@ -166,17 +157,14 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
   const currentDate = value ? new Date(value + "T00:00:00") : new Date();
   const [viewMonth, setViewMonth] = useState(currentDate.getMonth());
   const [viewYear, setViewYear] = useState(currentDate.getFullYear());
-
-  // Atualizar viewMonth/viewYear quando value mudar
-  useEffect(() => {
-    if (value) {
-      const date = new Date(value + "T00:00:00");
-      if (!isNaN(date.getTime())) {
-        setViewMonth(date.getMonth());
-        setViewYear(date.getFullYear());
-      }
+  const syncViewToValue = () => {
+    if (!value) return;
+    const date = new Date(value + "T00:00:00");
+    if (!isNaN(date.getTime())) {
+      setViewMonth(date.getMonth());
+      setViewYear(date.getFullYear());
     }
-  }, [value]);
+  };
 
   // Formatar data para exibição
   const formatDisplayDate = (dateStr: string | null): string => {
@@ -198,6 +186,7 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
       
       if (isOutsideContainer && isOutsideDropdown) {
         setIsOpen(false);
+        setDropdownPosition(null);
       }
     }
 
@@ -215,6 +204,7 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
+        setDropdownPosition(null);
         triggerRef.current?.focus();
       }
     }
@@ -287,6 +277,7 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
     const dateStr = formatDateValue(date);
     onChange(dateStr);
     setIsOpen(false);
+    setDropdownPosition(null);
     triggerRef.current?.focus();
     onBlur?.();
   };
@@ -331,6 +322,17 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
   };
 
   const variantClass = variant !== "default" ? styles[`datePicker${variant.charAt(0).toUpperCase() + variant.slice(1)}`] : "";
+  const handleToggleOpen = () => {
+    if (disabled) return;
+    if (isOpen) {
+      setIsOpen(false);
+      setDropdownPosition(null);
+      return;
+    }
+    syncViewToValue();
+    setIsOpen(true);
+    updateDropdownPosition(true);
+  };
 
   return (
     <div className={`${styles.datePicker} ${className}`} ref={containerRef} style={{ position: "relative", zIndex: isOpen ? 1000 : "auto" }}>
@@ -348,7 +350,7 @@ const DatePicker = forwardRef<DatePickerHandle, DatePickerProps>(({
         ref={triggerRef}
         type="button"
         className={`${styles.datePickerTrigger} ${isOpen ? styles.datePickerTriggerOpen : ""} ${disabled ? styles.datePickerTriggerDisabled : ""} ${variantClass}`}
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={handleToggleOpen}
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-label={ariaLabel}

@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireAdminSession } from "@/lib/adminAuth";
+import { Prisma } from "@prisma/client";
 
 function parseText(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -12,7 +13,10 @@ function parseBool(value: FormDataEntryValue | null) {
   return value === "on";
 }
 
-async function getDescendantCategoryIds(tx: any, rootId: string) {
+async function getDescendantCategoryIds(
+  tx: Prisma.TransactionClient,
+  rootId: string
+) {
   const categories: Array<{ id: string; parentId: string | null }> =
     await tx.category.findMany({
     select: { id: true, parentId: true },

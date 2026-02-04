@@ -13,13 +13,13 @@ import NextAction from "../orders/NextAction.client";
 import { OrderStatus } from "@prisma/client";
 
 export default function DesignSystemPage() {
-  if (process.env.NODE_ENV === "production") {
-    return null;
-  }
-
   const [tableDensity, setTableDensity] = useState<"comfortable" | "compact">("comfortable");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersActiveCount, setFiltersActiveCount] = useState(0);
+
+  if (process.env.NODE_ENV === "production") {
+    return null;
+  }
 
   // Dados de exemplo para DataTable
   const exampleData = [

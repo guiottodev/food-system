@@ -26,7 +26,7 @@ export interface TimePickerHandle {
   focus: () => void;
 }
 
-// Gerar opções de hora
+// Gerar opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Âµes de hora
 const generateTimeOptions = (interval: 30 | 60 = 30): string[] => {
   const options: string[] = [];
   const totalMinutes = 24 * 60;
@@ -52,18 +52,18 @@ const isValidTimeFormat = (time: string): boolean => {
 const normalizeTimeInput = (input: string, interval: 30 | 60): string | null => {
   if (!input || !input.trim()) return null;
   
-  // Remove tudo exceto números
+  // Remove tudo exceto nÃƒÆ’Ã‚Âºmeros
   const numbers = input.replace(/\D/g, "");
   
   if (numbers.length === 0) return null;
   
-  // Se tem 4 dígitos, assume HHMM
+  // Se tem 4 dÃƒÆ’Ã‚Â­gitos, assume HHMM
   if (numbers.length >= 4) {
     const hours = parseInt(numbers.slice(0, 2), 10);
     const minutes = parseInt(numbers.slice(2, 4), 10);
     
     if (hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59) {
-      // Arredondar minutos para o intervalo mais próximo
+      // Arredondar minutos para o intervalo mais prÃƒÆ’Ã‚Â³ximo
       const roundedMinutes = Math.round(minutes / interval) * interval;
       const finalHours = roundedMinutes >= 60 ? hours + 1 : hours;
       const finalMins = roundedMinutes >= 60 ? 0 : roundedMinutes;
@@ -74,7 +74,7 @@ const normalizeTimeInput = (input: string, interval: 30 | 60): string | null => 
     }
   }
   
-  // Se tem 1-2 dígitos, assume horas
+  // Se tem 1-2 dÃƒÆ’Ã‚Â­gitos, assume horas
   if (numbers.length <= 2) {
     const hours = parseInt(numbers, 10);
     if (hours >= 0 && hours <= 23) {
@@ -92,7 +92,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
   name,
   disabled = false,
   required = false,
-  placeholder = "Selecione o horário",
+  placeholder = "Selecione o horÃƒÆ’Ã‚Â¡rio",
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
@@ -113,16 +113,9 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
 
   const timeOptions = generateTimeOptions(interval);
 
-  // Sincronizar inputValue com value prop (apenas quando não está editando)
-  useEffect(() => {
-    if (!isEditing && !isOpen) {
-      setInputValue(value || "");
-    }
-  }, [value, isEditing, isOpen]);
-
-  // Função para calcular e atualizar posição do dropdown
-  const updateDropdownPosition = useCallback(() => {
-    if (!isOpen || !inputRef.current || isScrollingRef.current) {
+  // Funcao para calcular e atualizar posicao do dropdown
+  const updateDropdownPosition = useCallback((force = false) => {
+    if ((!isOpen && !force) || !inputRef.current || isScrollingRef.current) {
       return;
     }
 
@@ -131,7 +124,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     const viewportHeight = window.innerHeight;
     const dropdownWidth = rect.width;
     
-    // Ajustar posição horizontal se necessário
+    // Ajustar posicao horizontal se necessario
     let left = rect.left;
     if (left + dropdownWidth > viewportWidth) {
       left = viewportWidth - dropdownWidth - 16;
@@ -144,7 +137,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     const estimatedHeight = 280;
     let top = rect.bottom + 4;
     
-    // Se não couber abaixo, mostrar acima
+    // Se nao couber abaixo, mostrar acima
     if (top + estimatedHeight > viewportHeight && rect.top > estimatedHeight) {
       top = rect.top - estimatedHeight - 4;
     }
@@ -156,19 +149,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     });
   }, [isOpen]);
 
-  // Calcular posição inicial quando abrir
-  useEffect(() => {
-    if (isOpen) {
-      // Pequeno delay para garantir que o DOM está atualizado
-      setTimeout(() => {
-        updateDropdownPosition();
-      }, 0);
-    } else {
-      setDropdownPosition(null);
-    }
-  }, [isOpen, updateDropdownPosition]);
-
-  // Atualizar posição ao redimensionar (mas não ao scrollar dentro do dropdown)
+  // Atualizar posicao ao redimensionar (mas nÃƒÆ’Ã‚Â£o ao scrollar dentro do dropdown)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -183,11 +164,11 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
       });
     };
 
-    // Escutar scroll apenas na window (não em containers internos)
+    // Escutar scroll apenas na window (nÃƒÆ’Ã‚Â£o em containers internos)
     const handleWindowScroll = () => {
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
-        // Só atualizar se não estiver rolando dentro do dropdown
+        // SÃƒÆ’Ã‚Â³ atualizar Se nao estiver rolando dentro do dropdown
         if (!isScrollingRef.current) {
           updateDropdownPosition();
         }
@@ -224,7 +205,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     function handleClickOutside(event: MouseEvent) {
       const target = event.target as Node;
       
-      // Não fechar se o clique foi em um botão de opção ou no input
+      // NÃƒÆ’Ã‚Â£o fechar se o clique foi em um botÃƒÆ’Ã‚Â£o de opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o ou no input
       const clickedElement = target as Element;
       if (clickedElement.closest && (
         clickedElement.closest(`[role="option"]`) ||
@@ -239,7 +220,8 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
       
       if (isOutsideContainer && isOutsideDropdown) {
         setIsOpen(false);
-        // Só setar isEditing como false se realmente saiu do componente
+        setDropdownPosition(null);
+        // SÃƒÆ’Ã‚Â³ setar isEditing como false se realmente saiu do componente
         setTimeout(() => {
           if (!containerRef.current?.contains(document.activeElement)) {
             setIsEditing(false);
@@ -265,6 +247,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     function handleEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
+        setDropdownPosition(null);
         setIsEditing(false);
         setInputValue(value || "");
         inputRef.current?.focus();
@@ -295,7 +278,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     }
   }, [isOpen, value, timeOptions]);
 
-  // Expor métodos via ref
+  // Expor mÃƒÆ’Ã‚Â©todos via ref
   useImperativeHandle(ref, () => ({
     focus: () => {
       inputRef.current?.focus();
@@ -307,7 +290,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     setInputValue(newValue);
     setIsEditing(true);
     
-    // Se o formato é válido, atualizar imediatamente
+    // Se o formato ÃƒÆ’Ã‚Â© vÃƒÆ’Ã‚Â¡lido, atualizar imediatamente
     if (isValidTimeFormat(newValue)) {
       onChange(newValue);
     }
@@ -315,16 +298,18 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     // Abrir dropdown se houver texto
     if (newValue && !isOpen) {
       setIsOpen(true);
+      setTimeout(() => updateDropdownPosition(true), 0);
     }
   };
 
   const handleInputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    setInputValue(value || "");
     setIsEditing(true);
-    // Selecionar todo o texto ao focar para facilitar edição
+    // Selecionar todo o texto ao focar para facilitar ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o
     setTimeout(() => {
       e.target.select();
     }, 0);
-    // Não abrir dropdown automaticamente ao focar (só se clicar no botão)
+    // NÃƒÆ’Ã‚Â£o abrir dropdown automaticamente ao focar (sÃƒÆ’Ã‚Â³ se clicar no botÃƒÆ’Ã‚Â£o)
   };
 
   const handleInputBlur = () => {
@@ -337,15 +322,16 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
         dropdownRef.current?.contains(activeElement);
       
       if (isFocusInComponent) {
-        // Foco ainda está no componente, não fazer blur
+        // Foco ainda estÃƒÆ’Ã‚Â¡ no componente, nÃƒÆ’Ã‚Â£o fazer blur
         return;
       }
       
       // Foco saiu do componente, processar blur
       setIsOpen(false);
+      setDropdownPosition(null);
       setIsEditing(false);
       
-      // Se o valor não é válido, tentar normalizar ou reverter
+      // Se o valor nÃƒÆ’Ã‚Â£o ÃƒÆ’Ã‚Â© vÃƒÆ’Ã‚Â¡lido, tentar normalizar ou reverter
       if (inputValue && !isValidTimeFormat(inputValue)) {
         const normalized = normalizeTimeInput(inputValue, interval);
         if (normalized && isValidTimeFormat(normalized)) {
@@ -356,7 +342,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
           setInputValue(value || "");
         }
       } else if (isValidTimeFormat(inputValue)) {
-        // Se é válido, garantir que está sincronizado
+        // Se ÃƒÆ’Ã‚Â© vÃƒÆ’Ã‚Â¡lido, garantir que estÃƒÆ’Ã‚Â¡ sincronizado
         onChange(inputValue);
       }
       
@@ -373,24 +359,28 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
         onChange(normalized);
         setInputValue(normalized);
         setIsOpen(false);
+        setDropdownPosition(null);
         setIsEditing(false);
       } else if (isValidTimeFormat(inputValue)) {
         onChange(inputValue);
         setIsOpen(false);
+        setDropdownPosition(null);
         setIsEditing(false);
       }
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       if (!isOpen) {
         setIsOpen(true);
+        setTimeout(() => updateDropdownPosition(true), 0);
       }
-      // Focar primeira opção do dropdown
+      // Focar primeira opÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o do dropdown
       setTimeout(() => {
         const firstOption = scrollContainerRef.current?.querySelector('[role="option"]') as HTMLElement;
         firstOption?.focus();
       }, 100);
     } else if (e.key === "Escape") {
       setIsOpen(false);
+      setDropdownPosition(null);
       setIsEditing(false);
       setInputValue(value || "");
     }
@@ -400,11 +390,12 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     onChange(time);
     setInputValue(time);
     setIsOpen(false);
-    // Não setar isEditing como false imediatamente para permitir edição contínua
+    setDropdownPosition(null);
+    // NÃƒÆ’Ã‚Â£o setar isEditing como false imediatamente para permitir ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o contÃƒÆ’Ã‚Â­nua
     setTimeout(() => {
       setIsEditing(false);
       inputRef.current?.focus();
-      inputRef.current?.select(); // Selecionar texto para facilitar edição
+      inputRef.current?.select(); // Selecionar texto para facilitar ediÃƒÆ’Ã‚Â§ÃƒÆ’Ã‚Â£o
       onBlur?.();
     }, 100);
   };
@@ -413,18 +404,28 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
     e.preventDefault();
     e.stopPropagation();
     if (!disabled) {
-      setIsOpen(!isOpen);
+      setInputValue(value || "");
+      setIsOpen((open) => {
+        const next = !open;
+        if (next) {
+          setTimeout(() => updateDropdownPosition(true), 0);
+        } else {
+          setDropdownPosition(null);
+        }
+        return next;
+      });
       setIsEditing(true);
       inputRef.current?.focus();
     }
   };
 
   const variantClass = variant !== "default" ? styles[`timePicker${variant.charAt(0).toUpperCase() + variant.slice(1)}`] : "";
+  const displayValue = isEditing ? inputValue : value || "";
   const hasValidValue = isValidTimeFormat(inputValue) || isValidTimeFormat(value);
 
   return (
     <div className={`${styles.timePicker} ${className}`} ref={containerRef} style={{ position: "relative", zIndex: isOpen ? 1000 : "auto" }}>
-      {/* Hidden input para formulários */}
+      {/* Hidden input para formulÃƒÆ’Ã‚Â¡rios */}
       {name && (
         <input
           type="hidden"
@@ -440,7 +441,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
           ref={inputRef}
           type="text"
           inputMode="numeric"
-          value={inputValue}
+          value={displayValue}
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           onBlur={handleInputBlur}
@@ -462,7 +463,7 @@ const TimePicker = forwardRef<TimePickerHandle, TimePickerProps>(({
           onClick={handleDropdownClick}
           disabled={disabled}
           className={styles.timePickerDropdownButton}
-          aria-label="Abrir lista de horários"
+          aria-label="Abrir lista de horÃƒÆ’Ã‚Â¡rios"
           aria-haspopup="listbox"
           aria-expanded={isOpen}
         >

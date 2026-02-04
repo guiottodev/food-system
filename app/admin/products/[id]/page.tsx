@@ -13,6 +13,7 @@ import styles from "../../_styles/adminPrimitives.module.css";
 import type { SkuAttributeInput } from "@/lib/validation/skuAttributes";
 import { buildCategoryOptions, buildCategoryPathLabel, buildCategoryIndex } from "@/lib/domain/categoryHierarchy";
 import { InlineNotice } from "../../design-system/InlineNotice.client";
+import { buildSkuAttributesDisplay } from "@/lib/skuAttributesDisplay";
 
 type ProductSearchParams = {
   error?: string;
@@ -64,6 +65,15 @@ export default async function ProductDetailPage({
       skus: {
         include: {
           tags: true,
+          skuAtributos: {
+            select: {
+              atributoId: true,
+              atributoValorId: true,
+              valueText: true,
+              atributo: { select: { name: true, type: true, unit: true } },
+              atributoValor: { select: { value: true } },
+            },
+          },
         },
         orderBy: { createdAt: "desc" },
       },
@@ -83,24 +93,65 @@ export default async function ProductDetailPage({
     orderBy: [{ parentId: "asc" }, { name: "asc" }],
     select: { id: true, name: true, parentId: true, isActive: true },
   });
+  const catalogAttributes = await prisma.atributo.findMany({
+    orderBy: { name: "asc" },
+    include: { valores: { orderBy: { sortOrder: "asc" } } },
+  });
   const leafCategoryOptions = buildCategoryOptions({
     categories,
     includeInactive: false,
     leavesOnly: true,
   }).map((c) => ({ id: c.id, label: c.label }));
+  const parentCategoryOptions = buildCategoryOptions({
+    categories,
+    includeInactive: false,
+    leavesOnly: false,
+  }).map((c) => ({ id: c.id, label: c.label }));
   const { byId } = buildCategoryIndex(categories);
   const categoryLabel = buildCategoryPathLabel(byId, product.categoryId);
+
+  const recentCategoryIds = Array.from(
+    new Set(
+      (
+        await prisma.product.findMany({
+          orderBy: { updatedAt: "desc" },
+          take: 10,
+          select: { categoryId: true },
+        })
+      ).map((item) => item.categoryId)
+    )
+  );
+
+  const recentCategoryOptions = recentCategoryIds
+    .map((categoryId) => {
+      const label = buildCategoryPathLabel(byId, categoryId);
+      return label ? { id: categoryId, label } : null;
+    })
+    .filter((item): item is { id: string; label: string } => Boolean(item));
 
   const imageExtraUrls = product.images
     .sort((a, b) => a.sortOrder - b.sortOrder)
     .map((img) => img.url)
     .join("\n");
 
+  const catalogAttributesView = catalogAttributes.map((attr) => ({
+    id: attr.id,
+    name: attr.name,
+    isActive: attr.isActive,
+    type: attr.type,
+    unit: attr.unit,
+    values: attr.valores.map((val) => ({ id: val.id, value: val.value })),
+  }));
+
   const productErrorMessage =
     error === "campos" ? "Preencha nome e categoria para salvar." : "";
   const skuErrorMessage =
     error === "sku_campos"
       ? "Preencha nome, tipo de venda e preco."
+      : error === "sku_referencia"
+      ? "Referencia deve ter no maximo 50 caracteres."
+      : error === "referencia_duplicada"
+      ? "Referencia ja utilizada por outro SKU."
       : error === "sku_unit"
       ? "Tipo de venda invalido."
       : error === "sku_quantidade"
@@ -118,10 +169,18 @@ export default async function ProductDetailPage({
   const skusView = product.skus.map((sku) => ({
     id: sku.id,
     displayName: sku.displayName,
+    referencia: sku.referencia,
     sizeText: sku.sizeText,
     flavorText: sku.flavorText || "",
-    attributes: parseAttributesJson(sku.attributesJson),
+    attributes: sku.skuAtributos.length
+      ? buildSkuAttributesDisplay(sku.skuAtributos)
+      : parseAttributesJson(sku.attributesJson),
     attributesJson: sku.attributesJson ?? null,
+    catalogAttributes: sku.skuAtributos.map((attr) => ({
+      atributoId: attr.atributoId,
+      atributoValorId: attr.atributoValorId,
+      valueText: attr.valueText,
+    })),
     isFrozen: sku.isFrozen,
     unitType: sku.unitType,
     unitLabel: sku.unitLabel,
@@ -168,6 +227,9 @@ export default async function ProductDetailPage({
             isActive: product.isActive,
           }}
           categories={leafCategoryOptions}
+          recentCategories={recentCategoryOptions}
+          parentCategories={parentCategoryOptions}
+          allCategories={categories}
           errorMessage={productErrorMessage}
         />
       ) : null}
@@ -175,6 +237,7 @@ export default async function ProductDetailPage({
         <ProductSkusSection
           productId={product.id}
           skus={skusView}
+          catalogAttributes={catalogAttributesView}
           createSkuAction={createSkuAction}
           updateSkuAction={updateSkuAction}
           duplicateSkuAction={duplicateSkuAction}
