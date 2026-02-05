@@ -1115,7 +1115,7 @@ export default function OrderForm({
 
   // Calcular próxima ação (primeira pendência)
   const nextAction = useMemo(() => {
-    if (isReadyForConfirm) return null;
+    if (isReadyForConfirm) return undefined;
     
     if (!customerReady) {
       return {
@@ -1141,7 +1141,7 @@ export default function OrderForm({
         href: "#order-delivery",
       };
     }
-    return null;
+    return undefined;
   }, [isReadyForConfirm, customerReady, itemsReady, orderType, scheduleReady, deliveryMethod, addressReady]);
 
   function formatScheduleDate(value: string) {

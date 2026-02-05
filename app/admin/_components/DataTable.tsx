@@ -212,7 +212,7 @@ function DataTableInner<T extends { id: string } & Record<string, unknown>>({
               <React.Fragment key={row.id}>
                 <tr
                   className={`${styles.tr} ${isExpanded ? styles.trExpanded : ""}`}
-                  onClick={(e) => handleRowClick(row, e)}
+                  onClick={() => handleRowClick(row)}
                   onKeyDown={(e) => {
                     if (e.currentTarget !== e.target) return;
                     handleKeyDown(e, () => handleRowClick(row));

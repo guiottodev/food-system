@@ -15,6 +15,11 @@ Prisma (Windows):
 - Use `scripts\\prisma.ps1` para garantir o DATABASE_URL correto do `.env.local`
 - Exemplo: `./scripts/prisma.ps1 migrate deploy`
 - Exemplo: `./scripts/prisma.ps1 db seed`
+- Se `npm run build` falhar com `EPERM` ao renomear `query_engine-windows.dll.node`:
+  1) Pare processos Node/Next em execucao.
+  2) Delete `node_modules\\.prisma`.
+  3) Rode `npx prisma generate`.
+  4) Rode o build novamente.
 
 Testes (Vitest + SQLite):
 - `.env.test` usa `DATABASE_URL="file:./data/test.sqlite"`

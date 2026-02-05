@@ -352,7 +352,7 @@ export default async function OrdersPage({
     ...(end ? { lte: endOfDay(end) } : {}),
   });
 
-  let periodParam = periodParamRaw;
+  let periodParam: PeriodValue = periodParamRaw;
   if (hasExplicitPeriod && !allowedPeriods.has(periodParam)) {
     periodParam = defaultPeriod;
   }
@@ -397,14 +397,8 @@ export default async function OrdersPage({
     periodParam = defaultPeriod;
     if (periodParam === "last30") {
       dateFilter = { gte: startLast30, lte: endToday };
-    } else if (periodParam === "last7") {
-      dateFilter = { gte: startLast7, lte: endToday };
     } else if (periodParam === "upcoming") {
       dateFilter = { gte: startToday };
-    } else if (periodParam === "next30") {
-      dateFilter = { gte: startToday, lte: endNext30 };
-    } else if (periodParam === "next7") {
-      dateFilter = { gte: startToday, lte: endNext7 };
     } else {
       dateFilter = { gte: startToday, lte: endToday };
     }

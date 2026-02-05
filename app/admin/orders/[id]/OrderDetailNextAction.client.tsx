@@ -5,6 +5,7 @@ import NextAction from "../NextAction.client";
 import type { ChecklistItem } from "../NextAction.client";
 import type { OrderStatus } from "@prisma/client";
 import type { OrderAttentionSummary } from "@/lib/domain/attention";
+import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
 import {
   confirmOrderAction,
   reconfirmOrderAction,
@@ -45,6 +46,14 @@ function formatDate(value?: Date | null) {
   }).format(value);
 }
 
+function formatDeliveryTime(value?: string | null) {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === DEFAULT_DELIVERY_TIME) {
+    return "Sem horario";
+  }
+  return trimmed;
+}
+
 export default function OrderDetailNextAction({
   orderId,
   status,
@@ -72,24 +81,27 @@ export default function OrderDetailNextAction({
     const itemsLabel = itemsCount > 0
       ? `${itemsCount} ${itemsCount === 1 ? "item" : "itens"}`
       : "Nenhum item";
+    const hasDeliveryDate = Boolean(deliveryDatetime);
     const dateLabel =
       orderType === "PRONTA_ENTREGA"
         ? "Cadastro agora"
-        : deliveryDatetime
+        : hasDeliveryDate
         ? formatDate(deliveryDatetime)
-        : "Não definida";
+        : "Sem data";
     const timeLabel =
       orderType === "PRONTA_ENTREGA"
         ? "Agora"
-        : deliveryTime || "A confirmar";
+        : hasDeliveryDate
+        ? formatDeliveryTime(deliveryTime)
+        : null;
     const addressLabel =
       deliveryMethod === "RETIRADA"
         ? "Retirada"
         : addressReady
-        ? "Endereço informado"
-        : "Endereço pendente";
+        ? "Endereco informado"
+        : "Endereco pendente";
 
-    return [
+    const checklistItems: ChecklistItem[] = [
       {
         label: `Cliente: ${customerName}`,
         status: "complete",
@@ -108,15 +120,6 @@ export default function OrderDetailNextAction({
             : "pending",
       },
       {
-        label: `Horário: ${timeLabel}`,
-        status:
-          orderType === "PRONTA_ENTREGA"
-            ? "optional"
-            : timeReady
-            ? "complete"
-            : "optional",
-      },
-      {
         label: `Entrega: ${addressLabel}`,
         status:
           deliveryMethod === "RETIRADA"
@@ -126,6 +129,20 @@ export default function OrderDetailNextAction({
             : "warning",
       },
     ];
+
+    if (timeLabel) {
+      checklistItems.splice(3, 0, {
+        label: `Horario: ${timeLabel}`,
+        status:
+          orderType === "PRONTA_ENTREGA"
+            ? "complete"
+            : timeReady
+            ? "complete"
+            : "optional",
+      });
+    }
+
+    return checklistItems;
   }, [
     customerName,
     itemsCount,
@@ -138,7 +155,6 @@ export default function OrderDetailNextAction({
     deliveryDatetime,
     deliveryTime,
   ]);
-
   const confirmFormRef = useRef<HTMLFormElement>(null);
   const reconfirmFormRef = useRef<HTMLFormElement>(null);
   const statusFormRef = useRef<HTMLFormElement>(null);
@@ -173,7 +189,7 @@ export default function OrderDetailNextAction({
     if (status === "CONFIRMADO") {
       const disabled = !pendingSummary.hasItems || !pendingSummary.hasDeliveryDate;
       return {
-        label: "Iniciar produção",
+        label: "Avancar para producao",
         onClick: () => {
           if (statusFormRef.current) {
             const statusInput = statusFormRef.current.querySelector('input[name="status"]') as HTMLInputElement;
@@ -262,3 +278,6 @@ export default function OrderDetailNextAction({
     </>
   );
 }
+
+
+
