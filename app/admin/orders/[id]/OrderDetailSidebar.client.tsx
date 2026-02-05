@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AlertTriangle, Link2, ListChecks, Receipt, Zap, type LucideIcon } from "lucide-react";
 import Chip from "../../_components/Chip";
 import type { OrderStatus } from "@prisma/client";
 import type { OrderDetailViewModel, OrderDetailChecklistItem, OrderDetailBlockedReason } from "./orderDetailViewModel";
@@ -71,13 +72,19 @@ export default function OrderDetailSidebar({
   );
 
   const blockedReasons = viewModel.primaryCta.blockedReasons;
+  const renderSectionHeader = (Icon: LucideIcon, title: string) => (
+    <div className={styles.sidebarSectionHeader}>
+      <Icon size={16} className={styles.sidebarTitleIcon} aria-hidden />
+      <span className={styles.sidebarTitle}>{title}</span>
+    </div>
+  );
 
   const renderBlockedReasons = () => {
     if (!blockedReasons.length) return null;
 
     return (
       <section className={styles.sidebarSection}>
-        <div className={styles.sidebarTitle}>Por que nao da?</div>
+        {renderSectionHeader(AlertTriangle, "Por que nao da?")}
         <ul className={styles.blockedList}>
           {blockedReasons.map((reason, index) => {
             const href = resolveReasonHref(reason, editLink);
@@ -99,7 +106,7 @@ export default function OrderDetailSidebar({
 
   const renderChecklist = () => (
     <section className={styles.sidebarSection}>
-      <div className={styles.sidebarTitle}>Para avancar</div>
+      {renderSectionHeader(ListChecks, "Para avancar")}
       <ul className={styles.sidebarChecklist}>
         {viewModel.checklist.map((item) => {
           const className = checklistStatusClass[item.status];
@@ -125,7 +132,7 @@ export default function OrderDetailSidebar({
 
   const renderSummary = () => (
     <section className={styles.sidebarSection}>
-      <div className={styles.sidebarTitle}>Resumo</div>
+      {renderSectionHeader(Receipt, "Resumo")}
       <div className={styles.sidebarSummary}>
         <div className={styles.sidebarSummaryRow}>
           <span>Subtotal</span>
@@ -147,7 +154,7 @@ export default function OrderDetailSidebar({
 
   const renderAnchors = () => (
     <section className={styles.sidebarSection}>
-      <div className={styles.sidebarTitle}>Ancoras</div>
+      {renderSectionHeader(Link2, "Ancoras")}
       <div className={styles.anchorList}>
         {anchors.map((anchor) => (
           <a key={anchor.id} href={`#${anchor.id}`} className={styles.anchorLink}>
@@ -159,10 +166,10 @@ export default function OrderDetailSidebar({
   );
 
   const renderPanelContent = (includeCta: boolean) => (
-    <div className={styles.sidebarStack}>
+    <div className={styles.sidebarPanel}>
       {includeCta ? (
         <section className={styles.sidebarSection}>
-          <div className={styles.sidebarTitle}>Proxima acao</div>
+          {renderSectionHeader(Zap, "Proxima acao")}
           <OrderDetailPrimaryAction
             primaryCta={viewModel.primaryCta}
             editLink={editLink}
