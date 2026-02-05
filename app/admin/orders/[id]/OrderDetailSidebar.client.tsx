@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, Info, Link2, ListChecks, Receipt, Zap, type LucideIcon } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Link2, ListChecks, Zap, type LucideIcon } from "lucide-react";
 import Chip from "../../_components/Chip";
 import type { OrderStatus } from "@prisma/client";
 import type { OrderDetailViewModel, OrderDetailChecklistItem, OrderDetailBlockedReason } from "./orderDetailViewModel";
@@ -22,25 +22,12 @@ const blockedReasonContext: Record<NonNullable<OrderDetailBlockedReason["context
 type OrderDetailSidebarProps = {
   viewModel: OrderDetailViewModel;
   editLink: string;
-  context: Array<{ label: string; value: string; anchorTarget?: string }>;
-  summary: {
-    subtotal: number;
-    deliveryFee?: number | null;
-    total: number;
-  };
   status: OrderStatus;
   statusLabel: string;
   showProduction: boolean;
   confirmFormId: string;
   advanceFormId: string;
 };
-
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
-}
 
 function resolveReasonHref(reason: OrderDetailBlockedReason, editLink: string) {
   if (reason.context && blockedReasonContext[reason.context] === "edit") {
@@ -52,8 +39,6 @@ function resolveReasonHref(reason: OrderDetailBlockedReason, editLink: string) {
 export default function OrderDetailSidebar({
   viewModel,
   editLink,
-  context,
-  summary,
   status,
   statusLabel,
   showProduction,
@@ -140,37 +125,7 @@ export default function OrderDetailSidebar({
     </section>
   );
 
-  const renderContext = () => (
-    <section className={styles.sidebarSection}>
-      {renderSectionHeader(Info, "Contexto do pedido")}
-      <div className={styles.sidebarContext}>
-        {context.map((item) => (
-          <div key={item.label} className={styles.sidebarContextRow}>
-            <span className={styles.sidebarContextLabel}>{item.label}</span>
-            {item.anchorTarget ? (
-              <a href={item.anchorTarget} className={styles.sidebarContextValue}>
-                {item.value}
-              </a>
-            ) : (
-              <span className={styles.sidebarContextValue}>{item.value}</span>
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-
-  const renderSummary = () => (
-    <section className={styles.sidebarSection}>
-      {renderSectionHeader(Receipt, "Resumo")}
-      <div className={styles.sidebarSummary}>
-        <div className={styles.sidebarSummaryRowTotal}>
-          <span>Total</span>
-          <span>{formatMoney(summary.total)}</span>
-        </div>
-      </div>
-    </section>
-  );
+  const isFinalStatus = status === "ENTREGUE" || status === "CANCELADO";
 
   const renderAnchors = () => (
     <section className={styles.sidebarSection}>
@@ -190,19 +145,29 @@ export default function OrderDetailSidebar({
       {includeCta ? (
         <section className={styles.sidebarSection}>
           {renderSectionHeader(Zap, "Proxima acao")}
-          <OrderDetailPrimaryAction
-            primaryCta={viewModel.primaryCta}
-            editLink={editLink}
-            confirmFormId={confirmFormId}
-            advanceFormId={advanceFormId}
-            showHelpText
-          />
+          {isFinalStatus ? (
+            <div className={styles.finalActionBox}>
+              <CheckCircle2 className={styles.finalActionIcon} aria-hidden />
+              <div className={styles.finalActionText}>
+                <span className={styles.finalActionTitle}>
+                  {status === "ENTREGUE" ? "Pedido entregue" : "Pedido cancelado"}
+                </span>
+                <span className={styles.finalActionSubtitle}>Sem acoes pendentes.</span>
+              </div>
+            </div>
+          ) : (
+            <OrderDetailPrimaryAction
+              primaryCta={viewModel.primaryCta}
+              editLink={editLink}
+              confirmFormId={confirmFormId}
+              advanceFormId={advanceFormId}
+              showHelpText
+            />
+          )}
         </section>
       ) : null}
       {renderBlockedReasons()}
       {renderChecklist()}
-      {renderContext()}
-      {renderSummary()}
       {renderAnchors()}
     </div>
   );
