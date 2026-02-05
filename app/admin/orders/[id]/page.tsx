@@ -9,13 +9,14 @@ import {
   confirmOrderAction,
   convertToEncomendaAction,
   markPaidAction,
-  reconfirmOrderAction,
   updateStatusAction,
 } from "./actions";
 import CancelOrderForm from "./CancelOrderForm.client";
 import OrderDetailFocus from "./OrderDetailFocus.client";
 import OrderDetailPrimaryAction from "./OrderDetailPrimaryAction.client";
+import OrderReconfirmModal from "./OrderReconfirmModal.client";
 import OrderDetailSidebar from "./OrderDetailSidebar.client";
+import { summarizeRecentChanges, shouldShowReconfirmBanner } from "./orderDetailChanges";
 import { getOrderDetailViewModel } from "./orderDetailViewModel";
 import Chip from "../../_components/Chip";
 import styles from "../../_styles/adminPrimitives.module.css";
@@ -231,6 +232,15 @@ export default async function OrderDetailPage({
             (!log.field || criticalFields.has(log.field))
         )
       : [];
+  const changesSummary = summarizeRecentChanges(recentChanges);
+  const showChangesSection =
+    order.needsReconfirmation && order.status !== "ENTREGUE" && order.status !== "CANCELADO";
+  const showReconfirmBanner = shouldShowReconfirmBanner({
+    needsReconfirmation: order.needsReconfirmation,
+    status: order.status,
+    summary: changesSummary,
+  });
+  const showReconfirmInSection = showChangesSection && !showReconfirmBanner;
 
   const focusTarget =
     resolvedSearch?.focus === "items"
@@ -348,6 +358,33 @@ export default async function OrderDetailPage({
         <InlineNotice tone="success" clearQueryKeys={["reconfirmed"]}>
           Pedido reconfirmado.
         </InlineNotice>
+      ) : null}
+
+      {showReconfirmBanner ? (
+        <div className={`${styles.notice} ${styles.noticeWarning} ${detailStyles.reconfirmBanner}`}>
+          <div className={styles.noticeContent}>
+            <div className={detailStyles.reconfirmBannerTitle}>
+              Mudancas desde confirmacao
+            </div>
+            <ul className={detailStyles.reconfirmSummary}>
+              {changesSummary.labels.map((label) => (
+                <li key={label}>{label}</li>
+              ))}
+              {changesSummary.overflow > 0 ? (
+                <li>+{changesSummary.overflow} outras alteracoes</li>
+              ) : null}
+            </ul>
+          </div>
+          <div className={detailStyles.reconfirmBannerActions}>
+            <Link
+              href="#order-changes"
+              className={`${styles.button} ${styles.buttonGhost} ${styles.buttonSm}`}
+            >
+              Revisar mudancas
+            </Link>
+            <OrderReconfirmModal orderId={order.id} variant="ghost" size="sm" />
+          </div>
+        </div>
       ) : null}
       {viewModel.primaryCta.actionId === "confirm" ? (
         <form id={confirmFormId} action={confirmOrderAction} style={{ display: "none" }}>
@@ -690,7 +727,7 @@ export default async function OrderDetailPage({
             </div>
           </section>
 
-          {order.needsReconfirmation ? (
+          {showChangesSection ? (
             <section id="order-changes" className={styles.panel}>
               <div className={styles.panelHeader}>
                 <h2>Mudancas desde a confirmacao</h2>
@@ -711,15 +748,15 @@ export default async function OrderDetailPage({
                     ))}
                   </ul>
                 )}
-                <form action={reconfirmOrderAction} className={styles.formSection}>
-                  <input type="hidden" name="orderId" value={order.id} />
-                  <button
-                    type="submit"
-                    className={`${styles.button} ${styles.buttonPrimary}`}
-                  >
-                    Reconfirmar pedido
-                  </button>
-                </form>
+                {showReconfirmInSection ? (
+                  <div className={detailStyles.reconfirmSectionActions}>
+                    <OrderReconfirmModal
+                      orderId={order.id}
+                      variant="primary"
+                      size="md"
+                    />
+                  </div>
+                ) : null}
               </div>
             </section>
           ) : null}

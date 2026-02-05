@@ -1,6 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifySessionValue } from "@/lib/session";
@@ -645,5 +646,7 @@ export async function updateOrderAction(formData: FormData) {
     });
   });
 
+  revalidatePath(`/admin/orders/${orderId}`);
+  revalidatePath("/admin/orders");
   redirect(`/admin/orders/${orderId}?updated=1`);
 }
