@@ -902,10 +902,14 @@
   line-height: 1.4;
 }
 
-.notice::before {
-  content: 'ℹ️';
+.noticeIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
+
 
 .noticeContent {
   min-width: 0;
@@ -922,6 +926,9 @@
   padding: 4px 6px;
   border-radius: var(--radius-sm);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Notificações: fundos um pouco mais “soft” do que badges/tags */
@@ -949,21 +956,12 @@
 }
 
 .noticeDismiss:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
-.noticeWarning::before {
-  content: '⚠️';
-}
 
-.noticeError::before {
-  content: '❌';
-}
 
-.noticeSuccess::before {
-  content: '✅';
-}
 
 .textMuted {
   color: var(--text-muted);
@@ -1327,3 +1325,4 @@
     min-width: 44px;
   }
 }
+

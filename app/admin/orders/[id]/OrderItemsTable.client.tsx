@@ -109,51 +109,54 @@ export default function OrderItemsTable({ items }: { items: OrderItemRow[] }) {
                     </span>
                   </td>
                 </tr>
-                {isOpen ? (
-                  <tr className={detailStyles.itemDetailsRow}>
-                    <td colSpan={4}>
-                      <div
-                        id={detailsId}
-                        className={detailStyles.itemDetails}
-                        role="region"
-                        aria-label={`Detalhes do item ${item.skuName}`}
-                      >
-                        <div className={detailStyles.itemDetailsGrid}>
-                          <div>
-                            <div className={detailStyles.itemDetailLabel}>Preco unitario</div>
-                            <div className={detailStyles.itemDetailValue}>
-                              {formatMoney(item.unitPrice)}
-                            </div>
+                <tr
+                  className={detailStyles.itemDetailsRow}
+                  data-open={isOpen ? "true" : "false"}
+                >
+                  <td colSpan={4}>
+                    <div
+                      id={detailsId}
+                      className={detailStyles.itemDetails}
+                      data-open={isOpen ? "true" : "false"}
+                      role="region"
+                      aria-label={`Detalhes do item ${item.skuName}`}
+                      aria-hidden={!isOpen}
+                    >
+                      <div className={detailStyles.itemDetailsGrid}>
+                        <div>
+                          <div className={detailStyles.itemDetailLabel}>Preco unitario</div>
+                          <div className={detailStyles.itemDetailValue}>
+                            {formatMoney(item.unitPrice)}
                           </div>
-                          <div>
-                            <div className={detailStyles.itemDetailLabel}>Variacao</div>
-                            <div className={detailStyles.itemDetailValue}>
-                              {item.skuName}
-                            </div>
+                        </div>
+                        <div>
+                          <div className={detailStyles.itemDetailLabel}>Variacao</div>
+                          <div className={detailStyles.itemDetailValue}>
+                            {item.skuName}
                           </div>
-                          <div>
-                            <div className={detailStyles.itemDetailLabel}>Tamanho</div>
-                            <div className={detailStyles.itemDetailValue}>
-                              {item.sizeText || "-"}
-                            </div>
+                        </div>
+                        <div>
+                          <div className={detailStyles.itemDetailLabel}>Tamanho</div>
+                          <div className={detailStyles.itemDetailValue}>
+                            {item.sizeText || "-"}
                           </div>
-                          <div>
-                            <div className={detailStyles.itemDetailLabel}>Sabor</div>
-                            <div className={detailStyles.itemDetailValue}>
-                              {item.flavorText || "-"}
-                            </div>
+                        </div>
+                        <div>
+                          <div className={detailStyles.itemDetailLabel}>Sabor</div>
+                          <div className={detailStyles.itemDetailValue}>
+                            {item.flavorText || "-"}
                           </div>
-                          <div>
-                            <div className={detailStyles.itemDetailLabel}>Congelado</div>
-                            <div className={detailStyles.itemDetailValue}>
-                              {item.isFrozen ? "Sim" : "Nao"}
-                            </div>
+                        </div>
+                        <div>
+                          <div className={detailStyles.itemDetailLabel}>Congelado</div>
+                          <div className={detailStyles.itemDetailValue}>
+                            {item.isFrozen ? "Sim" : "Nao"}
                           </div>
                         </div>
                       </div>
-                    </td>
-                  </tr>
-                ) : null}
+                    </div>
+                  </td>
+                </tr>
               </Fragment>
             );
           })}

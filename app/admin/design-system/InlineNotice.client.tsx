@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, CheckCircle2, Info, XCircle, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import styles from "../_styles/adminPrimitives.module.css";
 
@@ -28,6 +29,14 @@ export function InlineNotice({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const Icon =
+    tone === "success"
+      ? CheckCircle2
+      : tone === "warning"
+      ? AlertTriangle
+      : tone === "error"
+      ? XCircle
+      : Info;
 
   const clearHref = useMemo(() => {
     if (clearQueryKeys.length === 0) return null;
@@ -56,6 +65,9 @@ export function InlineNotice({
 
   return (
     <div className={`${styles.notice} ${toneClass(tone)}`}>
+      <span className={styles.noticeIcon} aria-hidden>
+        <Icon size={16} />
+      </span>
       <div className={styles.noticeContent}>{children}</div>
       <button
         type="button"
@@ -63,9 +75,8 @@ export function InlineNotice({
         onClick={dismiss}
         aria-label="Fechar aviso"
       >
-        ×
+        <X size={16} />
       </button>
     </div>
   );
 }
-

@@ -5,6 +5,7 @@ import { getOrderAttentionSummary } from "@/lib/domain/attention";
 import { getOrderPendingSummary } from "@/lib/domain/order";
 import { computeOrderPendingFlags, computeOrderStockStatus } from "@/lib/domain/production";
 import { OrderStatus } from "@prisma/client";
+import { AlertTriangle, Bell, History } from "lucide-react";
 import {
   confirmOrderAction,
   convertToEncomendaAction,
@@ -259,6 +260,27 @@ export default async function OrderDetailPage({
     take: 20,
     include: { actor: true },
   });
+  const auditDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "medium",
+  });
+  const auditTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
+    timeStyle: "short",
+  });
+  const auditGroups: Array<{
+    key: string;
+    label: string;
+    items: typeof auditLogs;
+  }> = [];
+  for (const log of auditLogs) {
+    const dayKey = log.createdAt.toISOString().slice(0, 10);
+    const existing = auditGroups[auditGroups.length - 1];
+    const label = auditDateFormatter.format(log.createdAt);
+    if (!existing || existing.key !== dayKey) {
+      auditGroups.push({ key: dayKey, label, items: [log] });
+    } else {
+      existing.items.push(log);
+    }
+  }
 
   const criticalFields = new Set([
     "items",
@@ -807,7 +829,10 @@ export default async function OrderDetailPage({
               }`}
             >
               <div className={styles.panelHeader}>
-                <h2>Pendencias (bloqueiam)</h2>
+                <h2 className={detailStyles.sectionTitleWithIcon}>
+                  <AlertTriangle size={16} className={detailStyles.sectionTitleIcon} aria-hidden />
+                  Pendencias (bloqueiam)
+                </h2>
               </div>
               <div className={styles.panelBody}>
                 {attention.strongReasons.length === 0 ? (
@@ -849,7 +874,10 @@ export default async function OrderDetailPage({
               }`}
             >
               <div className={styles.panelHeader}>
-                <h2>Alertas (nao bloqueiam)</h2>
+                <h2 className={detailStyles.sectionTitleWithIcon}>
+                  <Bell size={16} className={detailStyles.sectionTitleIcon} aria-hidden />
+                  Alertas (nao bloqueiam)
+                </h2>
               </div>
               <div className={styles.panelBody}>
                 {weakReasonsForDisplay.length === 0 ? (
@@ -926,35 +954,65 @@ export default async function OrderDetailPage({
 
           <Card as="section" id="order-audit">
             <div className={styles.panelHeader}>
-              <h2>Auditoria</h2>
+              <h2 className={detailStyles.sectionTitleWithIcon}>
+                <History size={16} className={detailStyles.sectionTitleIcon} aria-hidden />
+                Auditoria
+              </h2>
             </div>
             <div className={styles.panelBody}>
               {auditLogs.length === 0 ? (
                 <div className={styles.emptyState}>Sem registros recentes.</div>
               ) : (
-                <ul className={detailStyles.summaryList}>
-                  {auditLogs.map((log) => (
-                    <li key={log.id}>
-                      {new Intl.DateTimeFormat("pt-BR", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      }).format(log.createdAt)}{" "}
-                      - {log.action} ({log.actor?.username || "sistema"})
-                      {log.field ? ` | Campo: ${log.field}` : ""}
-                      {log.beforeValue || log.afterValue ? (
-                        <>
-                          {" "}
-                          | De: {formatLogValue(log.beforeValue)} | Para:{" "}
-                          {formatLogValue(log.afterValue)}
-                        </>
-                      ) : null}
-                      {!log.field && !log.beforeValue && !log.afterValue && log.changes
-                        ? ` | ${log.changes}`
-                        : ""}
-                      {log.reason ? ` | Motivo: ${log.reason}` : ""}
-                    </li>
+                <div className={detailStyles.auditTimeline}>
+                  {auditGroups.map((group) => (
+                    <div key={group.key}>
+                      <div className={detailStyles.auditGroupHeader}>{group.label}</div>
+                      <ul className={detailStyles.auditList}>
+                        {group.items.map((log) => {
+                          const detailLines: string[] = [];
+                          if (log.field) detailLines.push(`Campo: ${log.field}`);
+                          if (log.beforeValue || log.afterValue) {
+                            detailLines.push(`De: ${formatLogValue(log.beforeValue)}`);
+                            detailLines.push(`Para: ${formatLogValue(log.afterValue)}`);
+                          }
+                          if (log.changes) detailLines.push(`Mudancas: ${log.changes}`);
+                          if (log.reason) detailLines.push(`Motivo: ${log.reason}`);
+                          const detailsText = detailLines.join("\n");
+                          return (
+                            <li key={log.id} className={detailStyles.auditItem}>
+                              <span className={detailStyles.auditDot} aria-hidden />
+                              <div className={detailStyles.auditContent}>
+                                <div className={detailStyles.auditHeader}>
+                                  <span className={detailStyles.auditTitle}>
+                                    {log.action || "Evento"}
+                                  </span>
+                                  <span className={detailStyles.auditTime}>
+                                    {auditTimeFormatter.format(log.createdAt)}
+                                  </span>
+                                </div>
+                                <div className={detailStyles.auditMeta}>
+                                  {log.actor?.username || "sistema"}
+                                </div>
+                                {detailsText ? (
+                                  <details className={detailStyles.auditDetails}>
+                                    <summary className={detailStyles.auditDetailsToggle}>
+                                      Ver detalhes
+                                    </summary>
+                                    <div className={detailStyles.auditDetailsBody}>
+                                      <pre className={detailStyles.auditPayload}>
+                                        {detailsText}
+                                      </pre>
+                                    </div>
+                                  </details>
+                                ) : null}
+                              </div>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
           </Card>
