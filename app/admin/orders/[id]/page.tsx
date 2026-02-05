@@ -15,7 +15,6 @@ import {
 } from "./actions";
 import CancelOrderForm from "./CancelOrderForm.client";
 import OrderDetailFocus from "./OrderDetailFocus.client";
-import OrderDetailPrimaryAction from "./OrderDetailPrimaryAction.client";
 import OrderDetailSidebar from "./OrderDetailSidebar.client";
 import OrderItemsTable, { type OrderItemRow } from "./OrderItemsTable.client";
 import { getOrderDetailViewModel } from "./orderDetailViewModel";
@@ -89,6 +88,65 @@ function formatQuantity(value: unknown) {
 function formatLogValue(value?: string | null) {
   const trimmed = value?.trim();
   return trimmed ? trimmed : "-";
+}
+
+function formatStatusValue(value?: string | null) {
+  if (!value) return "-";
+  const maybeStatus = value as OrderStatus;
+  return statusLabel[maybeStatus] ?? value;
+}
+
+function formatAuditTitle(log: {
+  action: string;
+  field?: string | null;
+  beforeValue?: string | null;
+  afterValue?: string | null;
+}) {
+  switch (log.action) {
+    case "create_order":
+      return "Pedido criado";
+    case "create_items":
+      return `Itens adicionados (${log.beforeValue ?? "0"}\u2192${log.afterValue ?? "-"})`;
+    case "confirm":
+      return "Pedido confirmado";
+    case "reconfirm":
+      return "Pedido reconfirmado";
+    case "cancel":
+      return "Pedido cancelado";
+    case "mark_paid":
+      return "Pagamento marcado como pago";
+    case "convert_order_type":
+      return "Tipo do pedido alterado";
+    case "status_change":
+      if (log.field === "status") {
+        return `Status alterado: ${formatStatusValue(log.beforeValue)} \u2192 ${formatStatusValue(log.afterValue)}`;
+      }
+      return "Status alterado";
+    case "order_update": {
+      if (log.field === "items") return "Itens atualizados";
+      if (log.field === "deliveryDatetime" || log.field === "deliveryTime") {
+        return "Data/hora alterada";
+      }
+      if (log.field === "deliveryMethod") return "Metodo de entrega alterado";
+      if (log.field === "orderType") return "Tipo do pedido alterado";
+      if (
+        log.field === "addressText" ||
+        log.field === "addressBairro" ||
+        log.field === "addressReferencia" ||
+        log.field === "addressCity" ||
+        log.field === "addressCep"
+      ) {
+        return "Endereco alterado";
+      }
+      if (log.field === "subtotal" || log.field === "total" || log.field === "deliveryFee") {
+        return "Valores do pedido alterados";
+      }
+      if (log.field === "notes") return "Observacoes alteradas";
+      return "Pedido atualizado";
+    }
+    default:
+      return "Atualizacao registrada";
+  }
 }
 
 export default async function OrderDetailPage({
@@ -243,6 +301,15 @@ export default async function OrderDetailPage({
   const weakReasonsForDisplay = showProduction
     ? attention.weakReasons.filter((reason) => reason.type !== "UNAVAILABLE_ITEMS")
     : attention.weakReasons;
+  const itemsCountLabel =
+    order.items.length === 1 ? "1 item" : `${order.items.length} itens`;
+  const contextItems = [
+    { label: "Cliente", value: order.customer.name, anchorTarget: "#order-customer" },
+    { label: "Itens", value: itemsCountLabel, anchorTarget: "#order-items" },
+    { label: "Data/Hora", value: viewModel.schedule.card, anchorTarget: "#order-delivery" },
+    { label: "Metodo", value: deliveryMethodLabel[order.deliveryMethod], anchorTarget: "#order-delivery" },
+    { label: "Tipo", value: orderTypeLabel[order.orderType] },
+  ];
   const pendingHasItems = attention.strongReasons.length > 0;
   const alertsHasItems = weakReasonsForDisplay.length > 0;
   const stepperIndex = stepperSteps.findIndex((step) => step.key === order.status);
@@ -521,15 +588,6 @@ export default async function OrderDetailPage({
                 </div>
               </div>
             </div>
-            <div className={detailStyles.orderHeaderCta}>
-              <OrderDetailPrimaryAction
-                primaryCta={viewModel.primaryCta}
-                editLink={editLink}
-                confirmFormId={confirmFormId}
-                advanceFormId={advanceFormId}
-                size="md"
-              />
-            </div>
           </section>
 
           {showProduction ? (
@@ -768,7 +826,7 @@ export default async function OrderDetailPage({
                 {!order.paidAt && (
                   <form action={markPaidAction} style={{ marginTop: "var(--space-3)" }}>
                     <input type="hidden" name="orderId" value={order.id} />
-                    <Button type="submit" variant="primary" className={detailStyles.fullWidth}>
+                    <Button type="submit" variant="outline" size="md" className={detailStyles.paymentAction}>
                       Marcar como pago
                     </Button>
                   </form>
@@ -881,7 +939,9 @@ export default async function OrderDetailPage({
               </div>
               <div className={styles.panelBody}>
                 {weakReasonsForDisplay.length === 0 ? (
-                  <EmptyStateCompact>Sem alertas.</EmptyStateCompact>
+                  <EmptyStateCompact>
+                    {showProduction ? "Sem alertas adicionais." : "Sem alertas."}
+                  </EmptyStateCompact>
                 ) : (
                   <ul className={detailStyles.summaryList}>
                     {weakReasonsForDisplay.map((reason, index) => {
@@ -969,7 +1029,7 @@ export default async function OrderDetailPage({
                       <div className={detailStyles.auditGroupHeader}>{group.label}</div>
                       <ul className={detailStyles.auditList}>
                         {group.items.map((log) => {
-                          const detailLines: string[] = [];
+                          const detailLines: string[] = [`Acao: ${log.action}`];
                           if (log.field) detailLines.push(`Campo: ${log.field}`);
                           if (log.beforeValue || log.afterValue) {
                             detailLines.push(`De: ${formatLogValue(log.beforeValue)}`);
@@ -984,7 +1044,7 @@ export default async function OrderDetailPage({
                               <div className={detailStyles.auditContent}>
                                 <div className={detailStyles.auditHeader}>
                                   <span className={detailStyles.auditTitle}>
-                                    {log.action || "Evento"}
+                                    {formatAuditTitle(log)}
                                   </span>
                                   <span className={detailStyles.auditTime}>
                                     {auditTimeFormatter.format(log.createdAt)}
@@ -1023,6 +1083,7 @@ export default async function OrderDetailPage({
             <OrderDetailSidebar
               viewModel={viewModel}
               editLink={editLink}
+              context={contextItems}
               summary={{
                 subtotal: Number(order.subtotal),
                 deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : null,
