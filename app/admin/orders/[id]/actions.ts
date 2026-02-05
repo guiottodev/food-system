@@ -165,6 +165,9 @@ export async function reconfirmOrderAction(formData: FormData) {
   if (!orderId) {
     redirect(`/admin/orders/${orderId}`);
   }
+  if (reason.length < 8) {
+    redirect(`/admin/orders/${orderId}?error=reconfirm_reason`);
+  }
 
   const actorId = await getActorId();
 

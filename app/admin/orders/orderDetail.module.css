@@ -191,6 +191,56 @@
   font-weight: bold;
 }
 
+/* ===== RECONFIRMATION ===== */
+.reconfirmBanner {
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.reconfirmBannerTitle {
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
+}
+
+.reconfirmSummary {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.reconfirmSummary li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.reconfirmSummary li::before {
+  content: '•';
+  color: var(--text-muted);
+  font-weight: bold;
+}
+
+.reconfirmBannerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-left: auto;
+}
+
+.reconfirmSectionActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
 /* ===== SECTION TITLE ===== */
 .sectionTitle {
   font-size: var(--text-sm);
@@ -213,6 +263,65 @@
 .actionMeta {
   color: var(--text-muted);
   font-size: var(--text-xs);
+}
+
+/* ===== RECONFIRMATION MODAL ===== */
+.reconfirmModalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  z-index: 60;
+}
+
+.reconfirmModalCard {
+  width: min(520px, 96vw);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 20px 60px -20px rgba(0, 0, 0, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+.reconfirmModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+}
+
+.reconfirmModalTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.reconfirmModalBody {
+  padding: var(--space-4);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.reconfirmModalFooter {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.reconfirmModalHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 /* ===== PRODUCTION TABLE ===== */
