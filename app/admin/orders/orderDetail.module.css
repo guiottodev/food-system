@@ -273,6 +273,173 @@
   color: var(--text-muted);
 }
 
+/* ===== ITEMS TABLE ===== */
+.itemsTable {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.itemsHeaderRow {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 0.6fr 0.8fr 0.6fr;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-2);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  font-weight: var(--fw-semibold);
+}
+
+.itemsHeaderCell {
+  text-align: left;
+}
+
+.itemsRow {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+.itemsRow[open] {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.itemsSummary {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) 0.6fr 0.8fr 0.6fr;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  cursor: pointer;
+  list-style: none;
+}
+
+.itemsSummary::-webkit-details-marker {
+  display: none;
+}
+
+.itemsProduct {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.itemsMeta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.itemsQty,
+.itemsSubtotal {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.itemsStatus {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.itemsStatusOk,
+.itemsStatusWarn {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: var(--fw-semibold);
+  text-decoration: none;
+}
+
+.itemsStatusOk {
+  border: 1px solid var(--state-success-border);
+  color: var(--state-success);
+  background: var(--state-success-bg);
+}
+
+.itemsStatusWarn {
+  border: 1px solid var(--state-warning-border);
+  color: var(--state-warning);
+  background: var(--state-warning-bg);
+}
+
+.itemsToggle::before {
+  content: "+";
+  display: inline-flex;
+  width: 18px;
+  height: 18px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.itemsRow[open] .itemsToggle::before {
+  content: "-";
+}
+
+.itemsDetails {
+  border-top: 1px solid var(--border-subtle);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-subtle);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.itemsDetailRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.itemsDetailLabel {
+  color: var(--text-muted);
+}
+
+.itemsDetailValue {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 720px) {
+  .itemsHeaderRow {
+    display: none;
+  }
+
+  .itemsSummary {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "product status"
+      "qty subtotal";
+    row-gap: var(--space-1);
+  }
+
+  .itemsProduct {
+    grid-area: product;
+  }
+
+  .itemsQty {
+    grid-area: qty;
+    text-align: left;
+  }
+
+  .itemsSubtotal {
+    grid-area: subtotal;
+  }
+
+  .itemsStatus {
+    grid-area: status;
+  }
+}
+
 /* ===== TWO COLUMN ===== */
 .twoColumn {
   display: grid;
@@ -291,6 +458,51 @@
 .actionLink:hover {
   color: var(--action-primary-hover);
   text-decoration: underline;
+}
+
+/* ===== TASK LIST ===== */
+.taskList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.taskRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.taskRow:last-child {
+  border-bottom: none;
+}
+
+.taskLabel {
+  min-width: 0;
+}
+
+.taskAction {
+  color: var(--action-primary);
+  text-decoration: none;
+  font-weight: var(--fw-medium);
+  flex-shrink: 0;
+}
+
+.taskAction:hover {
+  color: var(--action-primary-hover);
+  text-decoration: underline;
+}
+
+.taskEmpty {
+  font-size: var(--text-sm);
+  color: var(--text-muted);
 }
 
 /* ===== INFO GRID ===== */
