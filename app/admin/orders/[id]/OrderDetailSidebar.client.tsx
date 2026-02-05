@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertTriangle, Link2, ListChecks, Receipt, Zap, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Info, Link2, ListChecks, Receipt, Zap, type LucideIcon } from "lucide-react";
 import Chip from "../../_components/Chip";
 import type { OrderStatus } from "@prisma/client";
 import type { OrderDetailViewModel, OrderDetailChecklistItem, OrderDetailBlockedReason } from "./orderDetailViewModel";
@@ -22,6 +22,7 @@ const blockedReasonContext: Record<NonNullable<OrderDetailBlockedReason["context
 type OrderDetailSidebarProps = {
   viewModel: OrderDetailViewModel;
   editLink: string;
+  context: Array<{ label: string; value: string; anchorTarget?: string }>;
   summary: {
     subtotal: number;
     deliveryFee?: number | null;
@@ -51,6 +52,7 @@ function resolveReasonHref(reason: OrderDetailBlockedReason, editLink: string) {
 export default function OrderDetailSidebar({
   viewModel,
   editLink,
+  context,
   summary,
   status,
   statusLabel,
@@ -104,29 +106,57 @@ export default function OrderDetailSidebar({
     );
   };
 
+  const transitionChecklist = viewModel.checklist.filter((item) =>
+    ["production", "reconfirmation"].includes(item.id)
+  );
+
   const renderChecklist = () => (
     <section className={styles.sidebarSection}>
-      {renderSectionHeader(ListChecks, "Para avancar")}
-      <ul className={styles.sidebarChecklist}>
-        {viewModel.checklist.map((item) => {
-          const className = checklistStatusClass[item.status];
-          return (
-            <li key={item.id} className={styles.sidebarChecklistItem}>
-              <span
-                className={`${styles.checklistStatus} ${className}`.trim()}
-                aria-hidden
-              />
-              {item.anchorTarget ? (
-                <a href={item.anchorTarget} className={styles.checklistLink}>
-                  {item.label}
-                </a>
-              ) : (
-                <span className={styles.checklistLabel}>{item.label}</span>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      {renderSectionHeader(ListChecks, "Checklist de transicao")}
+      {transitionChecklist.length === 0 ? (
+        <span className={styles.sidebarEmpty}>Sem pendencias de transicao.</span>
+      ) : (
+        <ul className={styles.sidebarChecklist}>
+          {transitionChecklist.map((item) => {
+            const className = checklistStatusClass[item.status];
+            return (
+              <li key={item.id} className={styles.sidebarChecklistItem}>
+                <span
+                  className={`${styles.checklistStatus} ${className}`.trim()}
+                  aria-hidden
+                />
+                {item.anchorTarget ? (
+                  <a href={item.anchorTarget} className={styles.checklistLink}>
+                    {item.label}
+                  </a>
+                ) : (
+                  <span className={styles.checklistLabel}>{item.label}</span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+
+  const renderContext = () => (
+    <section className={styles.sidebarSection}>
+      {renderSectionHeader(Info, "Contexto do pedido")}
+      <div className={styles.sidebarContext}>
+        {context.map((item) => (
+          <div key={item.label} className={styles.sidebarContextRow}>
+            <span className={styles.sidebarContextLabel}>{item.label}</span>
+            {item.anchorTarget ? (
+              <a href={item.anchorTarget} className={styles.sidebarContextValue}>
+                {item.value}
+              </a>
+            ) : (
+              <span className={styles.sidebarContextValue}>{item.value}</span>
+            )}
+          </div>
+        ))}
+      </div>
     </section>
   );
 
@@ -181,6 +211,7 @@ export default function OrderDetailSidebar({
       ) : null}
       {renderBlockedReasons()}
       {renderChecklist()}
+      {renderContext()}
       {renderSummary()}
       {renderAnchors()}
     </div>
