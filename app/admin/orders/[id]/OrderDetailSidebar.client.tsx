@@ -164,16 +164,6 @@ export default function OrderDetailSidebar({
     <section className={styles.sidebarSection}>
       {renderSectionHeader(Receipt, "Resumo")}
       <div className={styles.sidebarSummary}>
-        <div className={styles.sidebarSummaryRow}>
-          <span>Subtotal</span>
-          <span>{formatMoney(summary.subtotal)}</span>
-        </div>
-        {summary.deliveryFee && summary.deliveryFee > 0 ? (
-          <div className={styles.sidebarSummaryRow}>
-            <span>Taxa</span>
-            <span>{formatMoney(summary.deliveryFee)}</span>
-          </div>
-        ) : null}
         <div className={styles.sidebarSummaryRowTotal}>
           <span>Total</span>
           <span>{formatMoney(summary.total)}</span>

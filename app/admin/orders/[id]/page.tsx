@@ -303,7 +303,6 @@ export default async function OrderDetailPage({
   const contextItems = [
     { label: "Cliente", value: order.customer.name, anchorTarget: "#order-customer" },
     { label: "Itens", value: itemsCountLabel, anchorTarget: "#order-items" },
-    { label: "Tipo", value: orderTypeLabel[order.orderType] },
   ];
   const pendingHasItems = attention.strongReasons.length > 0;
   const alertsHasItems = weakReasonsForDisplay.length > 0;
@@ -547,6 +546,8 @@ export default async function OrderDetailPage({
                   />
                   {orderTypeLabel[order.orderType]}
                 </span>
+                <span className={detailStyles.orderHeaderMetaDivider}>•</span>
+                <span className={detailStyles.orderHeaderMetaItem}>{itemsCountLabel}</span>
               </div>
               <div className={detailStyles.orderHeaderStepper}>
                 <div

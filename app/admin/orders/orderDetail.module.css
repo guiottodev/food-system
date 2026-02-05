@@ -858,7 +858,9 @@
 }
 
 .orderStepperCompact .orderStepperLabel {
-  display: none;
+  display: inline;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .orderStepperStepActive {
