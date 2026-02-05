@@ -300,16 +300,15 @@ export default async function OrderDetailPage({
     : attention.weakReasons;
   const itemsCountLabel =
     order.items.length === 1 ? "1 item" : `${order.items.length} itens`;
-  const contextItems = [
-    { label: "Cliente", value: order.customer.name, anchorTarget: "#order-customer" },
-    { label: "Itens", value: itemsCountLabel, anchorTarget: "#order-items" },
-  ];
+  const heroContext = `${orderTypeLabel[order.orderType]} \u2022 ${itemsCountLabel} \u2022 Cliente: ${order.customer.name}`;
   const pendingHasItems = attention.strongReasons.length > 0;
   const alertsHasItems = weakReasonsForDisplay.length > 0;
   const stepperIndex = stepperSteps.findIndex((step) => step.key === order.status);
   const isStepperCancelled = order.status === "CANCELADO";
   const isStepperDelivered = order.status === "ENTREGUE";
   const isStepperCompact = isStepperCancelled || isStepperDelivered;
+  const isStepperFinal = isStepperCancelled || isStepperDelivered;
+  const stepperSummaryLabel = isStepperCancelled ? "Fluxo encerrado" : "Fluxo concluido";
   const confirmFormId = "order-confirm-form";
   const advanceFormId = "order-advance-form";
 
@@ -508,73 +507,108 @@ export default async function OrderDetailPage({
         <div className={`${styles.pageMain} ${detailStyles.orderPageMain}`}>
           <section className={detailStyles.orderHeader}>
             <div className={detailStyles.orderHeaderMain}>
-              <div className={detailStyles.orderHeaderTop}>
-                <div className={detailStyles.orderHeaderStatus}>
-                  <Chip
-                    variant="status"
-                    status={order.status}
-                    label={statusLabel[order.status]}
-                  />
-                  <div className={detailStyles.orderHeaderChips}>
-                    {viewModel.chips.map((chip, index) => (
-                      <Chip
-                        key={`${chip.label}-${index}`}
-                        variant={chip.severity === "strong" ? "attention-strong" : "attention-weak"}
-                        label={chip.label}
-                        density="compact"
-                      />
-                    ))}
-                    {viewModel.chipsOverflow > 0 ? (
-                      <span className={detailStyles.chipOverflow}>
-                        +{viewModel.chipsOverflow}
-                      </span>
-                    ) : null}
+              <div className={detailStyles.orderHeaderContent}>
+                <div className={detailStyles.orderHeaderTop}>
+                  <div className={detailStyles.orderHeaderStatus}>
+                    <Chip
+                      variant="status"
+                      status={order.status}
+                      label={statusLabel[order.status]}
+                    />
+                    <div className={detailStyles.orderHeaderChips}>
+                      {viewModel.chips.map((chip, index) => (
+                        <Chip
+                          key={`${chip.label}-${index}`}
+                          variant={chip.severity === "strong" ? "attention-strong" : "attention-weak"}
+                          label={chip.label}
+                          density="compact"
+                        />
+                      ))}
+                      {viewModel.chipsOverflow > 0 ? (
+                        <span className={detailStyles.chipOverflow}>
+                          +{viewModel.chipsOverflow}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className={detailStyles.orderHeaderTitle}>
-                {deliveryMethodLabel[order.deliveryMethod]} — {viewModel.schedule.header}
-              </div>
-              <div className={detailStyles.orderHeaderMeta}>
-                <span className={detailStyles.orderHeaderType}>
-                  <span
-                    className={`${detailStyles.orderHeaderTypeIcon} ${
-                      order.orderType === "PRONTA_ENTREGA"
-                        ? detailStyles.orderHeaderTypeIconReady
-                        : ""
-                    }`}
-                  />
-                  {orderTypeLabel[order.orderType]}
-                </span>
-                <span className={detailStyles.orderHeaderMetaDivider}>•</span>
-                <span className={detailStyles.orderHeaderMetaItem}>{itemsCountLabel}</span>
-              </div>
-              <div className={detailStyles.orderHeaderStepper}>
-                <div
-                  className={`${detailStyles.orderStepper} ${
-                    isStepperCancelled ? detailStyles.orderStepperCancelled : ""
-                  } ${isStepperCompact ? detailStyles.orderStepperCompact : ""}`
-                    .trim()}
-                >
-                  {stepperSteps.map((step, index) => {
-                    const isComplete =
-                      !isStepperCancelled &&
-                      (isStepperDelivered ? true : stepperIndex > index);
-                    const isActive =
-                      !isStepperCancelled && !isStepperDelivered && stepperIndex === index;
-                    return (
-                      <div
-                        key={step.key}
-                        className={`${detailStyles.orderStepperStep} ${
-                          isComplete ? detailStyles.orderStepperStepComplete : ""
-                        } ${isActive ? detailStyles.orderStepperStepActive : ""}`.trim()}
-                      >
-                        <span className={detailStyles.orderStepperDot} aria-hidden />
-                        <span className={detailStyles.orderStepperLabel}>{step.label}</span>
-                      </div>
-                    );
-                  })}
+                <div className={detailStyles.orderHeaderTitle}>
+                  {deliveryMethodLabel[order.deliveryMethod]} — {viewModel.schedule.header}
                 </div>
+                <div className={detailStyles.orderHeaderContext}>{heroContext}</div>
+                <div className={detailStyles.orderHeaderStepper}>
+                  {isStepperFinal ? (
+                    <details className={detailStyles.orderStepperDetails}>
+                      <summary className={detailStyles.orderStepperSummary}>
+                        <span className={detailStyles.orderStepperSummaryText}>
+                          {stepperSummaryLabel} ✓
+                        </span>
+                        <span className={detailStyles.orderStepperSummaryToggle}>
+                          Ver etapas
+                        </span>
+                      </summary>
+                      <div className={detailStyles.orderStepperDetailsBody}>
+                        <div
+                          className={`${detailStyles.orderStepper} ${
+                            isStepperCancelled ? detailStyles.orderStepperCancelled : ""
+                          } ${isStepperCompact ? detailStyles.orderStepperCompact : ""}`
+                            .trim()}
+                        >
+                          {stepperSteps.map((step, index) => {
+                            const isComplete =
+                              !isStepperCancelled &&
+                              (isStepperDelivered ? true : stepperIndex > index);
+                            const isActive =
+                              !isStepperCancelled && !isStepperDelivered && stepperIndex === index;
+                            return (
+                              <div
+                                key={step.key}
+                                className={`${detailStyles.orderStepperStep} ${
+                                  isComplete ? detailStyles.orderStepperStepComplete : ""
+                                } ${isActive ? detailStyles.orderStepperStepActive : ""}`.trim()}
+                              >
+                                <span className={detailStyles.orderStepperDot} aria-hidden />
+                                <span className={detailStyles.orderStepperLabel}>{step.label}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </details>
+                  ) : (
+                    <div
+                      className={`${detailStyles.orderStepper} ${
+                        isStepperCancelled ? detailStyles.orderStepperCancelled : ""
+                      } ${isStepperCompact ? detailStyles.orderStepperCompact : ""}`
+                        .trim()}
+                    >
+                      {stepperSteps.map((step, index) => {
+                        const isComplete =
+                          !isStepperCancelled &&
+                          (isStepperDelivered ? true : stepperIndex > index);
+                        const isActive =
+                          !isStepperCancelled && !isStepperDelivered && stepperIndex === index;
+                        return (
+                          <div
+                            key={step.key}
+                            className={`${detailStyles.orderStepperStep} ${
+                              isComplete ? detailStyles.orderStepperStepComplete : ""
+                            } ${isActive ? detailStyles.orderStepperStepActive : ""}`.trim()}
+                          >
+                            <span className={detailStyles.orderStepperDot} aria-hidden />
+                            <span className={detailStyles.orderStepperLabel}>{step.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className={detailStyles.orderHeaderTotal}>
+                <span className={detailStyles.orderHeaderTotalLabel}>Total</span>
+                <span className={detailStyles.orderHeaderTotalValue}>
+                  {formatMoney(order.total)}
+                </span>
               </div>
             </div>
           </section>
@@ -1037,12 +1071,6 @@ export default async function OrderDetailPage({
             <OrderDetailSidebar
               viewModel={viewModel}
               editLink={editLink}
-              context={contextItems}
-              summary={{
-                subtotal: Number(order.subtotal),
-                deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : null,
-                total: Number(order.total),
-              }}
               status={order.status}
               statusLabel={statusLabel[order.status]}
               showProduction={showProduction}
