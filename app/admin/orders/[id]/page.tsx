@@ -123,6 +123,8 @@ export default async function OrderDetailPage({
           snapshotProductName: true,
           snapshotUnitLabel: true,
           snapshotUnitType: true,
+          snapshotSizeText: true,
+          snapshotFlavorText: true,
         },
       },
     },
@@ -195,6 +197,11 @@ export default async function OrderDetailPage({
     needsProduction: availability.hasUnavailableItems,
   });
   const showProduction = gapItems.length > 0;
+  const strongReasons = attention.strongReasons;
+  const weakReasons = showProduction
+    ? attention.weakReasons.filter((reason) => reason.type !== "UNAVAILABLE_ITEMS")
+    : attention.weakReasons;
+  const showProductionTask = showProduction;
   const confirmFormId = "order-confirm-form";
   const advanceFormId = "order-advance-form";
 
@@ -513,7 +520,8 @@ export default async function OrderDetailPage({
                   <span className={detailStyles.infoValueLarge}>{formatMoney(order.total)}</span>
                 </div>
                 {(attention.strongReasons.length > 0 ||
-                  attention.weakReasons.some((r) => r.type === "UNAVAILABLE_ITEMS")) && (
+                  (!showProduction &&
+                    attention.weakReasons.some((r) => r.type === "UNAVAILABLE_ITEMS"))) && (
                   <div className={styles.clusterSm} style={{ marginTop: "var(--space-2)" }}>
                     {attention.strongReasons.some((r) => r.type === "INCOMPLETE") && (
                       <span className={`${styles.badge} ${styles.badgeDanger}`}>Incompleto</span>
@@ -521,7 +529,8 @@ export default async function OrderDetailPage({
                     {attention.strongReasons.some((r) => r.type === "ALTERADO_APOS_CONFIRMACAO") && (
                       <span className={`${styles.badge} ${styles.badgeDanger}`}>Requer reconfirmacao</span>
                     )}
-                    {attention.weakReasons.some((r) => r.type === "UNAVAILABLE_ITEMS") && (
+                    {!showProduction &&
+                      attention.weakReasons.some((r) => r.type === "UNAVAILABLE_ITEMS") && (
                       <span className={`${styles.badge} ${styles.badgeWarning}`}>
                         {order.orderType === "PRONTA_ENTREGA" ? "Sem saldo" : "Precisa produzir"}
                       </span>
@@ -653,40 +662,93 @@ export default async function OrderDetailPage({
           <section id="order-items" className={styles.panel}>
             <div className={styles.panelHeader}>
               <h2>Itens</h2>
+              {showProduction ? (
+                <Link href="#order-production" className={detailStyles.actionLink}>
+                  Ver producao
+                </Link>
+              ) : null}
             </div>
             <div className={styles.panelBody}>
-              <div className={styles.stackSm}>
-                {order.items.map((item) => {
-                  const availabilityInfo = item.skuId
-                    ? availabilityBySku.get(item.skuId)
-                    : null;
-                  const gapQty = availabilityInfo?.gapQty ?? 0;
-                  return (
-                    <div key={item.id} className={detailStyles.itemRow}>
-                      <div>
-                        <strong>
-                          {item.snapshotProductName
-                            ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
-                            : item.snapshotSkuName}
-                        </strong>
-                        <div className={detailStyles.itemMeta}>
-                          {item.snapshotUnitLabel}
+              {order.items.length === 0 ? (
+                <div className={detailStyles.taskEmpty}>
+                  Nenhum item adicionado.
+                </div>
+              ) : (
+                <div className={detailStyles.itemsTable}>
+                  <div className={detailStyles.itemsHeaderRow}>
+                    <span className={detailStyles.itemsHeaderCell}>Produto</span>
+                    <span className={detailStyles.itemsHeaderCell}>Qtd</span>
+                    <span className={detailStyles.itemsHeaderCell}>Subtotal</span>
+                    <span className={detailStyles.itemsHeaderCell}>Situacao</span>
+                  </div>
+                  {order.items.map((item) => {
+                    const availabilityInfo = item.skuId
+                      ? availabilityBySku.get(item.skuId)
+                      : null;
+                    const gapQty = availabilityInfo?.gapQty ?? 0;
+                    const statusLabel = gapQty > 0 ? "A produzir" : "OK";
+                    const productLabel = item.snapshotProductName
+                      ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
+                      : item.snapshotSkuName;
+                    const variationParts = [
+                      item.snapshotSizeText,
+                      item.snapshotFlavorText,
+                    ].filter(Boolean);
+                    const variationText =
+                      variationParts.length > 0
+                        ? variationParts.join(" | ")
+                        : "Sem variacao";
+                    return (
+                      <details key={item.id} className={detailStyles.itemsRow}>
+                        <summary className={detailStyles.itemsSummary}>
+                          <div className={detailStyles.itemsProduct}>
+                            <strong>{productLabel}</strong>
+                            <span className={detailStyles.itemsMeta}>
+                              {item.snapshotUnitLabel}
+                            </span>
+                          </div>
+                          <div className={detailStyles.itemsQty}>
+                            {Number(item.quantity)} {item.snapshotUnitLabel}
+                          </div>
+                          <div className={detailStyles.itemsSubtotal}>
+                            {formatMoney(item.lineTotal)}
+                          </div>
+                          <div className={detailStyles.itemsStatus}>
+                            {gapQty > 0 ? (
+                              <Link
+                                href="#order-production"
+                                className={detailStyles.itemsStatusWarn}
+                                title={statusLabel}
+                              >
+                                {statusLabel}
+                              </Link>
+                            ) : (
+                              <span className={detailStyles.itemsStatusOk}>
+                                {statusLabel}
+                              </span>
+                            )}
+                            <span className={detailStyles.itemsToggle} aria-hidden />
+                          </div>
+                        </summary>
+                        <div className={detailStyles.itemsDetails}>
+                          <div className={detailStyles.itemsDetailRow}>
+                            <span className={detailStyles.itemsDetailLabel}>Preco unit</span>
+                            <span className={detailStyles.itemsDetailValue}>
+                              {formatMoney(item.snapshotUnitPrice)}
+                            </span>
+                          </div>
+                          <div className={detailStyles.itemsDetailRow}>
+                            <span className={detailStyles.itemsDetailLabel}>Variacao</span>
+                            <span className={detailStyles.itemsDetailValue}>
+                              {variationText}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                      <div>
-                        {Number(item.quantity)} {item.snapshotUnitLabel} x{" "}
-                        {formatMoney(item.snapshotUnitPrice)} ={" "}
-                        {formatMoney(item.lineTotal)}
-                      </div>
-                      {gapQty > 0 ? (
-                        <div className={styles.textError}>
-                          Falta produzir: {gapQty}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
+                      </details>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </section>
 
@@ -730,11 +792,13 @@ export default async function OrderDetailPage({
                 <h2>Pendencias (bloqueiam)</h2>
               </div>
               <div className={styles.panelBody}>
-                {attention.strongReasons.length === 0 ? (
-                  <div className={styles.emptyState}>Sem pendencias bloqueantes.</div>
+                {strongReasons.length === 0 ? (
+                  <div className={detailStyles.taskEmpty}>
+                    Tudo certo para avancar.
+                  </div>
                 ) : (
-                  <ul className={detailStyles.summaryList}>
-                    {attention.strongReasons.map((reason, index) => {
+                  <ul className={detailStyles.taskList}>
+                    {strongReasons.map((reason, index) => {
                       let target = "#order-items";
                       if (reason.type === "ALTERADO_APOS_CONFIRMACAO") {
                         target = "#order-changes";
@@ -746,11 +810,11 @@ export default async function OrderDetailPage({
                         }
                       }
                       return (
-                        <li key={`${reason.type}-${index}`}>
-                          {reason.label}{" "}
+                        <li key={`${reason.type}-${index}`} className={detailStyles.taskRow}>
+                          <span className={detailStyles.taskLabel}>{reason.label}</span>
                           <Link
                             href={`${editLink}${target}`}
-                            className={detailStyles.actionLink}
+                            className={detailStyles.taskAction}
                           >
                             Resolver
                           </Link>
@@ -767,11 +831,22 @@ export default async function OrderDetailPage({
                 <h2>Alertas (nao bloqueiam)</h2>
               </div>
               <div className={styles.panelBody}>
-                {attention.weakReasons.length === 0 ? (
-                  <div className={styles.emptyState}>Sem alertas.</div>
+                {weakReasons.length === 0 && !showProductionTask ? (
+                  <div className={detailStyles.taskEmpty}>Sem alertas.</div>
                 ) : (
-                  <ul className={detailStyles.summaryList}>
-                    {attention.weakReasons.map((reason, index) => {
+                  <ul className={detailStyles.taskList}>
+                    {showProductionTask ? (
+                      <li className={detailStyles.taskRow}>
+                        <span className={detailStyles.taskLabel}>Producao pendente</span>
+                        <Link
+                          href="#order-production"
+                          className={detailStyles.taskAction}
+                        >
+                          Resolver
+                        </Link>
+                      </li>
+                    ) : null}
+                    {weakReasons.map((reason, index) => {
                       let target = "#order-production";
                       if (
                         reason.type === "MISSING_ADDRESS" ||
@@ -780,10 +855,10 @@ export default async function OrderDetailPage({
                         target = `${editLink}#order-delivery`;
                       }
                       return (
-                        <li key={`${reason.type}-${index}`}>
-                          {reason.label}{" "}
-                          <Link href={target} className={detailStyles.actionLink}>
-                            Ver
+                        <li key={`${reason.type}-${index}`} className={detailStyles.taskRow}>
+                          <span className={detailStyles.taskLabel}>{reason.label}</span>
+                          <Link href={target} className={detailStyles.taskAction}>
+                            Resolver
                           </Link>
                         </li>
                       );
