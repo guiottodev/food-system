@@ -295,9 +295,6 @@ export default async function OrderDetailPage({
     needsProduction: availability.hasUnavailableItems,
   });
   const showProduction = gapItems.length > 0;
-  const showProductionBadge =
-    !showProduction &&
-    attention.weakReasons.some((reason) => reason.type === "UNAVAILABLE_ITEMS");
   const weakReasonsForDisplay = showProduction
     ? attention.weakReasons.filter((reason) => reason.type !== "UNAVAILABLE_ITEMS")
     : attention.weakReasons;
@@ -306,15 +303,13 @@ export default async function OrderDetailPage({
   const contextItems = [
     { label: "Cliente", value: order.customer.name, anchorTarget: "#order-customer" },
     { label: "Itens", value: itemsCountLabel, anchorTarget: "#order-items" },
-    { label: "Data/Hora", value: viewModel.schedule.card, anchorTarget: "#order-delivery" },
-    { label: "Metodo", value: deliveryMethodLabel[order.deliveryMethod], anchorTarget: "#order-delivery" },
-    { label: "Tipo", value: orderTypeLabel[order.orderType] },
   ];
   const pendingHasItems = attention.strongReasons.length > 0;
   const alertsHasItems = weakReasonsForDisplay.length > 0;
   const stepperIndex = stepperSteps.findIndex((step) => step.key === order.status);
   const isStepperCancelled = order.status === "CANCELADO";
   const isStepperDelivered = order.status === "ENTREGUE";
+  const isStepperCompact = isStepperCancelled || isStepperDelivered;
   const confirmFormId = "order-confirm-form";
   const advanceFormId = "order-advance-form";
 
@@ -541,10 +536,6 @@ export default async function OrderDetailPage({
                 {deliveryMethodLabel[order.deliveryMethod]} — {viewModel.schedule.header}
               </div>
               <div className={detailStyles.orderHeaderMeta}>
-                <span className={detailStyles.orderHeaderMetaItem}>
-                  Pedido {order.orderNumber}
-                </span>
-                <span className={detailStyles.orderHeaderMetaDivider}>•</span>
                 <span className={detailStyles.orderHeaderType}>
                   <span
                     className={`${detailStyles.orderHeaderTypeIcon} ${
@@ -555,12 +546,15 @@ export default async function OrderDetailPage({
                   />
                   {orderTypeLabel[order.orderType]}
                 </span>
+                <span className={detailStyles.orderHeaderMetaDivider}>•</span>
+                <span className={detailStyles.orderHeaderMetaItem}>{itemsCountLabel}</span>
               </div>
               <div className={detailStyles.orderHeaderStepper}>
                 <div
                   className={`${detailStyles.orderStepper} ${
                     isStepperCancelled ? detailStyles.orderStepperCancelled : ""
-                  }`.trim()}
+                  } ${isStepperCompact ? detailStyles.orderStepperCompact : ""}`
+                    .trim()}
                 >
                   {stepperSteps.map((step, index) => {
                     const isComplete =
@@ -580,11 +574,6 @@ export default async function OrderDetailPage({
                       </div>
                     );
                   })}
-                  {isStepperCancelled || isStepperDelivered ? (
-                    <span className={detailStyles.orderStepperBadge}>
-                      {statusLabel[order.status]}
-                    </span>
-                  ) : null}
                 </div>
               </div>
             </div>
@@ -672,28 +661,8 @@ export default async function OrderDetailPage({
               <div className={detailStyles.infoCardHeader}>
                 <div className={detailStyles.infoCardIcon}>📋</div>
                 <span className={detailStyles.infoCardTitle}>Pedido</span>
-                <span
-                  className={`${styles.badge} ${
-                    order.status === "ENTREGUE"
-                      ? styles.badgeSuccess
-                      : order.status === "CANCELADO"
-                      ? styles.badgeDanger
-                      : styles.badgeNeutral
-                  }`}
-                  style={{ marginLeft: "auto" }}
-                >
-                  {statusLabel[order.status]}
-                </span>
               </div>
               <div className={detailStyles.infoCardBody}>
-                <div className={detailStyles.infoRow}>
-                  <span className={detailStyles.infoLabel}>Tipo</span>
-                  <span className={detailStyles.infoValue}>{orderTypeLabel[order.orderType]}</span>
-                </div>
-                <div className={detailStyles.infoRow}>
-                  <span className={detailStyles.infoLabel}>Metodo</span>
-                  <span className={detailStyles.infoValue}>{deliveryMethodLabel[order.deliveryMethod]}</span>
-                </div>
                 <div className={detailStyles.infoRow}>
                   <span className={detailStyles.infoLabel}>Subtotal</span>
                   <span className={detailStyles.infoValue}>{formatMoney(order.subtotal)}</span>
@@ -702,21 +671,6 @@ export default async function OrderDetailPage({
                   <span className={detailStyles.infoLabel}>Total</span>
                   <span className={detailStyles.infoValueLarge}>{formatMoney(order.total)}</span>
                 </div>
-                {(attention.strongReasons.length > 0 || showProductionBadge) && (
-                  <div className={styles.clusterSm} style={{ marginTop: "var(--space-2)" }}>
-                    {attention.strongReasons.some((r) => r.type === "INCOMPLETE") && (
-                      <span className={`${styles.badge} ${styles.badgeDanger}`}>Incompleto</span>
-                    )}
-                    {attention.strongReasons.some((r) => r.type === "ALTERADO_APOS_CONFIRMACAO") && (
-                      <span className={`${styles.badge} ${styles.badgeDanger}`}>Requer reconfirmacao</span>
-                    )}
-                    {showProductionBadge && (
-                      <span className={`${styles.badge} ${styles.badgeWarning}`}>
-                        {order.orderType === "PRONTA_ENTREGA" ? "Sem saldo" : "Precisa produzir"}
-                      </span>
-                    )}
-                  </div>
-                )}
               </div>
             </section>
 

@@ -804,6 +804,10 @@
   align-items: center;
 }
 
+.orderStepperCompact {
+  gap: var(--space-1);
+}
+
 .orderStepperStep {
   display: inline-flex;
   align-items: center;
@@ -831,6 +835,14 @@
   display: none;
 }
 
+.orderStepperCompact .orderStepperStep {
+  padding-right: calc(var(--space-2) + 4px);
+}
+
+.orderStepperCompact .orderStepperStep::after {
+  width: var(--space-2);
+}
+
 .orderStepperDot {
   width: 12px;
   height: 12px;
@@ -843,6 +855,12 @@
 
 .orderStepperLabel {
   line-height: 1;
+}
+
+.orderStepperCompact .orderStepperLabel {
+  display: inline;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
 }
 
 .orderStepperStepActive {
