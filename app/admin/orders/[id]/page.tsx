@@ -60,7 +60,10 @@ const statusFlow: OrderStatus[] = [
 function formatMoney(value: unknown) {
   const number = Number(value ?? 0);
   if (!Number.isFinite(number)) return "R$ 0,00";
-  return `R$ ${number.toFixed(2)}`;
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(number);
 }
 
 function formatLogValue(value?: string | null) {
