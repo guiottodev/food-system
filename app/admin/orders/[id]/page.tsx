@@ -61,6 +61,13 @@ const statusFlow: OrderStatus[] = [
   "ENTREGUE",
 ];
 
+const stepperSteps: Array<{ key: OrderStatus; label: string }> = [
+  { key: "CONFIRMADO", label: "Confirmado" },
+  { key: "EM_PRODUCAO", label: "Em producao" },
+  { key: "PRONTO", label: "Pronto" },
+  { key: "ENTREGUE", label: "Entregue" },
+];
+
 function formatMoney(value: unknown) {
   const number = Number(value ?? 0);
   if (!Number.isFinite(number)) return "R$ 0,00";
@@ -235,6 +242,11 @@ export default async function OrderDetailPage({
   const weakReasonsForDisplay = showProduction
     ? attention.weakReasons.filter((reason) => reason.type !== "UNAVAILABLE_ITEMS")
     : attention.weakReasons;
+  const pendingHasItems = attention.strongReasons.length > 0;
+  const alertsHasItems = weakReasonsForDisplay.length > 0;
+  const stepperIndex = stepperSteps.findIndex((step) => step.key === order.status);
+  const isStepperCancelled = order.status === "CANCELADO";
+  const isStepperDelivered = order.status === "ENTREGUE";
   const confirmFormId = "order-confirm-form";
   const advanceFormId = "order-advance-form";
 
@@ -413,31 +425,37 @@ export default async function OrderDetailPage({
           <section className={detailStyles.orderHeader}>
             <div className={detailStyles.orderHeaderMain}>
               <div className={detailStyles.orderHeaderTop}>
-                <Chip
-                  variant="status"
-                  status={order.status}
-                  label={statusLabel[order.status]}
-                />
-                <div className={detailStyles.orderHeaderChips}>
-                  {viewModel.chips.map((chip, index) => (
-                    <Chip
-                      key={`${chip.label}-${index}`}
-                      variant={chip.severity === "strong" ? "attention-strong" : "attention-weak"}
-                      label={chip.label}
-                      density="compact"
-                    />
-                  ))}
-                  {viewModel.chipsOverflow > 0 ? (
-                    <span className={detailStyles.chipOverflow}>
-                      +{viewModel.chipsOverflow}
-                    </span>
-                  ) : null}
+                <div className={detailStyles.orderHeaderStatus}>
+                  <Chip
+                    variant="status"
+                    status={order.status}
+                    label={statusLabel[order.status]}
+                  />
+                  <div className={detailStyles.orderHeaderChips}>
+                    {viewModel.chips.map((chip, index) => (
+                      <Chip
+                        key={`${chip.label}-${index}`}
+                        variant={chip.severity === "strong" ? "attention-strong" : "attention-weak"}
+                        label={chip.label}
+                        density="compact"
+                      />
+                    ))}
+                    {viewModel.chipsOverflow > 0 ? (
+                      <span className={detailStyles.chipOverflow}>
+                        +{viewModel.chipsOverflow}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
               <div className={detailStyles.orderHeaderTitle}>
-                {deliveryMethodLabel[order.deliveryMethod]} - {viewModel.schedule.header}
+                {deliveryMethodLabel[order.deliveryMethod]} — {viewModel.schedule.header}
               </div>
               <div className={detailStyles.orderHeaderMeta}>
+                <span className={detailStyles.orderHeaderMetaItem}>
+                  Pedido {order.orderNumber}
+                </span>
+                <span className={detailStyles.orderHeaderMetaDivider}>•</span>
                 <span className={detailStyles.orderHeaderType}>
                   <span
                     className={`${detailStyles.orderHeaderTypeIcon} ${
@@ -448,6 +466,37 @@ export default async function OrderDetailPage({
                   />
                   {orderTypeLabel[order.orderType]}
                 </span>
+              </div>
+              <div className={detailStyles.orderHeaderStepper}>
+                <div
+                  className={`${detailStyles.orderStepper} ${
+                    isStepperCancelled ? detailStyles.orderStepperCancelled : ""
+                  }`.trim()}
+                >
+                  {stepperSteps.map((step, index) => {
+                    const isComplete =
+                      !isStepperCancelled &&
+                      (isStepperDelivered ? true : stepperIndex > index);
+                    const isActive =
+                      !isStepperCancelled && !isStepperDelivered && stepperIndex === index;
+                    return (
+                      <div
+                        key={step.key}
+                        className={`${detailStyles.orderStepperStep} ${
+                          isComplete ? detailStyles.orderStepperStepComplete : ""
+                        } ${isActive ? detailStyles.orderStepperStepActive : ""}`.trim()}
+                      >
+                        <span className={detailStyles.orderStepperDot} aria-hidden />
+                        <span className={detailStyles.orderStepperLabel}>{step.label}</span>
+                      </div>
+                    );
+                  })}
+                  {isStepperCancelled || isStepperDelivered ? (
+                    <span className={detailStyles.orderStepperBadge}>
+                      {statusLabel[order.status]}
+                    </span>
+                  ) : null}
+                </div>
               </div>
             </div>
             <div className={detailStyles.orderHeaderCta}>
@@ -462,7 +511,11 @@ export default async function OrderDetailPage({
           </section>
 
           {showProduction ? (
-            <Card as="section" id="order-production">
+            <Card
+              as="section"
+              id="order-production"
+              className={`${detailStyles.rail} ${detailStyles.railWarning}`}
+            >
               <div className={styles.panelHeader}>
                 <h2>
                   {order.orderType === "PRONTA_ENTREGA"
@@ -712,7 +765,11 @@ export default async function OrderDetailPage({
           </Card>
 
           {order.needsReconfirmation ? (
-            <Card as="section" id="order-changes">
+            <Card
+              as="section"
+              id="order-changes"
+              className={`${detailStyles.rail} ${detailStyles.railWarning}`}
+            >
               <div className={styles.panelHeader}>
                 <h2>Mudancas desde a confirmacao</h2>
               </div>
@@ -743,7 +800,12 @@ export default async function OrderDetailPage({
           ) : null}
 
           <div id="order-pending" className={detailStyles.twoColumn}>
-            <Card as="section">
+            <Card
+              as="section"
+              className={`${detailStyles.rail} ${
+                pendingHasItems ? detailStyles.railDanger : detailStyles.railNeutral
+              }`}
+            >
               <div className={styles.panelHeader}>
                 <h2>Pendencias (bloqueiam)</h2>
               </div>
@@ -780,7 +842,12 @@ export default async function OrderDetailPage({
               </div>
             </Card>
 
-            <Card as="section">
+            <Card
+              as="section"
+              className={`${detailStyles.rail} ${
+                alertsHasItems ? detailStyles.railWarning : detailStyles.railNeutral
+              }`}
+            >
               <div className={styles.panelHeader}>
                 <h2>Alertas (nao bloqueiam)</h2>
               </div>
