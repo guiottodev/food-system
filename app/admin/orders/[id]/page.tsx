@@ -16,6 +16,7 @@ import CancelOrderForm from "./CancelOrderForm.client";
 import OrderDetailFocus from "./OrderDetailFocus.client";
 import OrderDetailPrimaryAction from "./OrderDetailPrimaryAction.client";
 import OrderDetailSidebar from "./OrderDetailSidebar.client";
+import OrderItemsTable, { type OrderItemRow } from "./OrderItemsTable.client";
 import { getOrderDetailViewModel } from "./orderDetailViewModel";
 import Card from "../../_components/Card";
 import Button from "../../_components/Button";
@@ -66,6 +67,14 @@ function formatMoney(value: unknown) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
     currency: "BRL",
+  }).format(number);
+}
+
+function formatQuantity(value: unknown) {
+  const number = Number(value ?? 0);
+  if (!Number.isFinite(number)) return "0";
+  return new Intl.NumberFormat("pt-BR", {
+    maximumFractionDigits: 2,
   }).format(number);
 }
 
@@ -126,6 +135,9 @@ export default async function OrderDetailPage({
           snapshotProductName: true,
           snapshotUnitLabel: true,
           snapshotUnitType: true,
+          snapshotSizeText: true,
+          snapshotFlavorText: true,
+          snapshotIsFrozen: true,
         },
       },
     },
@@ -158,6 +170,25 @@ export default async function OrderDetailPage({
   );
   const gapItems = availability.itemAvailability.filter((item) => item.gapQty > 0);
   const gapTotal = gapItems.reduce((sum, item) => sum + item.gapQty, 0);
+  const itemsForTable: OrderItemRow[] = order.items.map((item) => {
+    const availabilityInfo = item.skuId
+      ? availabilityBySku.get(item.skuId)
+      : null;
+    const gapQty = Number(availabilityInfo?.gapQty ?? 0);
+    return {
+      id: item.id,
+      productName: item.snapshotProductName,
+      skuName: item.snapshotSkuName,
+      unitLabel: item.snapshotUnitLabel,
+      quantity: Number(item.quantity),
+      unitPrice: Number(item.snapshotUnitPrice),
+      lineTotal: Number(item.lineTotal),
+      sizeText: item.snapshotSizeText,
+      flavorText: item.snapshotFlavorText,
+      isFrozen: item.snapshotIsFrozen,
+      status: gapQty > 0 ? "A produzir" : "OK",
+    };
+  });
 
   const attention = getOrderAttentionSummary({
     status: order.status,
@@ -198,6 +229,12 @@ export default async function OrderDetailPage({
     needsProduction: availability.hasUnavailableItems,
   });
   const showProduction = gapItems.length > 0;
+  const showProductionBadge =
+    !showProduction &&
+    attention.weakReasons.some((reason) => reason.type === "UNAVAILABLE_ITEMS");
+  const weakReasonsForDisplay = showProduction
+    ? attention.weakReasons.filter((reason) => reason.type !== "UNAVAILABLE_ITEMS")
+    : attention.weakReasons;
   const confirmFormId = "order-confirm-form";
   const advanceFormId = "order-advance-form";
 
@@ -442,38 +479,56 @@ export default async function OrderDetailPage({
                 ) : null}
               </div>
               <div className={styles.panelBody}>
-                <div className={styles.textMuted}>
-                  Falta produzir: {gapItems.length} itens, total {gapTotal}.
+                <div className={detailStyles.productionSummary}>
+                  <span className={styles.tabularNums}>{formatQuantity(gapTotal)}</span>
+                  <span>un pendentes</span>
+                  <span className={detailStyles.summaryDivider}>•</span>
+                  <span>{gapItems.length} itens</span>
                 </div>
                 <div className={detailStyles.productionTable}>
-                  {gapItems.map((gapItem) => {
-                    const item = order.items.find(
-                      (entry) => entry.skuId === gapItem.skuId
-                    );
-                    return (
-                      <div key={gapItem.skuId} className={detailStyles.productionRow}>
-                        <div>
-                          <strong>
-                            {item?.snapshotProductName
-                              ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
-                              : item?.snapshotSkuName}
-                          </strong>
-                          <div className={detailStyles.itemMeta}>
-                            {item?.snapshotUnitLabel}
+                  <div className={detailStyles.productionHeaderRow}>
+                    <span>Produto</span>
+                    <span className={detailStyles.productionNumeric}>Pedido</span>
+                    <span className={detailStyles.productionNumeric}>Disponivel</span>
+                    <span className={detailStyles.productionNumeric}>Falta</span>
+                  </div>
+                  <div className={detailStyles.productionBody}>
+                    {gapItems.map((gapItem, index) => {
+                      const item = order.items.find(
+                        (entry) => entry.skuId === gapItem.skuId
+                      );
+                      return (
+                        <div
+                          key={gapItem.skuId}
+                          className={`${detailStyles.productionRow} ${
+                            index % 2 === 1 ? detailStyles.productionRowEven : ""
+                          }`}
+                        >
+                          <div className={detailStyles.productionProduct}>
+                            <span className={detailStyles.productionProductTitle}>
+                              {item?.snapshotProductName
+                                ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
+                                : item?.snapshotSkuName}
+                            </span>
+                            <span className={detailStyles.productionProductMeta}>
+                              {item?.snapshotUnitLabel}
+                            </span>
                           </div>
+                          <span className={detailStyles.productionNumeric}>
+                            {formatQuantity(gapItem.requiredQty)}
+                          </span>
+                          <span className={detailStyles.productionNumeric}>
+                            {formatQuantity(gapItem.availableNow)}
+                          </span>
+                          <span
+                            className={`${detailStyles.productionNumeric} ${detailStyles.productionGap}`}
+                          >
+                            {formatQuantity(gapItem.gapQty)}
+                          </span>
                         </div>
-                        <div className={detailStyles.productionValue}>
-                          Pedido: {gapItem.requiredQty}
-                        </div>
-                        <div className={detailStyles.productionValue}>
-                          Disponivel: {gapItem.availableNow}
-                        </div>
-                        <div className={detailStyles.productionValue}>
-                          Falta: {gapItem.gapQty}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </Card>
@@ -514,8 +569,7 @@ export default async function OrderDetailPage({
                   <span className={detailStyles.infoLabel}>Total</span>
                   <span className={detailStyles.infoValueLarge}>{formatMoney(order.total)}</span>
                 </div>
-                {(attention.strongReasons.length > 0 ||
-                  attention.weakReasons.some((r) => r.type === "UNAVAILABLE_ITEMS")) && (
+                {(attention.strongReasons.length > 0 || showProductionBadge) && (
                   <div className={styles.clusterSm} style={{ marginTop: "var(--space-2)" }}>
                     {attention.strongReasons.some((r) => r.type === "INCOMPLETE") && (
                       <span className={`${styles.badge} ${styles.badgeDanger}`}>Incompleto</span>
@@ -523,7 +577,7 @@ export default async function OrderDetailPage({
                     {attention.strongReasons.some((r) => r.type === "ALTERADO_APOS_CONFIRMACAO") && (
                       <span className={`${styles.badge} ${styles.badgeDanger}`}>Requer reconfirmacao</span>
                     )}
-                    {attention.weakReasons.some((r) => r.type === "UNAVAILABLE_ITEMS") && (
+                    {showProductionBadge && (
                       <span className={`${styles.badge} ${styles.badgeWarning}`}>
                         {order.orderType === "PRONTA_ENTREGA" ? "Sem saldo" : "Precisa produzir"}
                       </span>
@@ -653,38 +707,7 @@ export default async function OrderDetailPage({
               <h2>Itens</h2>
             </div>
             <div className={styles.panelBody}>
-              <div className={styles.stackSm}>
-                {order.items.map((item) => {
-                  const availabilityInfo = item.skuId
-                    ? availabilityBySku.get(item.skuId)
-                    : null;
-                  const gapQty = availabilityInfo?.gapQty ?? 0;
-                  return (
-                    <div key={item.id} className={detailStyles.itemRow}>
-                      <div>
-                        <strong>
-                          {item.snapshotProductName
-                            ? `${item.snapshotProductName} - ${item.snapshotSkuName}`
-                            : item.snapshotSkuName}
-                        </strong>
-                        <div className={detailStyles.itemMeta}>
-                          {item.snapshotUnitLabel}
-                        </div>
-                      </div>
-                      <div className={styles.tabularNums}>
-                        {Number(item.quantity)} {item.snapshotUnitLabel} x{" "}
-                        {formatMoney(item.snapshotUnitPrice)} ={" "}
-                        {formatMoney(item.lineTotal)}
-                      </div>
-                      {gapQty > 0 ? (
-                        <div className={styles.textError}>
-                          Falta produzir: {gapQty}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
+              <OrderItemsTable items={itemsForTable} />
             </div>
           </Card>
 
@@ -762,11 +785,11 @@ export default async function OrderDetailPage({
                 <h2>Alertas (nao bloqueiam)</h2>
               </div>
               <div className={styles.panelBody}>
-                {attention.weakReasons.length === 0 ? (
+                {weakReasonsForDisplay.length === 0 ? (
                   <EmptyStateCompact>Sem alertas.</EmptyStateCompact>
                 ) : (
                   <ul className={detailStyles.summaryList}>
-                    {attention.weakReasons.map((reason, index) => {
+                    {weakReasonsForDisplay.map((reason, index) => {
                       let target = "#order-production";
                       if (
                         reason.type === "MISSING_ADDRESS" ||
