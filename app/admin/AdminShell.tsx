@@ -10,7 +10,7 @@ export default function AdminShell({
   logoutAction: (formData: FormData) => void | Promise<void>;
 }) {
   return (
-    <div className={styles.shell}>
+    <div className={`${styles.shell} ${styles.adminRoot}`}>
       <AdminSidebar logoutAction={logoutAction} />
       <div className={styles.shellMain}>
         <AdminDrawer logoutAction={logoutAction} />

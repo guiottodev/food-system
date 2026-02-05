@@ -17,7 +17,10 @@ import OrderDetailFocus from "./OrderDetailFocus.client";
 import OrderDetailPrimaryAction from "./OrderDetailPrimaryAction.client";
 import OrderDetailSidebar from "./OrderDetailSidebar.client";
 import { getOrderDetailViewModel } from "./orderDetailViewModel";
+import Card from "../../_components/Card";
+import Button from "../../_components/Button";
 import Chip from "../../_components/Chip";
+import EmptyStateCompact from "../../_components/EmptyStateCompact";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "../orderDetail.module.css";
 import { InlineNotice } from "../../design-system/InlineNotice.client";
@@ -249,10 +252,12 @@ export default async function OrderDetailPage({
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>Pedido {order.orderNumber}</h1>
         <div className={styles.clusterSm}>
-          <Link href={editLink} className={styles.button}>
+          <Button href={editLink} variant="outline" size="sm">
             Editar pedido
-          </Link>
-          <Link href="/admin/orders">Voltar</Link>
+          </Button>
+          <Button href="/admin/orders" variant="outline" size="sm">
+            Voltar
+          </Button>
         </div>
       </div>
 
@@ -319,12 +324,12 @@ export default async function OrderDetailPage({
               Ajustar saldo: este pedido foi entregue sem saldo suficiente.
             </div>
             <div className={styles.clusterSm}>
-              <Link href="/admin/producao" className={styles.button}>
+              <Button href="/admin/producao" variant="outline" size="sm">
                 Registrar producao
-              </Link>
-              <Link href="/admin/consumo" className={styles.button}>
+              </Button>
+              <Button href="/admin/consumo" variant="outline" size="sm">
                 Ajustar saldo (admin)
-              </Link>
+              </Button>
             </div>
           </div>
         </div>
@@ -420,7 +425,7 @@ export default async function OrderDetailPage({
           </section>
 
           {showProduction ? (
-            <section id="order-production" className={styles.panel}>
+            <Card as="section" id="order-production">
               <div className={styles.panelHeader}>
                 <h2>
                   {order.orderType === "PRONTA_ENTREGA"
@@ -430,12 +435,9 @@ export default async function OrderDetailPage({
                 {order.orderType === "PRONTA_ENTREGA" && gapItems.length > 0 ? (
                   <form action={convertToEncomendaAction}>
                     <input type="hidden" name="orderId" value={order.id} />
-                    <button
-                      type="submit"
-                      className={`${styles.button} ${styles.buttonSecondary}`}
-                    >
+                    <Button type="submit" variant="secondary" size="sm">
                       Converter para encomenda
-                    </button>
+                    </Button>
                   </form>
                 ) : null}
               </div>
@@ -474,7 +476,7 @@ export default async function OrderDetailPage({
                   })}
                 </div>
               </div>
-            </section>
+            </Card>
           ) : null}
 
           <div className={detailStyles.infoGrid}>
@@ -637,20 +639,16 @@ export default async function OrderDetailPage({
                 {!order.paidAt && (
                   <form action={markPaidAction} style={{ marginTop: "var(--space-3)" }}>
                     <input type="hidden" name="orderId" value={order.id} />
-                    <button
-                      type="submit"
-                      className={`${styles.button} ${styles.buttonPrimary}`}
-                      style={{ width: "100%" }}
-                    >
+                    <Button type="submit" variant="primary" className={detailStyles.fullWidth}>
                       Marcar como pago
-                    </button>
+                    </Button>
                   </form>
                 )}
               </div>
             </section>
           </div>
 
-          <section id="order-items" className={styles.panel}>
+          <Card as="section" id="order-items">
             <div className={styles.panelHeader}>
               <h2>Itens</h2>
             </div>
@@ -673,7 +671,7 @@ export default async function OrderDetailPage({
                           {item.snapshotUnitLabel}
                         </div>
                       </div>
-                      <div>
+                      <div className={styles.tabularNums}>
                         {Number(item.quantity)} {item.snapshotUnitLabel} x{" "}
                         {formatMoney(item.snapshotUnitPrice)} ={" "}
                         {formatMoney(item.lineTotal)}
@@ -688,10 +686,10 @@ export default async function OrderDetailPage({
                 })}
               </div>
             </div>
-          </section>
+          </Card>
 
           {order.needsReconfirmation ? (
-            <section id="order-changes" className={styles.panel}>
+            <Card as="section" id="order-changes">
               <div className={styles.panelHeader}>
                 <h2>Mudancas desde a confirmacao</h2>
               </div>
@@ -713,25 +711,22 @@ export default async function OrderDetailPage({
                 )}
                 <form action={reconfirmOrderAction} className={styles.formSection}>
                   <input type="hidden" name="orderId" value={order.id} />
-                  <button
-                    type="submit"
-                    className={`${styles.button} ${styles.buttonPrimary}`}
-                  >
+                  <Button type="submit" variant="primary">
                     Reconfirmar pedido
-                  </button>
+                  </Button>
                 </form>
               </div>
-            </section>
+            </Card>
           ) : null}
 
           <div id="order-pending" className={detailStyles.twoColumn}>
-            <section className={styles.panel}>
+            <Card as="section">
               <div className={styles.panelHeader}>
                 <h2>Pendencias (bloqueiam)</h2>
               </div>
               <div className={styles.panelBody}>
                 {attention.strongReasons.length === 0 ? (
-                  <div className={styles.emptyState}>Sem pendencias bloqueantes.</div>
+                  <EmptyStateCompact>Sem pendencias bloqueantes.</EmptyStateCompact>
                 ) : (
                   <ul className={detailStyles.summaryList}>
                     {attention.strongReasons.map((reason, index) => {
@@ -760,15 +755,15 @@ export default async function OrderDetailPage({
                   </ul>
                 )}
               </div>
-            </section>
+            </Card>
 
-            <section className={styles.panel}>
+            <Card as="section">
               <div className={styles.panelHeader}>
                 <h2>Alertas (nao bloqueiam)</h2>
               </div>
               <div className={styles.panelBody}>
                 {attention.weakReasons.length === 0 ? (
-                  <div className={styles.emptyState}>Sem alertas.</div>
+                  <EmptyStateCompact>Sem alertas.</EmptyStateCompact>
                 ) : (
                   <ul className={detailStyles.summaryList}>
                     {attention.weakReasons.map((reason, index) => {
@@ -791,10 +786,10 @@ export default async function OrderDetailPage({
                   </ul>
                 )}
               </div>
-            </section>
+            </Card>
           </div>
 
-          <section id="order-actions" className={styles.panel}>
+          <Card as="section" id="order-actions">
             <div className={styles.panelHeader}>
               <h2>Acoes avancadas</h2>
             </div>
@@ -823,23 +818,23 @@ export default async function OrderDetailPage({
                         <span>Marcar pagamento ao entregar</span>
                       </div>
                     </label>
-                    <button
+                    <Button
                       type="submit"
+                      variant="secondary"
                       disabled={
                         order.status === "ENTREGUE" || order.status === "CANCELADO"
                       }
-                      className={`${styles.button} ${styles.buttonSecondary}`}
                     >
                       Atualizar
-                    </button>
+                    </Button>
                   </form>
                   <CancelOrderForm orderId={order.id} />
                 </div>
               </details>
             </div>
-          </section>
+          </Card>
 
-          <section id="order-audit" className={styles.panel}>
+          <Card as="section" id="order-audit">
             <div className={styles.panelHeader}>
               <h2>Auditoria</h2>
             </div>
@@ -872,7 +867,7 @@ export default async function OrderDetailPage({
                 </ul>
               )}
             </div>
-          </section>
+          </Card>
         </div>
 
         <aside className={styles.pageAside}>

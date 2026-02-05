@@ -65,6 +65,7 @@
   font-size: var(--text-xl);
   font-weight: var(--fw-semibold);
   color: var(--text-primary);
+  line-height: var(--lh-tight);
 }
 
 .orderHeaderBadges {
@@ -359,12 +360,14 @@
   color: var(--text-primary);
   font-weight: var(--fw-medium);
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .infoValueLarge {
   font-size: var(--text-lg);
   font-weight: var(--fw-bold);
   color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ===== ORDER HEADER ===== */
@@ -395,6 +398,7 @@
   font-size: var(--text-xl);
   font-weight: var(--fw-bold);
   color: var(--text-primary);
+  line-height: var(--lh-tight);
 }
 
 .orderHeaderMeta {
@@ -459,6 +463,10 @@
 }
 
 .primaryCtaButton {
+  width: 100%;
+}
+
+.fullWidth {
   width: 100%;
 }
 
@@ -655,7 +663,7 @@
 .mobileSheetOverlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--overlay);
   z-index: 30;
 }
 

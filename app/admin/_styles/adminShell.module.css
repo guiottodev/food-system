@@ -1,8 +1,57 @@
+.adminRoot {
+  /* ===== ADMIN TOKENS (scoped) ===== */
+  --bg: #F6F7FB;
+  --surface: #FFFFFF;
+  --surface-2: #F3F5F9;
+  --border: #E3E7EF;
+  --divider: #EEF1F6;
+
+  --text-primary: #111827;
+  --text-secondary: #4B5563;
+  --text-muted: #6B7280;
+
+  --shadow-xs: 0 1px 1px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-md: 0 6px 16px rgba(15, 23, 42, 0.10);
+
+  --radius-md: 12px;
+  --radius-lg: 16px;
+
+  --focus-ring: 0 0 0 3px rgba(var(--action-primary-rgb), 0.28);
+  --overlay: rgba(0, 0, 0, 0.35);
+
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+
+  --lh-tight: 1.2;
+  --lh-normal: 1.5;
+
+  /* ===== Legacy mappings (admin only) ===== */
+  --bg-app: var(--bg);
+  --bg-surface: var(--surface);
+  --bg-subtle: var(--surface-2);
+  --bg-muted: var(--surface-2);
+
+  --border-subtle: var(--divider);
+  --border-strong: #D5DAE3;
+  --border-focus: var(--action-primary);
+
+  --shadow-focus: var(--focus-ring);
+  --text-base: var(--text-md);
+}
+
 .shell {
   min-height: 100vh;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  background: var(--bg-app);
+  background: var(--bg);
 }
 
 .shellMain {

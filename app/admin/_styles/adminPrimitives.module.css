@@ -973,6 +973,10 @@
   color: var(--state-error);
 }
 
+.tabularNums {
+  font-variant-numeric: tabular-nums;
+}
+
 /* ===== DEPRECATED: Use Chip component from app/admin/_components/Chip.tsx ===== */
 /* 
  * ⚠️ DEPRECATED: Estas classes são mantidas apenas para compatibilidade durante a migração.

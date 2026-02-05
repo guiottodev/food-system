@@ -1,5 +1,6 @@
 "use client";
 
+import Button from "../../_components/Button";
 import styles from "../../_styles/adminPrimitives.module.css";
 import { cancelOrderAction } from "./actions";
 
@@ -24,9 +25,9 @@ export default function CancelOrderForm({ orderId }: { orderId: string }) {
         className={styles.control}
         required
       />
-      <button type="submit" className={`${styles.button} ${styles.buttonDanger}`}>
+      <Button type="submit" variant="outline">
         Cancelar pedido
-      </button>
+      </Button>
     </form>
   );
 }
