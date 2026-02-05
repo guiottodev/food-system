@@ -71,6 +71,136 @@ function formatLogValue(value?: string | null) {
   return trimmed ? trimmed : "-";
 }
 
+type AuditLogEntry = {
+  id: string;
+  action: string;
+  field: string | null;
+  beforeValue: string | null;
+  afterValue: string | null;
+  reason: string | null;
+  changes: string | null;
+  createdAt: Date;
+  actor: { username: string } | null;
+};
+
+function formatItemsCount(value?: string | null) {
+  const trimmed = value?.trim() ?? "";
+  if (!trimmed) return null;
+  const matchItems = trimmed.match(/^(\d+)\s+itens?$/i);
+  if (matchItems) return Number(matchItems[1]);
+  const matchNumber = trimmed.match(/^(\d+)$/);
+  if (matchNumber) return Number(matchNumber[1]);
+  const parts = trimmed.split(";").map((part) => part.trim()).filter(Boolean);
+  return parts.length > 0 ? parts.length : null;
+}
+
+function formatItemsChange(label: string, before?: string | null, after?: string | null) {
+  const beforeCount = formatItemsCount(before);
+  const afterCount = formatItemsCount(after);
+  if (beforeCount !== null && afterCount !== null) {
+    return `${label} (${beforeCount}→${afterCount})`;
+  }
+  return label;
+}
+
+function formatAuditEvent(log: AuditLogEntry) {
+  if (log.action === "create_order") return "Pedido criado";
+  if (log.action === "create_items") {
+    return formatItemsChange("Itens adicionados", log.beforeValue, log.afterValue);
+  }
+  if (log.action === "confirm") return "Pedido confirmado";
+  if (log.action === "reconfirm") return "Pedido reconfirmado";
+  if (log.action === "cancel") return "Pedido cancelado";
+  if (log.action === "convert_order_type") return "Tipo do pedido atualizado";
+  if (log.action === "mark_paid") return "Pagamento marcado como pago";
+  if (log.action === "flag_reconfirm") return "Pedido marcado para reconfirmacao";
+  if (log.action === "status_change" || log.field === "status") {
+    const beforeStatus = log.beforeValue
+      ? statusLabel[log.beforeValue as OrderStatus] ?? log.beforeValue
+      : "-";
+    const afterStatus = log.afterValue
+      ? statusLabel[log.afterValue as OrderStatus] ?? log.afterValue
+      : "-";
+    return `Status: ${beforeStatus} → ${afterStatus}`;
+  }
+  if (log.action === "order_update") {
+    if (log.field === "items") {
+      return formatItemsChange("Itens atualizados", log.beforeValue, log.afterValue);
+    }
+    if (log.field === "deliveryDatetime" || log.field === "deliveryTime") {
+      return "Data/hora atualizada";
+    }
+    if (log.field === "deliveryMethod") {
+      return "Metodo de entrega atualizado";
+    }
+    if (log.field === "orderType") {
+      return "Tipo do pedido atualizado";
+    }
+    if (
+      log.field === "addressText" ||
+      log.field === "addressBairro" ||
+      log.field === "addressReferencia" ||
+      log.field === "addressCity" ||
+      log.field === "addressCep"
+    ) {
+      return "Endereco atualizado";
+    }
+    if (log.field === "deliveryFee" || log.field === "subtotal" || log.field === "total") {
+      return "Valores do pedido atualizados";
+    }
+    if (log.field === "notes") {
+      return "Observacoes atualizadas";
+    }
+    return "Pedido atualizado";
+  }
+  return "Atualizacao no pedido";
+}
+
+function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDayLabel(date: Date, now: Date) {
+  const today = startOfDay(now).getTime();
+  const candidate = startOfDay(date).getTime();
+  if (candidate === today) return "Hoje";
+  const yesterday = startOfDay(new Date(now.getTime() - 86400000)).getTime();
+  if (candidate === yesterday) return "Ontem";
+  return new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(date);
+}
+
+function groupAuditLogs(logs: AuditLogEntry[]) {
+  const now = new Date();
+  const groups: Array<{
+    key: string;
+    label: string;
+    items: AuditLogEntry[];
+  }> = [];
+  let currentKey = "";
+
+  for (const log of logs) {
+    const key = getDateKey(log.createdAt);
+    if (key !== currentKey) {
+      currentKey = key;
+      groups.push({
+        key,
+        label: formatDayLabel(log.createdAt, now),
+        items: [],
+      });
+    }
+    groups[groups.length - 1].items.push(log);
+  }
+
+  return groups;
+}
+
 export default async function OrderDetailPage({
   params,
   searchParams,
@@ -207,6 +337,8 @@ export default async function OrderDetailPage({
     take: 20,
     include: { actor: true },
   });
+  const auditGroups = groupAuditLogs(auditLogs as AuditLogEntry[]);
+  const timeFormatter = new Intl.DateTimeFormat("pt-BR", { timeStyle: "short" });
 
   const criticalFields = new Set([
     "items",
@@ -844,32 +976,79 @@ export default async function OrderDetailPage({
               <h2>Auditoria</h2>
             </div>
             <div className={styles.panelBody}>
-              {auditLogs.length === 0 ? (
+              {auditGroups.length === 0 ? (
                 <div className={styles.emptyState}>Sem registros recentes.</div>
               ) : (
-                <ul className={detailStyles.summaryList}>
-                  {auditLogs.map((log) => (
-                    <li key={log.id}>
-                      {new Intl.DateTimeFormat("pt-BR", {
-                        dateStyle: "short",
-                        timeStyle: "short",
-                      }).format(log.createdAt)}{" "}
-                      - {log.action} ({log.actor?.username || "sistema"})
-                      {log.field ? ` | Campo: ${log.field}` : ""}
-                      {log.beforeValue || log.afterValue ? (
-                        <>
-                          {" "}
-                          | De: {formatLogValue(log.beforeValue)} | Para:{" "}
-                          {formatLogValue(log.afterValue)}
-                        </>
-                      ) : null}
-                      {!log.field && !log.beforeValue && !log.afterValue && log.changes
-                        ? ` | ${log.changes}`
-                        : ""}
-                      {log.reason ? ` | Motivo: ${log.reason}` : ""}
-                    </li>
+                <div className={detailStyles.auditTimeline}>
+                  {auditGroups.map((group) => (
+                    <div key={group.key} className={detailStyles.auditGroup}>
+                      <div className={detailStyles.auditGroupTitle}>{group.label}</div>
+                      <div className={detailStyles.auditGroupList}>
+                        {group.items.map((log) => {
+                          const eventText = formatAuditEvent(log);
+                          const timeText = timeFormatter.format(log.createdAt);
+                          return (
+                            <div key={log.id} className={detailStyles.auditItem}>
+                              <div className={detailStyles.auditDot} />
+                              <div className={detailStyles.auditContent}>
+                                <div className={detailStyles.auditHeader}>
+                                  <span className={detailStyles.auditTitle}>{eventText}</span>
+                                  <span className={detailStyles.auditTime}>{timeText}</span>
+                                </div>
+                                <div className={detailStyles.auditMeta}>
+                                  por {log.actor?.username || "sistema"}
+                                </div>
+                                <details className={detailStyles.auditDetails}>
+                                  <summary className={detailStyles.auditDetailsSummary}>
+                                    Ver detalhes
+                                  </summary>
+                                  <div className={detailStyles.auditDetailsBody}>
+                                    <div>
+                                      <span className={detailStyles.auditDetailsLabel}>Acao:</span>{" "}
+                                      {log.action}
+                                    </div>
+                                    {log.field ? (
+                                      <div>
+                                        <span className={detailStyles.auditDetailsLabel}>
+                                          Campo:
+                                        </span>{" "}
+                                        {log.field}
+                                      </div>
+                                    ) : null}
+                                    {log.beforeValue || log.afterValue ? (
+                                      <div>
+                                        <span className={detailStyles.auditDetailsLabel}>De:</span>{" "}
+                                        {formatLogValue(log.beforeValue)}{" "}
+                                        <span className={detailStyles.auditDetailsLabel}>Para:</span>{" "}
+                                        {formatLogValue(log.afterValue)}
+                                      </div>
+                                    ) : null}
+                                    {log.changes ? (
+                                      <div>
+                                        <span className={detailStyles.auditDetailsLabel}>
+                                          Detalhes:
+                                        </span>{" "}
+                                        {log.changes}
+                                      </div>
+                                    ) : null}
+                                    {log.reason ? (
+                                      <div>
+                                        <span className={detailStyles.auditDetailsLabel}>
+                                          Motivo:
+                                        </span>{" "}
+                                        {log.reason}
+                                      </div>
+                                    ) : null}
+                                  </div>
+                                </details>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   ))}
-                </ul>
+                </div>
               )}
             </div>
           </section>
