@@ -6,7 +6,7 @@ import {
   computeOrderStockStatus,
   computeUnavailableItemsForOrders,
 } from "@/lib/domain/production";
-import { DEFAULT_DELIVERY_TIME } from "@/lib/domain/order";
+import { formatDeliveryTime } from "@/lib/domain/order";
 import { FINAL_STATUSES } from "@/lib/domain/status";
 import { normalizePhoneDigits } from "@/lib/phone";
 import { DeliveryMethod, OrderStatus, OrderType, Prisma } from "@prisma/client";
@@ -65,11 +65,8 @@ function formatDate(value?: Date | null) {
 function formatDeliveryLabel(value?: Date | null, time?: string | null) {
   if (!value) return "Sem data";
   const dateLabel = formatDate(value);
-  const trimmedTime = time?.trim();
-  if (!trimmedTime || trimmedTime === DEFAULT_DELIVERY_TIME) {
-    return dateLabel;
-  }
-  return `${dateLabel} ${trimmedTime}`;
+  const timeLabel = formatDeliveryTime(time);
+  return timeLabel === "Sem horario" ? dateLabel : `${dateLabel} ${timeLabel}`;
 }
 
 function formatCurrency(value: number) {
@@ -397,16 +394,8 @@ export default async function OrdersPage({
     periodParam = defaultPeriod;
     if (periodParam === "last30") {
       dateFilter = { gte: startLast30, lte: endToday };
-    } else if (periodParam === "last7") {
-      dateFilter = { gte: startLast7, lte: endToday };
-    } else if (periodParam === "upcoming") {
-      dateFilter = { gte: startToday };
-    } else if (periodParam === "next30") {
-      dateFilter = { gte: startToday, lte: endNext30 };
-    } else if (periodParam === "next7") {
-      dateFilter = { gte: startToday, lte: endNext7 };
     } else {
-      dateFilter = { gte: startToday, lte: endToday };
+      dateFilter = { gte: startToday };
     }
   }
 
@@ -760,7 +749,6 @@ export default async function OrdersPage({
               };
             })}
             sort={sort}
-            dir={sort === "delivery_desc" || sort === "created_desc" ? "desc" : "asc"}
             mode={mode}
           />
         )}

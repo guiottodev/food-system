@@ -61,7 +61,8 @@ function DataTableInner<T extends { id: string } & Record<string, unknown>>({
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const handleRowClick = useCallback(
-    (row: T) => {
+    (row: T, event?: React.MouseEvent | React.KeyboardEvent) => {
+      if (event?.defaultPrevented) return;
       if (rowHref) {
         router.push(rowHref(row));
       } else if (onRowClick) {

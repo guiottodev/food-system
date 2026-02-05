@@ -91,6 +91,7 @@ const unitTypeOptions = [
 ];
 
 const maxAttributes = 15;
+const EMPTY_CATALOG_ATTRIBUTES: CatalogAttribute[] = [];
 
 function createEmptyCatalogRow(): CatalogAttributeRow {
   return { atributoId: "", atributoValorId: "", valueText: "" };
@@ -196,6 +197,7 @@ export default function ProductSkusSection({
   skuErrorMessage,
   showReadyNotice = false,
 }: ProductSkusSectionProps) {
+  const safeCatalogAttributes = catalogAttributes ?? EMPTY_CATALOG_ATTRIBUTES;
   const initialSku = useMemo(
     () =>
       initialSkuId
@@ -308,11 +310,15 @@ export default function ProductSkusSection({
   );
 
   const attributeMap = useMemo(
-    () => new Map(catalogAttributes.map((attr) => [attr.id, attr])),
+    () =>
+      new Map(
+        (catalogAttributes ?? EMPTY_CATALOG_ATTRIBUTES).map((attr) => [attr.id, attr])
+      ),
     [catalogAttributes]
   );
   const hasActiveAttributes = useMemo(
-    () => catalogAttributes.some((attr) => attr.isActive),
+    () =>
+      (catalogAttributes ?? EMPTY_CATALOG_ATTRIBUTES).some((attr) => attr.isActive),
     [catalogAttributes]
   );
   const useLegacyAttributes =
@@ -934,7 +940,7 @@ export default function ProductSkusSection({
                         {filledAttributeCount}/{maxAttributes}
                       </span>
                     </div>
-                    {catalogAttributes.length === 0 ? (
+                    {safeCatalogAttributes.length === 0 ? (
                       <div className={styles.textMuted}>
                         Nenhum atributo cadastrado.{" "}
                         <Link href="/admin/configuracoes">Ir para Configuracoes</Link>
@@ -974,7 +980,7 @@ export default function ProductSkusSection({
                           const valueOptions = attribute?.values ?? [];
                           const attributeOptions = [
                             { value: "", label: "Selecione um atributo" },
-                            ...catalogAttributes
+                            ...safeCatalogAttributes
                               .filter((attr) => attr.isActive || attr.id === row.atributoId)
                               .map((attr) => ({
                                 value: attr.id,
@@ -1053,7 +1059,7 @@ export default function ProductSkusSection({
                         })}
                       </div>
                     )}
-                    {!useLegacyAttributes && catalogAttributes.length > 0 ? (
+                    {!useLegacyAttributes && safeCatalogAttributes.length > 0 ? (
                       <div className={detailStyles.attributeFooter}>
                         <button
                           type="button"

@@ -215,7 +215,8 @@ export default function OrdersFilters({
   const currentStatus = searchParams.get("status") ?? initialStatus;
   const defaultSort =
     currentMode === "historico" ? "delivery_desc" : "delivery_asc";
-  const defaultPeriod = currentMode === "historico" ? "last30" : "upcoming";
+  const defaultPeriod: PeriodValue =
+    currentMode === "historico" ? "last30" : "upcoming";
   const currentSort = normalizeSort(
     searchParams.get("sort") ?? initialSort,
     defaultSort
@@ -247,7 +248,11 @@ export default function OrdersFilters({
   const legacyDeliveryRange =
     searchParams.get("deliveryRange") ?? initialDeliveryRange;
 
-  const resolvedPeriod = useMemo(() => {
+  const resolvedPeriod = useMemo<{
+    period: PeriodValue;
+    deliveryStart: string;
+    deliveryEnd: string;
+  }>(() => {
     const hasExplicitPeriod =
       Boolean(periodFromParams) ||
       Boolean(deliveryStartParam) ||
@@ -326,6 +331,7 @@ export default function OrdersFilters({
       deliveryEnd: "",
     };
   }, [
+    defaultPeriod,
     deliveryEndParam,
     deliveryStartParam,
     legacyDeliveryDate,
