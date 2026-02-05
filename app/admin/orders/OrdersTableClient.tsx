@@ -76,12 +76,10 @@ export default function OrdersTableClient({
   orders,
   sort,
   mode,
-  dir,
 }: {
   orders: OrderRow[];
   sort?: string;
   mode: "agenda" | "historico";
-  dir?: "asc" | "desc";
 }) {
   const router = useRouter();
   const pathname = usePathname();

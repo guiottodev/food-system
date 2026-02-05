@@ -321,7 +321,7 @@ export default function OrderForm({
   const isFinalOrder =
     isEdit && (initialOrderStatus === "ENTREGUE" || initialOrderStatus === "CANCELADO");
 
-  const [createState, createFormAction, isCreatePending] = useActionState<CreateOrderResult | null, FormData>(
+  const [, createFormAction, isCreatePending] = useActionState<CreateOrderResult | null, FormData>(
     createOrderAction,
     null
   );

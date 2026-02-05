@@ -2,10 +2,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getOrderAttentionSummary } from "@/lib/domain/attention";
-import { DEFAULT_DELIVERY_TIME, getOrderPendingSummary } from "@/lib/domain/order";
+import { getOrderPendingSummary } from "@/lib/domain/order";
 import { computeOrderPendingFlags, computeOrderStockStatus } from "@/lib/domain/production";
 import { OrderStatus } from "@prisma/client";
 import {
+  confirmOrderAction,
   convertToEncomendaAction,
   markPaidAction,
   reconfirmOrderAction,
@@ -13,11 +14,13 @@ import {
 } from "./actions";
 import CancelOrderForm from "./CancelOrderForm.client";
 import OrderDetailFocus from "./OrderDetailFocus.client";
-import OrderDetailNextAction from "./OrderDetailNextAction.client";
+import OrderDetailPrimaryAction from "./OrderDetailPrimaryAction.client";
+import OrderDetailSidebar from "./OrderDetailSidebar.client";
+import { getOrderDetailViewModel } from "./orderDetailViewModel";
+import Chip from "../../_components/Chip";
 import styles from "../../_styles/adminPrimitives.module.css";
 import detailStyles from "../orderDetail.module.css";
 import { InlineNotice } from "../../design-system/InlineNotice.client";
-import Chip from "../../_components/Chip";
 
 const statusLabel: Record<OrderStatus, string> = {
   RASCUNHO: "Rascunho",
@@ -54,44 +57,13 @@ const statusFlow: OrderStatus[] = [
   "ENTREGUE",
 ];
 
-function formatDate(value?: Date | null) {
-  if (!value) return "-";
-  return new Intl.DateTimeFormat("pt-BR", {
-    dateStyle: "short",
-  }).format(value);
-}
-
-function formatScheduleDate(value: Date) {
-  return new Intl.DateTimeFormat("pt-BR", {
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-  }).format(value);
-}
-
-function formatDeliveryTime(value?: string | null) {
-  const trimmed = value?.trim();
-  if (!trimmed || trimmed === DEFAULT_DELIVERY_TIME) {
-    return "Sem horario";
-  }
-  return trimmed;
-}
-
-function formatDeliverySchedule(
-  value?: Date | null,
-  time?: string | null,
-  withWeekday = false
-) {
-  if (!value) return "Sem data";
-  const dateLabel = withWeekday ? formatScheduleDate(value) : formatDate(value);
-  const timeLabel = formatDeliveryTime(time);
-  return `${dateLabel} \u2022 ${timeLabel}`;
-}
-
 function formatMoney(value: unknown) {
   const number = Number(value ?? 0);
   if (!Number.isFinite(number)) return "R$ 0,00";
-  return `R$ ${number.toFixed(2)}`;
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(number);
 }
 
 function formatLogValue(value?: string | null) {
@@ -204,19 +176,27 @@ export default async function OrderDetailPage({
     items: order.items,
     needsReconfirmation: order.needsReconfirmation,
   });
-  const itemsReady = pendingSummary.hasItems;
-  const scheduleReady =
-    order.orderType === "PRONTA_ENTREGA"
-      ? true
-      : Boolean(order.deliveryDatetime);
-  const timeReady =
-    order.orderType === "PRONTA_ENTREGA"
-      ? true
-      : Boolean(order.deliveryTime && order.deliveryTime !== DEFAULT_DELIVERY_TIME);
   const addressReady =
     order.deliveryMethod !== "ENTREGA"
       ? true
       : Boolean(order.addressText?.trim()) && Boolean(order.addressCity?.trim());
+  const viewModel = getOrderDetailViewModel({
+    status: order.status,
+    orderType: order.orderType,
+    deliveryMethod: order.deliveryMethod,
+    deliveryDatetime: order.deliveryDatetime,
+    deliveryTime: order.deliveryTime,
+    needsReconfirmation: order.needsReconfirmation,
+    attention,
+    pendingSummary,
+    itemsCount: order.items.length,
+    customerName: order.customer.name,
+    addressReady,
+    needsProduction: availability.hasUnavailableItems,
+  });
+  const showProduction = gapItems.length > 0;
+  const confirmFormId = "order-confirm-form";
+  const advanceFormId = "order-advance-form";
 
   const auditLogs = await prisma.auditLog.findMany({
     where: {
@@ -252,88 +232,6 @@ export default async function OrderDetailPage({
         )
       : [];
 
-  const isFinal = order.status === "ENTREGUE" || order.status === "CANCELADO";
-  const hasPayment = Boolean(order.paidAt);
-
-  const blockedReasons: string[] = [];
-  const primaryAction = (() => {
-    if (isFinal) {
-      return { label: "Pedido finalizado", type: "none" as const };
-    }
-    if (order.needsReconfirmation) {
-      return { label: "Reconfirmar pedido", type: "reconfirm" as const };
-    }
-    if (order.status === "RASCUNHO") {
-      if (!pendingSummary.hasItems) {
-        blockedReasons.push("Adicione itens ao pedido.");
-      }
-      if (!pendingSummary.hasDeliveryDate) {
-        blockedReasons.push("Defina a data de entrega.");
-      }
-      return { label: "Confirmar pedido", type: "confirm" as const };
-    }
-    if (order.status === "CONFIRMADO") {
-      if (!pendingSummary.hasItems) {
-        blockedReasons.push("Adicione itens ao pedido.");
-      }
-      if (!pendingSummary.hasDeliveryDate) {
-        blockedReasons.push("Defina a data de entrega.");
-      }
-      return {
-        label: "Avancar para producao",
-        type: "status" as const,
-        status: "EM_PRODUCAO" as OrderStatus,
-      };
-    }
-    if (order.status === "EM_PRODUCAO") {
-      if (attention.strongReasons.length > 0) {
-        if (!pendingSummary.hasItems) blockedReasons.push("Itens pendentes.");
-        if (!pendingSummary.hasDeliveryDate)
-          blockedReasons.push("Data pendente.");
-        if (order.needsReconfirmation) {
-          blockedReasons.push("Reconfirmacao pendente.");
-        }
-      }
-      return {
-        label: "Marcar pronto",
-        type: "status" as const,
-        status: "PRONTO" as OrderStatus,
-      };
-    }
-    if (order.status === "PRONTO") {
-      if (attention.strongReasons.length > 0) {
-        if (!pendingSummary.hasItems) blockedReasons.push("Itens pendentes.");
-        if (!pendingSummary.hasDeliveryDate)
-          blockedReasons.push("Data pendente.");
-        if (order.needsReconfirmation) {
-          blockedReasons.push("Reconfirmacao pendente.");
-        }
-      }
-      return {
-        label: "Marcar entregue",
-        type: "status" as const,
-        status: "ENTREGUE" as OrderStatus,
-      };
-    }
-    return { label: "Atualizar status", type: "none" as const };
-  })();
-
-  const whyList: string[] = [];
-  if (order.orderType === "ENCOMENDA") {
-    whyList.push("Pedido de encomenda: producao planejada.");
-  } else {
-    whyList.push("Pronta entrega: alerta de saldo insuficiente quando aplicavel.");
-  }
-  if (attention.strongReasons.length > 0) {
-    whyList.push(`Pendencias bloqueando: ${attention.strongReasons.length}.`);
-  }
-  if (attention.weakReasons.length > 0) {
-    whyList.push(`Alertas ativos: ${attention.weakReasons.length}.`);
-  }
-  if (hasPayment) {
-    whyList.push("Pagamento registrado.");
-  }
-
   const focusTarget =
     resolvedSearch?.focus === "items"
       ? "order-items"
@@ -344,190 +242,184 @@ export default async function OrderDetailPage({
       : undefined;
 
   const editLink = `/admin/orders/${order.id}/edit`;
-  const deliveryScheduleHeader = formatDeliverySchedule(
-    order.deliveryDatetime,
-    order.deliveryTime,
-    true
-  );
-  const deliveryScheduleCard = formatDeliverySchedule(
-    order.deliveryDatetime,
-    order.deliveryTime
-  );
-  const riskChips = [
-    ...attention.strongReasons,
-    ...attention.weakReasons,
-  ].slice(0, 3);
-  const showProductionBlock = gapItems.length > 0;
-  const hasNotices = Boolean(
-    created ||
-      resolvedSearch?.updated ||
-      resolvedSearch?.converted ||
-      resolvedSearch?.error ||
-      resolvedSearch?.confirmed ||
-      resolvedSearch?.reconfirmed ||
-      (order.status === "ENTREGUE" && stockStatus.deliveredShortage)
-  );
 
   return (
     <main className={styles.page}>
       <OrderDetailFocus targetId={focusTarget} />
-
-      <div className={detailStyles.orderHeader}>
-        <div className={detailStyles.orderHeaderTop}>
-          <div className={detailStyles.orderHeaderMeta}>
-            <Chip
-              variant="status"
-              status={order.status}
-              label={statusLabel[order.status]}
-              className={detailStyles.statusPill}
-            />
-            <span className={detailStyles.orderNumber}>Pedido {order.orderNumber}</span>
-          </div>
-          <div className={styles.clusterSm}>
-            <Link href={editLink} className={styles.button}>
-              Editar pedido
-            </Link>
-            <Link href="/admin/orders">Voltar</Link>
-          </div>
-        </div>
-        <div className={detailStyles.orderHeaderMain}>
-          <div className={detailStyles.orderHeaderContent}>
-            <h1 className={detailStyles.orderHeaderTitle}>
-              {deliveryMethodLabel[order.deliveryMethod]}{" \u2014 "}
-              {deliveryScheduleHeader}
-            </h1>
-            <div className={detailStyles.orderHeaderBadges}>
-              <span
-                className={`${detailStyles.typeBadge} ${
-                  order.orderType === "PRONTA_ENTREGA"
-                    ? detailStyles.typeBadgePronta
-                    : ""
-                }`}
-              >
-                {orderTypeLabel[order.orderType]}
-              </span>
-            </div>
-          </div>
-          {riskChips.length > 0 ? (
-            <div className={detailStyles.riskChips}>
-              {riskChips.map((reason, index) => (
-                <Chip
-                  key={`${reason.type}-${index}`}
-                  variant={
-                    reason.severity === "strong"
-                      ? "attention-strong"
-                      : "attention-weak"
-                  }
-                  label={reason.label}
-                  density="compact"
-                />
-              ))}
-            </div>
-          ) : null}
+      <div className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>Pedido {order.orderNumber}</h1>
+        <div className={styles.clusterSm}>
+          <Link href={editLink} className={styles.button}>
+            Editar pedido
+          </Link>
+          <Link href="/admin/orders">Voltar</Link>
         </div>
       </div>
 
-      <div className={styles.pageGrid}>
-        <div className={styles.pageMain}>
-          {hasNotices ? (
-            <div className={styles.stackSm}>
-              {created ? (
-                <InlineNotice tone="success" clearQueryKeys={["created"]}>
-                  Pedido salvo.
-                </InlineNotice>
-              ) : null}
+      {created ? (
+        <InlineNotice tone="success" clearQueryKeys={["created"]}>
+          Pedido salvo.
+        </InlineNotice>
+      ) : null}
 
-              {resolvedSearch?.updated ? (
-                <InlineNotice tone="success" clearQueryKeys={["updated"]}>
-                  Pedido atualizado.
-                </InlineNotice>
-              ) : null}
+      {resolvedSearch?.updated ? (
+        <InlineNotice tone="success" clearQueryKeys={["updated"]}>
+          Pedido atualizado.
+        </InlineNotice>
+      ) : null}
 
-              {resolvedSearch?.converted ? (
-                <InlineNotice tone="warning" clearQueryKeys={["converted"]}>
-                  Estoque insuficiente para pronta entrega. Pedido convertido para encomenda.
-                </InlineNotice>
-              ) : null}
+      {resolvedSearch?.converted ? (
+        <InlineNotice tone="warning" clearQueryKeys={["converted"]}>
+          Estoque insuficiente para pronta entrega. Pedido convertido para encomenda.
+        </InlineNotice>
+      ) : null}
 
-              {resolvedSearch?.error === "motivo" ? (
-                <p className={styles.textError}>Informe o motivo do cancelamento.</p>
-              ) : null}
+      {resolvedSearch?.error === "motivo" ? (
+        <p className={styles.textError}>Informe o motivo do cancelamento.</p>
+      ) : null}
 
-              {resolvedSearch?.error === "transicao" ? (
-                <p className={styles.textError}>Transicao de status invalida.</p>
-              ) : null}
+      {resolvedSearch?.error === "transicao" ? (
+        <p className={styles.textError}>Transicao de status invalida.</p>
+      ) : null}
 
-              {resolvedSearch?.error === "ready" ? (
-                <p className={styles.textError}>Pedido incompleto para producao.</p>
-              ) : null}
+      {resolvedSearch?.error === "ready" ? (
+        <p className={styles.textError}>Pedido incompleto para producao.</p>
+      ) : null}
 
-              {resolvedSearch?.error === "ready_items" ? (
-                <p className={styles.textError}>
-                  Para confirmar, adicione itens ao pedido.
-                  <Link href="#order-items" className={detailStyles.actionLink}>
-                    {" "}Ir para itens
-                  </Link>
-                  .
-                </p>
-              ) : null}
+      {resolvedSearch?.error === "ready_items" ? (
+        <p className={styles.textError}>
+          Para confirmar, adicione itens ao pedido.
+          <Link href="#order-items" className={detailStyles.actionLink}>
+            {" "}Ir para itens
+          </Link>
+          .
+        </p>
+      ) : null}
 
-              {resolvedSearch?.error === "ready_date" ? (
-                <p className={styles.textError}>
-                  Para confirmar, defina a data de entrega.
-                  <Link href="#order-delivery" className={detailStyles.actionLink}>
-                    {" "}Ir para entrega
-                  </Link>
-                  .
-                </p>
-              ) : null}
+      {resolvedSearch?.error === "ready_date" ? (
+        <p className={styles.textError}>
+          Para confirmar, defina a data de entrega.
+          <Link href="#order-delivery" className={detailStyles.actionLink}>
+            {" "}Ir para entrega
+          </Link>
+          .
+        </p>
+      ) : null}
 
-              {resolvedSearch?.error === "pendencia" ? (
-                <p className={styles.textError}>
-                  Pendencia forte impede avancar para Pronto/Entregue.
-                </p>
-              ) : null}
+      {resolvedSearch?.error === "pendencia" ? (
+        <p className={styles.textError}>
+          Pendencia forte impede avancar para Pronto/Entregue.
+        </p>
+      ) : null}
 
-              {order.status === "ENTREGUE" && stockStatus.deliveredShortage ? (
-                <div className={`${styles.notice} ${styles.noticeWarning}`}>
-                  <div className={styles.stackSm}>
-                    <div>
-                      Ajustar saldo: este pedido foi entregue sem saldo suficiente.
-                    </div>
-                    <div className={styles.clusterSm}>
-                      <Link href="/admin/producao" className={styles.button}>
-                        Registrar producao
-                      </Link>
-                      <Link href="/admin/consumo" className={styles.button}>
-                        Ajustar saldo (admin)
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-
-              {resolvedSearch?.error === "confirmacao" ? (
-                <p className={styles.textError}>Confirmacao invalida para este status.</p>
-              ) : null}
-
-              {resolvedSearch?.error === "reconfirmacao" ? (
-                <p className={styles.textError}>Nao ha pendencia para reconfirmar.</p>
-              ) : null}
-
-              {resolvedSearch?.confirmed ? (
-                <InlineNotice tone="success" clearQueryKeys={["confirmed"]}>
-                  Pedido confirmado.
-                </InlineNotice>
-              ) : null}
-
-              {resolvedSearch?.reconfirmed ? (
-                <InlineNotice tone="success" clearQueryKeys={["reconfirmed"]}>
-                  Pedido reconfirmado.
-                </InlineNotice>
-              ) : null}
+      {order.status === "ENTREGUE" && stockStatus.deliveredShortage ? (
+        <div className={`${styles.notice} ${styles.noticeWarning}`}>
+          <div className={styles.stackSm}>
+            <div>
+              Ajustar saldo: este pedido foi entregue sem saldo suficiente.
             </div>
-          ) : null}
+            <div className={styles.clusterSm}>
+              <Link href="/admin/producao" className={styles.button}>
+                Registrar producao
+              </Link>
+              <Link href="/admin/consumo" className={styles.button}>
+                Ajustar saldo (admin)
+              </Link>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
-          {showProductionBlock ? (
+      {resolvedSearch?.error === "confirmacao" ? (
+        <p className={styles.textError}>Confirmacao invalida para este status.</p>
+      ) : null}
+
+      {resolvedSearch?.error === "reconfirmacao" ? (
+        <p className={styles.textError}>Nao ha pendencia para reconfirmar.</p>
+      ) : null}
+
+      {resolvedSearch?.confirmed ? (
+        <InlineNotice tone="success" clearQueryKeys={["confirmed"]}>
+          Pedido confirmado.
+        </InlineNotice>
+      ) : null}
+
+      {resolvedSearch?.reconfirmed ? (
+        <InlineNotice tone="success" clearQueryKeys={["reconfirmed"]}>
+          Pedido reconfirmado.
+        </InlineNotice>
+      ) : null}
+      {viewModel.primaryCta.actionId === "confirm" ? (
+        <form id={confirmFormId} action={confirmOrderAction} style={{ display: "none" }}>
+          <input type="hidden" name="orderId" value={order.id} />
+        </form>
+      ) : null}
+
+      {viewModel.primaryCta.actionId === "advance_status" &&
+      viewModel.primaryCta.statusTarget ? (
+        <form id={advanceFormId} action={updateStatusAction} style={{ display: "none" }}>
+          <input type="hidden" name="orderId" value={order.id} />
+          <input type="hidden" name="status" value={viewModel.primaryCta.statusTarget} />
+          {viewModel.primaryCta.statusTarget === "ENTREGUE" && !order.paidAt ? (
+            <input type="checkbox" name="markPaid" value="1" defaultChecked={false} />
+          ) : null}
+        </form>
+      ) : null}
+
+      <div className={styles.pageGrid}>
+        <div className={`${styles.pageMain} ${detailStyles.orderPageMain}`}>
+          <section className={detailStyles.orderHeader}>
+            <div className={detailStyles.orderHeaderMain}>
+              <div className={detailStyles.orderHeaderTop}>
+                <Chip
+                  variant="status"
+                  status={order.status}
+                  label={statusLabel[order.status]}
+                />
+                <div className={detailStyles.orderHeaderChips}>
+                  {viewModel.chips.map((chip, index) => (
+                    <Chip
+                      key={`${chip.label}-${index}`}
+                      variant={chip.severity === "strong" ? "attention-strong" : "attention-weak"}
+                      label={chip.label}
+                      density="compact"
+                    />
+                  ))}
+                  {viewModel.chipsOverflow > 0 ? (
+                    <span className={detailStyles.chipOverflow}>
+                      +{viewModel.chipsOverflow}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+              <div className={detailStyles.orderHeaderTitle}>
+                {deliveryMethodLabel[order.deliveryMethod]} - {viewModel.schedule.header}
+              </div>
+              <div className={detailStyles.orderHeaderMeta}>
+                <span className={detailStyles.orderHeaderType}>
+                  <span
+                    className={`${detailStyles.orderHeaderTypeIcon} ${
+                      order.orderType === "PRONTA_ENTREGA"
+                        ? detailStyles.orderHeaderTypeIconReady
+                        : ""
+                    }`}
+                  />
+                  {orderTypeLabel[order.orderType]}
+                </span>
+              </div>
+            </div>
+            <div className={detailStyles.orderHeaderCta}>
+              <OrderDetailPrimaryAction
+                primaryCta={viewModel.primaryCta}
+                editLink={editLink}
+                confirmFormId={confirmFormId}
+                advanceFormId={advanceFormId}
+                size="md"
+              />
+            </div>
+          </section>
+
+          {showProduction ? (
             <section id="order-production" className={styles.panel}>
               <div className={styles.panelHeader}>
                 <h2>
@@ -535,7 +427,7 @@ export default async function OrderDetailPage({
                     ? "Sem saldo (pronta entrega)"
                     : "Producao (precisa produzir)"}
                 </h2>
-                {order.orderType === "PRONTA_ENTREGA" ? (
+                {order.orderType === "PRONTA_ENTREGA" && gapItems.length > 0 ? (
                   <form action={convertToEncomendaAction}>
                     <input type="hidden" name="orderId" value={order.id} />
                     <button
@@ -588,7 +480,7 @@ export default async function OrderDetailPage({
           <div className={detailStyles.infoGrid}>
             <section className={detailStyles.infoCard}>
               <div className={detailStyles.infoCardHeader}>
-                <div className={detailStyles.infoCardIcon}>??</div>
+                <div className={detailStyles.infoCardIcon}>📋</div>
                 <span className={detailStyles.infoCardTitle}>Pedido</span>
                 <span
                   className={`${styles.badge} ${
@@ -606,48 +498,32 @@ export default async function OrderDetailPage({
               <div className={detailStyles.infoCardBody}>
                 <div className={detailStyles.infoRow}>
                   <span className={detailStyles.infoLabel}>Tipo</span>
-                  <span className={detailStyles.infoValue}>
-                    {orderTypeLabel[order.orderType]}
-                  </span>
+                  <span className={detailStyles.infoValue}>{orderTypeLabel[order.orderType]}</span>
                 </div>
                 <div className={detailStyles.infoRow}>
                   <span className={detailStyles.infoLabel}>Metodo</span>
-                  <span className={detailStyles.infoValue}>
-                    {deliveryMethodLabel[order.deliveryMethod]}
-                  </span>
+                  <span className={detailStyles.infoValue}>{deliveryMethodLabel[order.deliveryMethod]}</span>
                 </div>
                 <div className={detailStyles.infoRow}>
                   <span className={detailStyles.infoLabel}>Subtotal</span>
-                  <span className={detailStyles.infoValue}>
-                    {formatMoney(order.subtotal)}
-                  </span>
+                  <span className={detailStyles.infoValue}>{formatMoney(order.subtotal)}</span>
                 </div>
                 <div className={detailStyles.infoRow}>
                   <span className={detailStyles.infoLabel}>Total</span>
-                  <span className={detailStyles.infoValueLarge}>
-                    {formatMoney(order.total)}
-                  </span>
+                  <span className={detailStyles.infoValueLarge}>{formatMoney(order.total)}</span>
                 </div>
                 {(attention.strongReasons.length > 0 ||
                   attention.weakReasons.some((r) => r.type === "UNAVAILABLE_ITEMS")) && (
                   <div className={styles.clusterSm} style={{ marginTop: "var(--space-2)" }}>
                     {attention.strongReasons.some((r) => r.type === "INCOMPLETE") && (
-                      <span className={`${styles.badge} ${styles.badgeDanger}`}>
-                        Incompleto
-                      </span>
+                      <span className={`${styles.badge} ${styles.badgeDanger}`}>Incompleto</span>
                     )}
-                    {attention.strongReasons.some(
-                      (r) => r.type === "ALTERADO_APOS_CONFIRMACAO"
-                    ) && (
-                      <span className={`${styles.badge} ${styles.badgeDanger}`}>
-                        Requer reconfirmacao
-                      </span>
+                    {attention.strongReasons.some((r) => r.type === "ALTERADO_APOS_CONFIRMACAO") && (
+                      <span className={`${styles.badge} ${styles.badgeDanger}`}>Requer reconfirmacao</span>
                     )}
                     {attention.weakReasons.some((r) => r.type === "UNAVAILABLE_ITEMS") && (
                       <span className={`${styles.badge} ${styles.badgeWarning}`}>
-                        {order.orderType === "PRONTA_ENTREGA"
-                          ? "Sem saldo"
-                          : "Precisa produzir"}
+                        {order.orderType === "PRONTA_ENTREGA" ? "Sem saldo" : "Precisa produzir"}
                       </span>
                     )}
                   </div>
@@ -655,9 +531,9 @@ export default async function OrderDetailPage({
               </div>
             </section>
 
-            <section className={detailStyles.infoCard}>
+            <section id="order-customer" className={detailStyles.infoCard}>
               <div className={detailStyles.infoCardHeader}>
-                <div className={detailStyles.infoCardIcon}>??</div>
+                <div className={detailStyles.infoCardIcon}>👤</div>
                 <span className={detailStyles.infoCardTitle}>Cliente</span>
               </div>
               <div className={detailStyles.infoCardBody}>
@@ -672,16 +548,14 @@ export default async function OrderDetailPage({
                 </div>
                 <div className={detailStyles.infoRow}>
                   <span className={detailStyles.infoLabel}>Telefone</span>
-                  <span className={detailStyles.infoValue}>
-                    {order.customer.phone || "-"}
-                  </span>
+                  <span className={detailStyles.infoValue}>{order.customer.phone || "-"}</span>
                 </div>
               </div>
             </section>
 
             <section id="order-delivery" className={detailStyles.infoCard}>
               <div className={detailStyles.infoCardHeader}>
-                <div className={detailStyles.infoCardIcon}>??</div>
+                <div className={detailStyles.infoCardIcon}>📍</div>
                 <span className={detailStyles.infoCardTitle}>
                   {deliveryMethodLabel[order.deliveryMethod]}
                 </span>
@@ -699,36 +573,26 @@ export default async function OrderDetailPage({
                   <>
                     <div className={detailStyles.infoRow}>
                       <span className={detailStyles.infoLabel}>Bairro</span>
-                      <span className={detailStyles.infoValue}>
-                        {order.addressBairro || "-"}
-                      </span>
+                      <span className={detailStyles.infoValue}>{order.addressBairro || "-"}</span>
                     </div>
                     <div className={detailStyles.infoRow}>
                       <span className={detailStyles.infoLabel}>Cidade</span>
-                      <span className={detailStyles.infoValue}>
-                        {order.addressCity || "-"}
-                      </span>
+                      <span className={detailStyles.infoValue}>{order.addressCity || "-"}</span>
                     </div>
                     <div className={detailStyles.infoRow}>
                       <span className={detailStyles.infoLabel}>Referencia</span>
-                      <span className={detailStyles.infoValue}>
-                        {order.addressReferencia || "-"}
-                      </span>
+                      <span className={detailStyles.infoValue}>{order.addressReferencia || "-"}</span>
                     </div>
                   </>
                 )}
                 <div className={detailStyles.infoRow}>
                   <span className={detailStyles.infoLabel}>Data/Hora</span>
-                  <span className={detailStyles.infoValue}>
-                    {deliveryScheduleCard}
-                  </span>
+                  <span className={detailStyles.infoValue}>{viewModel.schedule.card}</span>
                 </div>
                 {order.deliveryMethod === "ENTREGA" && (
                   <div className={detailStyles.infoRow}>
                     <span className={detailStyles.infoLabel}>Taxa</span>
-                    <span className={detailStyles.infoValue}>
-                      {formatMoney(order.deliveryFee || 0)}
-                    </span>
+                    <span className={detailStyles.infoValue}>{formatMoney(order.deliveryFee || 0)}</span>
                   </div>
                 )}
               </div>
@@ -736,7 +600,7 @@ export default async function OrderDetailPage({
 
             <section id="order-payment" className={detailStyles.infoCard}>
               <div className={detailStyles.infoCardHeader}>
-                <div className={detailStyles.infoCardIcon}>??</div>
+                <div className={detailStyles.infoCardIcon}>💳</div>
                 <span className={detailStyles.infoCardTitle}>Pagamento</span>
                 <span
                   className={`${styles.badge} ${
@@ -826,7 +690,41 @@ export default async function OrderDetailPage({
             </div>
           </section>
 
-          <div className={detailStyles.twoColumn}>
+          {order.needsReconfirmation ? (
+            <section id="order-changes" className={styles.panel}>
+              <div className={styles.panelHeader}>
+                <h2>Mudancas desde a confirmacao</h2>
+              </div>
+              <div className={styles.panelBody}>
+                {recentChanges.length === 0 ? (
+                  <div className={styles.textMuted}>
+                    Nenhuma mudanca registrada.
+                  </div>
+                ) : (
+                  <ul className={detailStyles.summaryList}>
+                    {recentChanges.map((log) => (
+                      <li key={log.id}>
+                        {log.field ? `Campo ${log.field}` : "Alteracao"}: 
+                        {formatLogValue(log.beforeValue)} →{" "}
+                        {formatLogValue(log.afterValue)}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <form action={reconfirmOrderAction} className={styles.formSection}>
+                  <input type="hidden" name="orderId" value={order.id} />
+                  <button
+                    type="submit"
+                    className={`${styles.button} ${styles.buttonPrimary}`}
+                  >
+                    Reconfirmar pedido
+                  </button>
+                </form>
+              </div>
+            </section>
+          ) : null}
+
+          <div id="order-pending" className={detailStyles.twoColumn}>
             <section className={styles.panel}>
               <div className={styles.panelHeader}>
                 <h2>Pendencias (bloqueiam)</h2>
@@ -850,7 +748,10 @@ export default async function OrderDetailPage({
                       return (
                         <li key={`${reason.type}-${index}`}>
                           {reason.label}{" "}
-                          <Link href={`${editLink}${target}`} className={detailStyles.actionLink}>
+                          <Link
+                            href={`${editLink}${target}`}
+                            className={detailStyles.actionLink}
+                          >
                             Resolver
                           </Link>
                         </li>
@@ -892,40 +793,6 @@ export default async function OrderDetailPage({
               </div>
             </section>
           </div>
-
-          {order.needsReconfirmation ? (
-            <section id="order-changes" className={styles.panel}>
-              <div className={styles.panelHeader}>
-                <h2>Mudancas desde a confirmacao</h2>
-              </div>
-              <div className={styles.panelBody}>
-                {recentChanges.length === 0 ? (
-                  <div className={styles.textMuted}>
-                    Nenhuma mudanca registrada.
-                  </div>
-                ) : (
-                  <ul className={detailStyles.summaryList}>
-                    {recentChanges.map((log) => (
-                      <li key={log.id}>
-                        {log.field ? `Campo ${log.field}` : "Alteracao"}: {" "}
-                        {formatLogValue(log.beforeValue)} ?{" "}
-                        {formatLogValue(log.afterValue)}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <form action={reconfirmOrderAction} className={styles.formSection}>
-                  <input type="hidden" name="orderId" value={order.id} />
-                  <button
-                    type="submit"
-                    className={`${styles.button} ${styles.buttonPrimary}`}
-                  >
-                    Reconfirmar pedido
-                  </button>
-                </form>
-              </div>
-            </section>
-          ) : null}
 
           <section id="order-actions" className={styles.panel}>
             <div className={styles.panelHeader}>
@@ -972,7 +839,7 @@ export default async function OrderDetailPage({
             </div>
           </section>
 
-          <section className={styles.panel}>
+          <section id="order-audit" className={styles.panel}>
             <div className={styles.panelHeader}>
               <h2>Auditoria</h2>
             </div>
@@ -1010,34 +877,26 @@ export default async function OrderDetailPage({
 
         <aside className={styles.pageAside}>
           <div className={styles.stickyPanel}>
-            <OrderDetailNextAction
-              orderId={order.id}
+            <OrderDetailSidebar
+              viewModel={viewModel}
+              editLink={editLink}
+              summary={{
+                subtotal: Number(order.subtotal),
+                deliveryFee: order.deliveryFee ? Number(order.deliveryFee) : null,
+                total: Number(order.total),
+              }}
               status={order.status}
-              attention={attention}
-              pendingSummary={pendingSummary}
-              itemsReady={itemsReady}
-              scheduleReady={scheduleReady}
-              timeReady={timeReady}
-              addressReady={addressReady}
-              orderType={order.orderType}
-              deliveryMethod={order.deliveryMethod}
-              deliveryDatetime={order.deliveryDatetime}
-              deliveryTime={order.deliveryTime}
-              customerName={order.customer.name}
-              itemsCount={order.items.length}
-              subtotal={Number(order.subtotal)}
-              deliveryFee={order.deliveryFee ? Number(order.deliveryFee) : null}
-              total={Number(order.total)}
-              isFinal={isFinal}
-              needsReconfirmation={order.needsReconfirmation}
-              hasPayment={hasPayment}
-              primaryActionStatus={
-                primaryAction.type === "status" ? primaryAction.status : undefined
-              }
+              statusLabel={statusLabel[order.status]}
+              showProduction={showProduction}
+              confirmFormId={confirmFormId}
+              advanceFormId={advanceFormId}
             />
           </div>
         </aside>
       </div>
+
+
     </main>
-  );}
+  );
+}
 

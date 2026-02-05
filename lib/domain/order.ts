@@ -49,6 +49,18 @@ export type OrderCriticalSnapshot = {
 
 export const DEFAULT_DELIVERY_TIME = "00:00";
 
+/**
+ * Formata horário de entrega para exibição. Retorna "Sem horario" quando
+ * o valor está vazio ou é DEFAULT_DELIVERY_TIME ("00:00").
+ */
+export function formatDeliveryTime(value?: string | null): string {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === DEFAULT_DELIVERY_TIME) {
+    return "Sem horario";
+  }
+  return trimmed;
+}
+
 export function validateCancelReason(reason: string): ValidationResult {
   if (!reason || !reason.trim()) {
     return { ok: false, error: "Motivo obrigatorio." };

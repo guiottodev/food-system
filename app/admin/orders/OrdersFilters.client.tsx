@@ -248,7 +248,11 @@ export default function OrdersFilters({
   const legacyDeliveryRange =
     searchParams.get("deliveryRange") ?? initialDeliveryRange;
 
-  const resolvedPeriod = useMemo(() => {
+  const resolvedPeriod = useMemo<{
+    period: PeriodValue;
+    deliveryStart: string;
+    deliveryEnd: string;
+  }>(() => {
     const hasExplicitPeriod =
       Boolean(periodFromParams) ||
       Boolean(deliveryStartParam) ||

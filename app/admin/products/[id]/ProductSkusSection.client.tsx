@@ -91,6 +91,7 @@ const unitTypeOptions = [
 ];
 
 const maxAttributes = 15;
+const EMPTY_CATALOG_ATTRIBUTES: CatalogAttribute[] = [];
 
 function createEmptyCatalogRow(): CatalogAttributeRow {
   return { atributoId: "", atributoValorId: "", valueText: "" };
@@ -196,16 +197,13 @@ export default function ProductSkusSection({
   skuErrorMessage,
   showReadyNotice = false,
 }: ProductSkusSectionProps) {
+  const safeCatalogAttributes = catalogAttributes ?? EMPTY_CATALOG_ATTRIBUTES;
   const initialSku = useMemo(
     () =>
       initialSkuId
         ? skus.find((sku) => sku.id === initialSkuId) ?? null
         : null,
     [initialSkuId, skus]
-  );
-  const safeCatalogAttributes = useMemo(
-    () => (Array.isArray(catalogAttributes) ? catalogAttributes : []),
-    [catalogAttributes]
   );
   const shouldOpenInitial = Boolean(initialMode || skuErrorMessage);
   const [modalOpen, setModalOpen] = useState(shouldOpenInitial);
@@ -312,12 +310,16 @@ export default function ProductSkusSection({
   );
 
   const attributeMap = useMemo(
-    () => new Map(safeCatalogAttributes.map((attr) => [attr.id, attr])),
-    [safeCatalogAttributes]
+    () =>
+      new Map(
+        (catalogAttributes ?? EMPTY_CATALOG_ATTRIBUTES).map((attr) => [attr.id, attr])
+      ),
+    [catalogAttributes]
   );
   const hasActiveAttributes = useMemo(
-    () => safeCatalogAttributes.some((attr) => attr.isActive),
-    [safeCatalogAttributes]
+    () =>
+      (catalogAttributes ?? EMPTY_CATALOG_ATTRIBUTES).some((attr) => attr.isActive),
+    [catalogAttributes]
   );
   const useLegacyAttributes =
     Boolean(modalSku?.attributesJson) &&
