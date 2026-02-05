@@ -347,6 +347,11 @@ export default async function OrderDetailPage({
       {resolvedSearch?.error === "reconfirmacao" ? (
         <p className={styles.textError}>Nao ha pendencia para reconfirmar.</p>
       ) : null}
+      {resolvedSearch?.error === "reconfirm_reason" ? (
+        <p className={styles.textError}>
+          Explique rapidamente o que foi reconfirmado.
+        </p>
+      ) : null}
 
       {resolvedSearch?.confirmed ? (
         <InlineNotice tone="success" clearQueryKeys={["confirmed"]}>
