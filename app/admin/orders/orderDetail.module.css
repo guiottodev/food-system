@@ -769,6 +769,111 @@
   font-weight: var(--fw-medium);
 }
 
+/* ===== AUDIT TIMELINE ===== */
+.auditTimeline {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.auditGroupTitle {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  font-weight: var(--fw-semibold);
+}
+
+.auditGroupList {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.auditItem {
+  display: grid;
+  grid-template-columns: 12px 1fr;
+  gap: var(--space-3);
+  align-items: start;
+}
+
+.auditDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--border-strong);
+  margin-top: 6px;
+}
+
+.auditContent {
+  display: grid;
+  gap: var(--space-1);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.auditItem:last-child .auditContent {
+  border-bottom: none;
+}
+
+.auditHeader {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.auditTitle {
+  font-weight: var(--fw-semibold);
+  color: var(--text-primary);
+}
+
+.auditTime {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.auditMeta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+}
+
+.auditDetails {
+  margin-top: var(--space-1);
+}
+
+.auditDetailsSummary {
+  cursor: pointer;
+  font-size: var(--text-xs);
+  color: var(--action-primary);
+  list-style: none;
+}
+
+.auditDetailsSummary::-webkit-details-marker {
+  display: none;
+}
+
+.auditDetailsSummary:hover {
+  text-decoration: underline;
+}
+
+.auditDetailsBody {
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-subtle);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  display: grid;
+  gap: 4px;
+}
+
+.auditDetailsLabel {
+  color: var(--text-muted);
+  font-weight: var(--fw-semibold);
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 900px) {
   .orderHeaderMain {
